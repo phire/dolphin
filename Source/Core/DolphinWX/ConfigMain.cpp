@@ -47,6 +47,7 @@ const CPUCore CPUCores[] = {
 #else
 	{1, wxTRANSLATE("JIT Recompiler (recommended)")},
 	{2, wxTRANSLATE("JITIL experimental recompiler")},
+	{5, wxTRANSLATE("TraceJIT experimental tracing recompiler")},
 #endif
 };
 

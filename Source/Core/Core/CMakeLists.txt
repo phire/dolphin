@@ -199,7 +199,19 @@ if(NOT _M_GENERIC)
 			PowerPC/Jit64/Jit_SystemRegisters.cpp
 			PowerPC/JitCommon/JitBackpatch.cpp
 			PowerPC/JitCommon/JitAsmCommon.cpp
-			PowerPC/JitCommon/Jit_Util.cpp)
+			PowerPC/JitCommon/Jit_Util.cpp
+			PowerPC/TraceJit/TraceJit_Tables.cpp
+			PowerPC/TraceJit/TraceJitAsm.cpp
+			PowerPC/TraceJit/TraceJit_Branch.cpp
+			PowerPC/TraceJit/TraceJit.cpp
+			PowerPC/TraceJit/TraceJit_FloatingPoint.cpp
+			PowerPC/TraceJit/TraceJit_Integer.cpp
+			PowerPC/TraceJit/TraceJit_LoadStore.cpp
+			PowerPC/TraceJit/TraceJit_LoadStoreFloating.cpp
+			PowerPC/TraceJit/TraceJit_LoadStorePaired.cpp
+			PowerPC/TraceJit/TraceJit_Paired.cpp
+			PowerPC/TraceJit/TraceJitRegCache.cpp
+			PowerPC/TraceJit/TraceJit_SystemRegisters.cpp)
 endif()
 if(_M_ARM)
 	set(SRCS ${SRCS}

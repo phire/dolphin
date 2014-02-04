@@ -17,6 +17,8 @@
 #include "Jit64/Jit.h"
 #include "Jit64/Jit64_Tables.h"
 #include "Jit64IL/JitIL_Tables.h"
+#include "TraceJit/TraceJit.h"
+#include "TraceJit/TraceJit_Tables.h"
 #endif
 
 #ifdef _M_ARM
@@ -60,6 +62,11 @@ namespace JitInterface
 				ptr = new JitIL();
 				break;
 			}
+			case 5:
+			{
+				ptr = new TraceJit();
+				break;
+			}
 			#endif
 			#ifdef _M_ARM
 			case 3:
@@ -98,6 +105,11 @@ namespace JitInterface
 			case 2:
 			{
 				JitILTables::InitTables();
+				break;
+			}
+			case 5:
+			{
+				TraceJitTables::InitTables();
 				break;
 			}
 			#endif
