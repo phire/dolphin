@@ -257,6 +257,7 @@ static void AddCore(FPTemp a, u64 a_low, FPTemp b, FPTemp &result)
 	if (exponent_diff == 0)
 	{
 		aligned_b = b.mantissa;
+		aligned_b_low = b_low;
 	}
 	else if (exponent_diff < 64)
 	{
