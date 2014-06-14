@@ -337,8 +337,22 @@ static void AddCore(FPTemp a, u64 a_low, FPTemp b, FPTemp &result)
 // Multiply two inputs.  Each input is either a normalized finite number
 // or zero. The output low contains addtional bits from the result mantissa
 // that don't fit into a 56-bit integer (necessary for madd).
-static void MulCore(FPTemp a, FPTemp b, FPTemp &result, u64 &low, bool single = false)
+static void MulCore(FPTemp a, FPTemp b, FPTemp &result, u64 &low, bool single)
 {
+	// The FPU doesn't have a full 53x53 multiplier; instead, it has a 53x28
+	// multiplier.  In double-precision mode, it uses two multiplies to compute
+	// the full 106-bit result; in single-precision mode, it rounds the RHS to
+	// 28 bits and performs a single multiply.  See also patent US5241493.
+	// TODO: Confirm exact rounding rule.
+	if (single)
+	{
+		int shift = 3 + 28;
+		int x = 0 != (b.mantissa & (1ULL << (shift - 1)));
+		b.mantissa >>= shift;
+		b.mantissa += x;
+		b.mantissa <<= shift;
+	}
+
 	// Need exactly 57 bits of product in "high", so tweak operands.
 	// 57 == 53 bits of double mantissa + 3 guard bits +
 	//     1 extra in case the top result bit isn't 1.
@@ -348,14 +362,6 @@ static void MulCore(FPTemp a, FPTemp b, FPTemp &result, u64 &low, bool single = 
 
 	// Result exponent is just the sum of the input exponents
 	result.exponent = a.exponent + b.exponent - 0x3ff;
-
-	if (single)
-	{
-		result.mantissa |= low != 0;
-		low = 0;
-		result.mantissa |= ((result.mantissa & 0xf) != 0) << 4;
-		result.mantissa &= ~0xf;
-	}
 
 	// The upper part of the result is either 56 or 57 bits long; if it's 57 bits,
 	// shift right one bit.
@@ -411,11 +417,11 @@ static FPTemp DivFPTemp(FPTemp a, FPTemp b)
 	return result;
 }
 
-static FPTemp MulFPTemp(FPTemp a, FPTemp b)
+static FPTemp MulFPTemp(FPTemp a, FPTemp b, bool single)
 {
 	FPTemp result;
 	u64 low;
-	MulCore(a, b, result, low);
+	MulCore(a, b, result, low, single);
 
 	// OR the low bits into the sticky bit
 	result.mantissa |= (low != 0 ? 1 : 0);
@@ -430,11 +436,11 @@ static FPTemp AddFPTemp(FPTemp a, FPTemp b)
 	return result;
 }
 
-static FPTemp MaddFPTemp(FPTemp a, FPTemp b, FPTemp c)
+static FPTemp MaddFPTemp(FPTemp a, FPTemp b, FPTemp c, bool single)
 {
 	FPTemp result;
 	u64 result_low;
-	MulCore(a, b, result, result_low);
+	MulCore(a, b, result, result_low, single);
 	AddCore(result, result_low, c, result);
 	return result;
 }
@@ -737,7 +743,7 @@ u64 MultiplySinglePrecision(u64 double_a, u64 double_b)
 
 	FPTemp a = DecomposeDouble(double_a);
 	FPTemp b = DecomposeDouble(double_b);
-	FPTemp result = MulFPTemp(a, b);
+	FPTemp result = MulFPTemp(a, b, /*single*/true);
 	u64 result_double = RoundFPTempToSingle(result);
 
 	return result_double;
@@ -757,7 +763,7 @@ u64 MultiplyDoublePrecision(u64 double_a, u64 double_b)
 
 	FPTemp a = DecomposeDouble(double_a);
 	FPTemp b = DecomposeDouble(double_b);
-	FPTemp result = MulFPTemp(a, b);
+	FPTemp result = MulFPTemp(a, b, /*single*/false);
 	u64 result_double = RoundFPTempToDouble(result);
 
 	return result_double;
@@ -783,18 +789,7 @@ u64 MaddSinglePrecision(u64 double_a, u64 double_b, u64 double_c, bool negate_c,
 	FPTemp a = DecomposeDouble(double_a);
 	FPTemp b = DecomposeDouble(double_b);
 	FPTemp c = DecomposeDouble(double_c);
-	FPTemp result;
-	{
-		int shift = 3 + 25 - 1;
-		int x = 0 != (b.mantissa & (1ULL << (shift - 1)));
-		b.mantissa >>= shift;
-		b.mantissa += x;
-		b.mantissa <<= shift;
-		u64 result_low;
-		MulCore(a, b, result, result_low);
-		AddCore(result, result_low, c, result);
-	}
-
+	FPTemp result = MaddFPTemp(a, b, c, /*single*/true);
 	if (negate_result)
 		result.sign = !result.sign;
 	u64 result_double = RoundFPTempToSingle(result);
@@ -825,7 +820,7 @@ u64 MaddDoublePrecision(u64 double_a, u64 double_b, u64 double_c, bool negate_c,
 	FPTemp a = DecomposeDouble(double_a);
 	FPTemp b = DecomposeDouble(double_b);
 	FPTemp c = DecomposeDouble(double_c);
-	FPTemp result = MaddFPTemp(a, b, c);
+	FPTemp result = MaddFPTemp(a, b, c, /*single*/false);
 	if (negate_result)
 		result.sign = !result.sign;
 	u64 result_double = RoundFPTempToDouble(result);
