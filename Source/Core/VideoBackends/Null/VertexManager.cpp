@@ -110,88 +110,10 @@ void VertexManager::vFlush(bool useDstAlpha)
 	GLVertexFormat *nativeVertexFmt = (GLVertexFormat*)g_nativeVertexFmt;
 	u32 stride  = nativeVertexFmt->GetVertexStride();
 
-	if (m_last_vao != nativeVertexFmt->VAO) {
-		glBindVertexArray(nativeVertexFmt->VAO);
-		m_last_vao = nativeVertexFmt->VAO;
-	}
-
 	PrepareDrawBuffers(stride);
-	GL_REPORT_ERRORD();
-
-	// Makes sure we can actually do Dual source blending
-	bool dualSourcePossible = g_ActiveConfig.backend_info.bSupportsDualSourceBlend;
-
-	// If host supports GL_ARB_blend_func_extended, we can do dst alpha in
-	// the same pass as regular rendering.
-	if (useDstAlpha && dualSourcePossible)
-	{
-		ProgramShaderCache::SetShader(DSTALPHA_DUAL_SOURCE_BLEND, g_nativeVertexFmt->m_components);
-	}
-	else
-	{
-		ProgramShaderCache::SetShader(DSTALPHA_NONE,g_nativeVertexFmt->m_components);
-	}
-
-	// upload global constants
-	ProgramShaderCache::UploadConstants();
-
-	// setup the pointers
-	g_nativeVertexFmt->SetupVertexPointers();
-	GL_REPORT_ERRORD();
 
 	Draw(stride);
 
-	// run through vertex groups again to set alpha
-	if (useDstAlpha && !dualSourcePossible)
-	{
-		ProgramShaderCache::SetShader(DSTALPHA_ALPHA_PASS,g_nativeVertexFmt->m_components);
-
-		// only update alpha
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
-
-		glDisable(GL_BLEND);
-
-		Draw(stride);
-
-		// restore color mask
-		g_renderer->SetColorMask();
-
-		if (bpmem.blendmode.blendenable || bpmem.blendmode.subtract)
-			glEnable(GL_BLEND);
-	}
-
-#if defined(_DEBUG) || defined(DEBUGFAST)
-	if (g_ActiveConfig.iLog & CONF_SAVESHADERS)
-	{
-		// save the shaders
-		ProgramShaderCache::PCacheEntry prog = ProgramShaderCache::GetShaderProgram();
-		std::string filename = StringFromFormat("%sps%.3d.txt", File::GetUserPath(D_DUMPFRAMES_IDX).c_str(), g_ActiveConfig.iSaveTargetId);
-		std::ofstream fps;
-		OpenFStream(fps, filename, std::ios_base::out);
-		fps << prog.shader.strpprog.c_str();
-
-		filename = StringFromFormat("%svs%.3d.txt", File::GetUserPath(D_DUMPFRAMES_IDX).c_str(), g_ActiveConfig.iSaveTargetId);
-		std::ofstream fvs;
-		OpenFStream(fvs, filename, std::ios_base::out);
-		fvs << prog.shader.strvprog.c_str();
-	}
-
-	if (g_ActiveConfig.iLog & CONF_SAVETARGETS)
-	{
-		std::string filename = StringFromFormat("%starg%.3d.png", File::GetUserPath(D_DUMPFRAMES_IDX).c_str(), g_ActiveConfig.iSaveTargetId);
-		TargetRectangle tr;
-		tr.left = 0;
-		tr.right = Renderer::GetTargetWidth();
-		tr.top = 0;
-		tr.bottom = Renderer::GetTargetHeight();
-		g_renderer->SaveScreenshot(filename, tr);
-	}
-#endif
-	g_Config.iSaveTargetId++;
-
-	ClearEFBCache();
-
-	GL_REPORT_ERRORD();
 }
 
 
