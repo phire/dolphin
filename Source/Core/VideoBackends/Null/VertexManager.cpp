@@ -102,28 +102,6 @@ void VertexManager::ResetBuffer(u32 stride)
 
 void VertexManager::Draw(u32 stride)
 {
-	u32 index_size = IndexGenerator::GetIndexLen();
-	u32 max_index = IndexGenerator::GetNumVerts();
-	GLenum primitive_mode = 0;
-
-	switch (current_primitive_type)
-	{
-		case PRIMITIVE_POINTS:
-			primitive_mode = GL_POINTS;
-			break;
-		case PRIMITIVE_LINES:
-			primitive_mode = GL_LINES;
-			break;
-		case PRIMITIVE_TRIANGLES:
-			primitive_mode = g_ActiveConfig.backend_info.bSupportsPrimitiveRestart ? GL_TRIANGLE_STRIP : GL_TRIANGLES;
-			break;
-	}
-
-	if (g_ogl_config.bSupportsGLBaseVertex) {
-		glDrawRangeElementsBaseVertex(primitive_mode, 0, max_index, index_size, GL_UNSIGNED_SHORT, (u8*)nullptr+s_index_offset, (GLint)s_baseVertex);
-	} else {
-		glDrawRangeElements(primitive_mode, 0, max_index, index_size, GL_UNSIGNED_SHORT, (u8*)nullptr+s_index_offset);
-	}
 	INCSTAT(stats.thisFrame.numIndexedDrawCalls);
 }
 
