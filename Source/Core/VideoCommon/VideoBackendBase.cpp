@@ -7,6 +7,7 @@
 #include "VideoBackends/D3D/VideoBackend.h"
 #endif
 #include "VideoBackends/OGL/VideoBackend.h"
+#include "VideoBackends/Null/VideoBackend.h"
 #include "VideoBackends/Software/VideoBackend.h"
 
 #include "VideoCommon/VideoBackendBase.h"
@@ -38,7 +39,7 @@ void VideoBackend::PopulateList()
 {
 	VideoBackend* backends[4] = { nullptr };
 
-	// OGL > D3D11 > SW
+	// OGL > D3D11 > SW > Null
 #if !defined(USE_GLES) || USE_GLES3
 	g_available_video_backends.push_back(backends[0] = new OGL::VideoBackend);
 #endif
@@ -46,7 +47,8 @@ void VideoBackend::PopulateList()
 	if (IsGteVista())
 		g_available_video_backends.push_back(backends[1] = new DX11::VideoBackend);
 #endif
-	g_available_video_backends.push_back(backends[3] = new SW::VideoSoftware);
+	g_available_video_backends.push_back(backends[2] = new SW::VideoSoftware);
+	g_available_video_backends.push_back(backends[3] = new NullVideo::VideoBackend);
 
 	for (VideoBackend* backend : backends)
 	{

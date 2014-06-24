@@ -228,7 +228,7 @@ if(_M_ARM_32)
 			)
 endif()
 
-set(LIBS bdisasm inputcommon videoogl videosoftware sfml-network)
+set(LIBS bdisasm inputcommon videoogl videosoftware videonull sfml-network)
 
 if(LIBUSB_FOUND)
 	# Using shared LibUSB

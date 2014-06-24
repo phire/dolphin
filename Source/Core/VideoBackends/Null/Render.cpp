@@ -61,13 +61,7 @@
 #include "VideoCommon/AVIDump.h"
 #endif
 
-
-void VideoConfig::UpdateProjectionHack()
-{
-	::UpdateProjectionHack(g_Config.iPhackvalue, g_Config.sPhackvalue);
-}
-
-int OSDInternalW, OSDInternalH;
+extern int OSDInternalW, OSDInternalH;
 
 namespace NullVideo
 {

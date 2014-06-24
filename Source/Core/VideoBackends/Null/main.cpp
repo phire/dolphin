@@ -92,15 +92,13 @@ namespace NullVideo
 
 std::string VideoBackend::GetName() const
 {
-	return "OGL";
+	return "Null";
 }
 
 std::string VideoBackend::GetDisplayName() const
 {
-	if (GLInterface != nullptr && GLInterface->GetMode() == GLInterfaceMode::MODE_OPENGLES3)
-		return "OpenGLES";
-	else
-		return "OpenGL";
+	return "Null Video";
+
 }
 
 void GetShaders(std::vector<std::string> &shaders)

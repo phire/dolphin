@@ -14,8 +14,8 @@
 
 #include "VideoCommon/VideoConfig.h"
 
-GLWindow GLWin;
-cInterfaceBase *GLInterface;
+extern GLWindow GLWin;
+extern cInterfaceBase *GLInterface;
 
 namespace NullVideo
 {
@@ -33,6 +33,8 @@ void VideoBackend::UpdateFPSDisplay(const std::string& text)
 }
 
 }
+
+/*
 void InitInterface()
 {
 	#if defined(USE_EGL) && USE_EGL
@@ -150,5 +152,5 @@ bool OpenGL_ReportFBOError(const char *function, const char *file, int line)
 		return false;
 	}
 	return true;
-}
+}*/
 
