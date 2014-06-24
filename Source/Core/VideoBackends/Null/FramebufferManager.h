@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/Render.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/Render.h"
 
 #include "VideoCommon/FramebufferManagerBase.h"
 
@@ -42,7 +42,7 @@
 // There may be multiple XFBs in GameCube RAM. This is the maximum number to
 // virtualize.
 
-namespace OGL {
+namespace NullVideo {
 
 struct XFBSource : public XFBSourceBase
 {
@@ -117,4 +117,4 @@ private:
 	static SHADER m_pixel_format_shaders[2];
 };
 
-}  // namespace OGL
+}  // namespace NullVideo

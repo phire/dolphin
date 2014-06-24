@@ -3,7 +3,7 @@
 #include <string>
 #include "VideoCommon/VideoBackendBase.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 class VideoBackend : public VideoBackendHardware

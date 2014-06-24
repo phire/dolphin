@@ -11,11 +11,11 @@
 
 #include "Core/HW/Memmap.h"
 
-#include "VideoBackends/OGL/FramebufferManager.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/TextureCache.h"
-#include "VideoBackends/OGL/TextureConverter.h"
+#include "VideoBackends/Null/FramebufferManager.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/TextureCache.h"
+#include "VideoBackends/Null/TextureConverter.h"
 
 #include "VideoCommon/DriverDetails.h"
 #include "VideoCommon/ImageWrite.h"
@@ -23,13 +23,13 @@
 #include "VideoCommon/VideoConfig.h"
 
 
-namespace OGL
+namespace NullVideo
 {
 
 namespace TextureConverter
 {
 
-using OGL::TextureCache;
+using NullVideo::TextureCache;
 
 static GLuint s_texConvFrameBuffer[2] = {0,0};
 static GLuint s_srcTexture = 0; // for decoding from RAM
@@ -394,4 +394,4 @@ void DecodeToTexture(u32 xfbAddr, int srcWidth, int srcHeight, GLuint destTextur
 
 }  // namespace
 
-}  // namespace OGL
+}  // namespace NullVideo

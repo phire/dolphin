@@ -10,12 +10,12 @@
 #include "Common/MemoryUtil.h"
 #include "Common/StringUtil.h"
 
-#include "VideoBackends/OGL/main.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/StreamBuffer.h"
-#include "VideoBackends/OGL/TextureCache.h"
-#include "VideoBackends/OGL/VertexManager.h"
+#include "VideoBackends/Null/main.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/StreamBuffer.h"
+#include "VideoBackends/Null/TextureCache.h"
+#include "VideoBackends/Null/VertexManager.h"
 
 #include "VideoCommon/BPMemory.h"
 #include "VideoCommon/DriverDetails.h"
@@ -32,7 +32,7 @@
 // internal state for loading vertices
 extern NativeVertexFormat *g_nativeVertexFmt;
 
-namespace OGL
+namespace NullVideo
 {
 //This are the initially requested size for the buffers expressed in bytes
 const u32 MAX_IBUFFER_SIZE =  2*1024*1024;

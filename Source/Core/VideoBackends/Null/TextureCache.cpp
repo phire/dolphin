@@ -26,11 +26,11 @@
 
 #include "Core/HW/Memmap.h"
 
-#include "VideoBackends/OGL/FramebufferManager.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/TextureCache.h"
-#include "VideoBackends/OGL/TextureConverter.h"
+#include "VideoBackends/Null/FramebufferManager.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/TextureCache.h"
+#include "VideoBackends/Null/TextureConverter.h"
 
 #include "VideoCommon/BPStructs.h"
 #include "VideoCommon/HiresTextures.h"
@@ -39,7 +39,7 @@
 #include "VideoCommon/TextureDecoder.h"
 #include "VideoCommon/VideoConfig.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 static SHADER s_ColorMatrixProgram;

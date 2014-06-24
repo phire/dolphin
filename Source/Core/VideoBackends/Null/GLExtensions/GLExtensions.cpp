@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "Common/Log.h"
-#include "VideoBackends/OGL/GLExtensions/GLExtensions.h"
+#include "VideoBackends/Null/GLExtensions/GLExtensions.h"
 
 #if defined(__linux__) || defined(__APPLE__)
 #include <dlfcn.h>

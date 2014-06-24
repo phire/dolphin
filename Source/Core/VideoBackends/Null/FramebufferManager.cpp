@@ -4,15 +4,15 @@
 
 #include "Core/HW/Memmap.h"
 
-#include "VideoBackends/OGL/FramebufferManager.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/TextureConverter.h"
+#include "VideoBackends/Null/FramebufferManager.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/TextureConverter.h"
 
 #include "VideoCommon/DriverDetails.h"
 #include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/VertexShaderGen.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 int FramebufferManager::m_targetWidth;
@@ -447,4 +447,4 @@ void FramebufferManager::GetTargetSize(unsigned int *width, unsigned int *height
 	*height = m_targetHeight;
 }
 
-}  // namespace OGL
+}  // namespace NullVideo

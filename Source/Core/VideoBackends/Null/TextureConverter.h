@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "VideoBackends/OGL/GLUtil.h"
+#include "VideoBackends/Null/GLUtil.h"
 #include "VideoCommon/VideoCommon.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 // Converts textures between formats using shaders
@@ -28,4 +28,4 @@ int EncodeToRamFromTexture(u32 address, GLuint source_texture, bool bFromZBuffer
 
 }
 
-}  // namespace OGL
+}  // namespace NullVideo

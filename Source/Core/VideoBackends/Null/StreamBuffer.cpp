@@ -4,14 +4,14 @@
 
 #include "Common/MemoryUtil.h"
 
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/StreamBuffer.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/StreamBuffer.h"
 
 #include "VideoCommon/DriverDetails.h"
 #include "VideoCommon/OnScreenDisplay.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 // moved out of constructor, so m_buffer is allowed to be const

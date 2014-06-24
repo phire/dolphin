@@ -2,10 +2,10 @@
 
 #include <map>
 
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/Render.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/Render.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 class SamplerCache : NonCopyable

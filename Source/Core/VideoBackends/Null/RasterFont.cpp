@@ -2,13 +2,13 @@
 // Licensed under GPLv2
 // Refer to the license.txt file included.
 
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/RasterFont.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/RasterFont.h"
 
 // globals
 
-namespace OGL {
+namespace NullVideo {
 
 static const int char_width = 8;
 static const int char_height = 13;

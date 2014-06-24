@@ -7,9 +7,9 @@
 #include "Common/MathUtil.h"
 #include "Common/StringUtil.h"
 
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/StreamBuffer.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/StreamBuffer.h"
 
 #include "VideoCommon/Debugger.h"
 #include "VideoCommon/DriverDetails.h"
@@ -18,7 +18,7 @@
 #include "VideoCommon/Statistics.h"
 #include "VideoCommon/VertexShaderManager.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 static const u32 UBO_LENGTH = 32*1024*1024;
@@ -542,4 +542,4 @@ void ProgramShaderCache::ProgramShaderCacheInserter::Read ( const SHADERUID& key
 }
 
 
-} // namespace OGL
+} // namespace NullVideo

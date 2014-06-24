@@ -6,11 +6,11 @@
 
 #include "Common/LinearDiskCache.h"
 #include "Core/ConfigManager.h"
-#include "VideoBackends/OGL/GLUtil.h"
+#include "VideoBackends/Null/GLUtil.h"
 #include "VideoCommon/PixelShaderGen.h"
 #include "VideoCommon/VertexShaderGen.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 class SHADERUID
@@ -103,4 +103,4 @@ private:
 	static s32 s_ubo_align;
 };
 
-}  // namespace OGL
+}  // namespace NullVideo

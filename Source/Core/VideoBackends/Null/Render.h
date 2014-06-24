@@ -3,7 +3,7 @@
 #include <string>
 #include "VideoCommon/RenderBase.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 void ClearEFBCache();

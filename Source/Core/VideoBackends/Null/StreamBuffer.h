@@ -5,11 +5,11 @@
 #pragma once
 
 #include <utility>
-#include "VideoBackends/OGL/FramebufferManager.h"
-#include "VideoBackends/OGL/GLUtil.h"
+#include "VideoBackends/Null/FramebufferManager.h"
+#include "VideoBackends/Null/GLUtil.h"
 #include "VideoCommon/VideoCommon.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 class StreamBuffer {

@@ -6,7 +6,7 @@
 
 #include "Common/MathUtil.h"
 #include "DolphinWX/GLInterface/GLInterface.h"
-#include "VideoBackends/OGL/GLExtensions/GLExtensions.h"
+#include "VideoBackends/Null/GLExtensions/GLExtensions.h"
 #include "VideoCommon/VideoConfig.h"
 
 #ifndef _WIN32

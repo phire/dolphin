@@ -3,11 +3,11 @@
 // Refer to the license.txt file included.
 
 #include "DolphinWX/GLInterface/GLInterface.h"
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/PerfQuery.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/PerfQuery.h"
 #include "VideoCommon/RenderBase.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 PerfQuery::PerfQuery()

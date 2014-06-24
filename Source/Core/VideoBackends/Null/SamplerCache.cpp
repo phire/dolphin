@@ -2,10 +2,10 @@
 // Licensed under GPLv2
 // Refer to the license.txt file included.
 
-#include "VideoBackends/OGL/SamplerCache.h"
+#include "VideoBackends/Null/SamplerCache.h"
 #include "VideoCommon/DriverDetails.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 SamplerCache *g_sampler_cache;

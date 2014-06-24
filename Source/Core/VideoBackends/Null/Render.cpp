@@ -19,18 +19,18 @@
 #include "Core/Core.h"
 #include "Core/Movie.h"
 
-#include "VideoBackends/OGL/FramebufferManager.h"
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/main.h"
-#include "VideoBackends/OGL/PostProcessing.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/RasterFont.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/SamplerCache.h"
-#include "VideoBackends/OGL/StreamBuffer.h"
-#include "VideoBackends/OGL/TextureCache.h"
-#include "VideoBackends/OGL/TextureConverter.h"
-#include "VideoBackends/OGL/VertexManager.h"
+#include "VideoBackends/Null/FramebufferManager.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/main.h"
+#include "VideoBackends/Null/PostProcessing.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/RasterFont.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/SamplerCache.h"
+#include "VideoBackends/Null/StreamBuffer.h"
+#include "VideoBackends/Null/TextureCache.h"
+#include "VideoBackends/Null/TextureConverter.h"
+#include "VideoBackends/Null/VertexManager.h"
 
 #include "VideoCommon/BPFunctions.h"
 #include "VideoCommon/BPStructs.h"
@@ -69,7 +69,7 @@ void VideoConfig::UpdateProjectionHack()
 
 int OSDInternalW, OSDInternalH;
 
-namespace OGL
+namespace NullVideo
 {
 
 enum MultisampleMode {
@@ -1677,7 +1677,7 @@ void Renderer::RestoreAPIState()
 	if (GLInterface->GetMode() == GLInterfaceMode::MODE_OPENGL)
 		glPolygonMode(GL_FRONT_AND_BACK, g_ActiveConfig.bWireFrame ? GL_LINE : GL_FILL);
 
-	VertexManager *vm = (OGL::VertexManager*)g_vertex_manager;
+	VertexManager *vm = (NullVideo::VertexManager*)g_vertex_manager;
 	glBindBuffer(GL_ARRAY_BUFFER, vm->m_vertex_buffers);
 	glBindVertexArray(vm->m_last_vao);
 
@@ -1810,7 +1810,7 @@ void Renderer::FlipImageData(u8 *data, int w, int h, int pixel_width)
 
 }
 
-namespace OGL
+namespace NullVideo
 {
 
 bool Renderer::SaveScreenshot(const std::string &filename, const TargetRectangle &back_rc)

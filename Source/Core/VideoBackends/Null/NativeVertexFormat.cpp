@@ -6,9 +6,9 @@
 #include "Common/x64ABI.h"
 #include "Common/x64Emitter.h"
 
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/VertexManager.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/VertexManager.h"
 
 #include "VideoCommon/CPMemory.h"
 #include "VideoCommon/NativeVertexFormat.h"
@@ -17,7 +17,7 @@
 // Here's some global state. We only use this to keep track of what we've sent to the OpenGL state
 // machine.
 
-namespace OGL
+namespace NullVideo
 {
 
 NativeVertexFormat* VertexManager::CreateNativeVertexFormat()
@@ -64,7 +64,7 @@ void GLVertexFormat::Initialize(const PortableVertexDeclaration &_vtx_decl)
 	if (vertex_stride & 3)
 		PanicAlert("Uneven vertex stride: %i", vertex_stride);
 
-	VertexManager *vm = (OGL::VertexManager*)g_vertex_manager;
+	VertexManager *vm = (NullVideo::VertexManager*)g_vertex_manager;
 
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);

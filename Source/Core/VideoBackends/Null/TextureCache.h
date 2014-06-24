@@ -6,12 +6,12 @@
 
 #include <map>
 
-#include "VideoBackends/OGL/GLUtil.h"
+#include "VideoBackends/Null/GLUtil.h"
 #include "VideoCommon/BPStructs.h"
 #include "VideoCommon/TextureCacheBase.h"
 #include "VideoCommon/VideoCommon.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 class TextureCache : public ::TextureCache

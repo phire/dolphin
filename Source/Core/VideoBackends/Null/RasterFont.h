@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace OGL
+namespace NullVideo
 {
 
 class RasterFont

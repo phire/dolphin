@@ -5,15 +5,15 @@
 #include "Common/CommonPaths.h"
 #include "Common/FileUtil.h"
 
-#include "VideoBackends/OGL/FramebufferManager.h"
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/PostProcessing.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
+#include "VideoBackends/Null/FramebufferManager.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/PostProcessing.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
 
 #include "VideoCommon/VideoCommon.h"
 #include "VideoCommon/VideoConfig.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 namespace PostProcessing
@@ -153,4 +153,4 @@ void ApplyShader()
 
 }  // namespace
 
-}  // namespace OGL
+}  // namespace NullVideo

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "VideoBackends/OGL/GLUtil.h"
+#include "VideoBackends/Null/GLUtil.h"
 #include "VideoCommon/VideoCommon.h"
 
-namespace OGL
+namespace NullVideo
 {
 
 namespace PostProcessing

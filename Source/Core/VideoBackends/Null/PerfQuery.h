@@ -3,7 +3,7 @@
 #include <array>
 #include "VideoCommon/PerfQueryBase.h"
 
-namespace OGL {
+namespace NullVideo {
 
 class PerfQuery : public PerfQueryBase
 {

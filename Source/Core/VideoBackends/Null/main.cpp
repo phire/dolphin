@@ -48,17 +48,17 @@ Make AA apply instantly during gameplay if possible
 #include "Core/Core.h"
 #include "Core/Host.h"
 
-#include "VideoBackends/OGL/FramebufferManager.h"
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/PerfQuery.h"
-#include "VideoBackends/OGL/PostProcessing.h"
-#include "VideoBackends/OGL/ProgramShaderCache.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/SamplerCache.h"
-#include "VideoBackends/OGL/TextureCache.h"
-#include "VideoBackends/OGL/TextureConverter.h"
-#include "VideoBackends/OGL/VertexManager.h"
-#include "VideoBackends/OGL/VideoBackend.h"
+#include "VideoBackends/Null/FramebufferManager.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/PerfQuery.h"
+#include "VideoBackends/Null/PostProcessing.h"
+#include "VideoBackends/Null/ProgramShaderCache.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/SamplerCache.h"
+#include "VideoBackends/Null/TextureCache.h"
+#include "VideoBackends/Null/TextureConverter.h"
+#include "VideoBackends/Null/VertexManager.h"
+#include "VideoBackends/Null/VideoBackend.h"
 
 #include "VideoCommon/BPStructs.h"
 #include "VideoCommon/CommandProcessor.h"
@@ -87,7 +87,7 @@ Make AA apply instantly during gameplay if possible
 #include "DolphinWX/Debugger/DebuggerPanel.h"
 #endif // HAVE_WX
 
-namespace OGL
+namespace NullVideo
 {
 
 std::string VideoBackend::GetName() const

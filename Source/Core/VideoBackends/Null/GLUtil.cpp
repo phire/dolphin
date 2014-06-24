@@ -8,16 +8,16 @@
 #include "Core/ConfigManager.h"
 #include "Core/Core.h"
 
-#include "VideoBackends/OGL/GLUtil.h"
-#include "VideoBackends/OGL/Render.h"
-#include "VideoBackends/OGL/VideoBackend.h"
+#include "VideoBackends/Null/GLUtil.h"
+#include "VideoBackends/Null/Render.h"
+#include "VideoBackends/Null/VideoBackend.h"
 
 #include "VideoCommon/VideoConfig.h"
 
 GLWindow GLWin;
 cInterfaceBase *GLInterface;
 
-namespace OGL
+namespace NullVideo
 {
 
 // Draw messages on top of the screen

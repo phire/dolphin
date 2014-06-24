@@ -7,7 +7,7 @@
 #include "VideoCommon/CPMemory.h"
 #include "VideoCommon/VertexManagerBase.h"
 
-namespace OGL
+namespace NullVideo
 {
 	class GLVertexFormat : public NativeVertexFormat
 	{
