@@ -50,7 +50,6 @@ Make AA apply instantly during gameplay if possible
 
 #include "VideoBackends/Null/FramebufferManager.h"
 #include "VideoBackends/Null/GLUtil.h"
-#include "VideoBackends/Null/PerfQuery.h"
 #include "VideoBackends/Null/PostProcessing.h"
 #include "VideoBackends/Null/ProgramShaderCache.h"
 #include "VideoBackends/Null/Render.h"
@@ -208,7 +207,7 @@ void VideoBackend::Video_Prepare()
 
 	BPInit();
 	g_vertex_manager = new VertexManager;
-	g_perf_query = new PerfQuery;
+	g_perf_query = new PerfQueryBase;
 	Fifo_Init(); // must be done before OpcodeDecoder_Init()
 	OpcodeDecoder_Init();
 	IndexGenerator::Init();
