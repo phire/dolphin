@@ -19,8 +19,6 @@ namespace NullVideo
 
 		virtual void Initialize(const PortableVertexDeclaration &_vtx_decl) override;
 		virtual void SetupVertexPointers() override;
-
-		GLuint VAO;
 	};
 
 // Handles the OpenGL details of drawing lots of vertices quickly.
@@ -34,10 +32,6 @@ public:
 	void CreateDeviceObjects() override;
 	void DestroyDeviceObjects() override;
 
-	// NativeVertexFormat use this
-	GLuint m_vertex_buffers;
-	GLuint m_index_buffers;
-	GLuint m_last_vao;
 protected:
 	virtual void ResetBuffer(u32 stride) override;
 private:
