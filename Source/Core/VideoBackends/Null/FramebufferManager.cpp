@@ -6,7 +6,6 @@
 
 #include "VideoBackends/Null/FramebufferManager.h"
 #include "VideoBackends/Null/Render.h"
-#include "VideoBackends/Null/TextureConverter.h"
 
 #include "VideoCommon/DriverDetails.h"
 #include "VideoCommon/OnScreenDisplay.h"

@@ -8,7 +8,6 @@ set(SRCS GLExtensions/GLExtensions.cpp
 	   Render.cpp
 	   StreamBuffer.cpp
 	   TextureCache.cpp
-	   TextureConverter.cpp
 	   VertexManager.cpp)
 
 set(LIBS	videocommon

@@ -53,7 +53,6 @@ Make AA apply instantly during gameplay if possible
 #include "VideoBackends/Null/ProgramShaderCache.h"
 #include "VideoBackends/Null/Render.h"
 #include "VideoBackends/Null/TextureCache.h"
-#include "VideoBackends/Null/TextureConverter.h"
 #include "VideoBackends/Null/VertexManager.h"
 #include "VideoBackends/Null/VideoBackend.h"
 
@@ -216,7 +215,6 @@ void VideoBackend::Video_Prepare()
 	Renderer::Init();
 	GL_REPORT_ERRORD();
 	VertexLoaderManager::Init();
-	TextureConverter::Init();
 
 	// Notify the core that the video backend is ready
 	Host_Message(WM_USER_CREATE);
@@ -244,7 +242,6 @@ void VideoBackend::Video_Cleanup() {
 		// The following calls are NOT Thread Safe
 		// And need to be called from the video thread
 		Renderer::Shutdown();
-		TextureConverter::Shutdown();
 		VertexLoaderManager::Shutdown();
 		delete g_texture_cache;
 		g_texture_cache = nullptr;

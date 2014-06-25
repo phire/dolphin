@@ -30,7 +30,6 @@
 #include "VideoBackends/Null/ProgramShaderCache.h"
 #include "VideoBackends/Null/Render.h"
 #include "VideoBackends/Null/TextureCache.h"
-#include "VideoBackends/Null/TextureConverter.h"
 
 #include "VideoCommon/BPStructs.h"
 #include "VideoCommon/HiresTextures.h"

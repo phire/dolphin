@@ -27,7 +27,6 @@
 #include "VideoBackends/Null/Render.h"
 #include "VideoBackends/Null/StreamBuffer.h"
 #include "VideoBackends/Null/TextureCache.h"
-#include "VideoBackends/Null/TextureConverter.h"
 #include "VideoBackends/Null/VertexManager.h"
 
 #include "VideoCommon/BPFunctions.h"
