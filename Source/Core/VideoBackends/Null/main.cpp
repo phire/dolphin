@@ -91,13 +91,13 @@ namespace NullVideo
 
 unsigned int VideoBackend::PeekMessages()
 {
-	return GLInterface->PeekMessages();
+	return 0; //GLInterface->PeekMessages();
 }
 
 // Show the current FPS
 void VideoBackend::UpdateFPSDisplay(const std::string& text)
 {
-	return GLInterface->UpdateFPSDisplay(StringFromFormat("%s | %s | %s", scm_rev_str, GetDisplayName().c_str(), text.c_str()));
+	//return GLInterface->UpdateFPSDisplay(StringFromFormat("%s | %s | %s", scm_rev_str, GetDisplayName().c_str(), text.c_str()));
 }
 
 std::string VideoBackend::GetName() const
@@ -148,7 +148,7 @@ void GetShaders(std::vector<std::string> &shaders)
 
 void InitBackendInfo()
 {
-	g_Config.backend_info.APIType = API_OPENGL;
+	g_Config.backend_info.APIType = API_NONE;
 	g_Config.backend_info.bUseRGBATextures = true;
 	g_Config.backend_info.bUseMinimalMipCount = false;
 	g_Config.backend_info.bSupports3DVision = false;
@@ -188,10 +188,10 @@ bool VideoBackend::Initialize(void *&window_handle)
 	g_Config.VerifyValidity();
 	UpdateActiveConfig();
 
-	InitInterface();
-	GLInterface->SetMode(GLInterfaceMode::MODE_DETECT);
-	if (!GLInterface->Create(window_handle))
-		return false;
+	//InitInterface();
+	//GLInterface->SetMode(GLInterfaceMode::MODE_DETECT);
+	//if (!GLInterface->Create(window_handle))
+	//	return false;
 
 	// Do our OSD callbacks
 	OSD::DoCallbacks(OSD::OSD_INIT);
@@ -205,7 +205,7 @@ bool VideoBackend::Initialize(void *&window_handle)
 // Run from the graphics thread
 void VideoBackend::Video_Prepare()
 {
-	GLInterface->MakeCurrent();
+	//GLInterface->MakeCurrent();
 
 	g_renderer = new Renderer;
 
@@ -239,7 +239,7 @@ void VideoBackend::Shutdown()
 	// Do our OSD callbacks
 	OSD::DoCallbacks(OSD::OSD_SHUTDOWN);
 
-	GLInterface->Shutdown();
+	//GLInterface->Shutdown();
 }
 
 void VideoBackend::Video_Cleanup() {
@@ -265,7 +265,7 @@ void VideoBackend::Video_Cleanup() {
 		OpcodeDecoder_Shutdown();
 		delete g_renderer;
 		g_renderer = nullptr;
-		GLInterface->ClearCurrent();
+		//GLInterface->ClearCurrent();
 	}
 }
 
