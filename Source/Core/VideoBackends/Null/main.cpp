@@ -48,8 +48,10 @@ Make AA apply instantly during gameplay if possible
 #include "Core/Core.h"
 #include "Core/Host.h"
 
+#include "DolphinWX/GLInterface/GLInterface.h"
+
 #include "VideoBackends/Null/FramebufferManager.h"
-#include "VideoBackends/Null/GLUtil.h"
+//#include "VideoBackends/Null/GLUtil.h"
 #include "VideoBackends/Null/Render.h"
 #include "VideoBackends/Null/TextureCache.h"
 #include "VideoBackends/Null/VertexManager.h"
@@ -72,6 +74,8 @@ Make AA apply instantly during gameplay if possible
 #include "VideoCommon/VideoConfig.h"
 #include "VideoCommon/VideoState.h"
 
+// FIXME
+void InitInterface();
 
 #ifdef _WIN32
 #include "Common/IniFile.h"
@@ -84,6 +88,17 @@ Make AA apply instantly during gameplay if possible
 
 namespace NullVideo
 {
+
+unsigned int VideoBackend::PeekMessages()
+{
+	return GLInterface->PeekMessages();
+}
+
+// Show the current FPS
+void VideoBackend::UpdateFPSDisplay(const std::string& text)
+{
+	return GLInterface->UpdateFPSDisplay(StringFromFormat("%s | %s | %s", scm_rev_str, GetDisplayName().c_str(), text.c_str()));
+}
 
 std::string VideoBackend::GetName() const
 {
@@ -211,7 +226,6 @@ void VideoBackend::Video_Prepare()
 	PixelShaderManager::Init();
 	g_texture_cache = new TextureCache();
 	Renderer::Init();
-	GL_REPORT_ERRORD();
 	VertexLoaderManager::Init();
 
 	// Notify the core that the video backend is ready

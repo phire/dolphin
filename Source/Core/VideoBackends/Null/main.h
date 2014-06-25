@@ -4,4 +4,7 @@
 
 #pragma once
 
+// FIXME:
+void InitInterface();
+
 #include "VideoCommon/MainBase.h"

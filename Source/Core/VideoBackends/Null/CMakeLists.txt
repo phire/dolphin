@@ -1,6 +1,4 @@
-set(SRCS GLExtensions/GLExtensions.cpp
-	   FramebufferManager.cpp
-	   GLUtil.cpp
+set(SRCS FramebufferManager.cpp
 	   main.cpp
 	   NativeVertexFormat.cpp
 	   Render.cpp
