@@ -932,8 +932,6 @@ void Renderer::RestoreAPIState()
 
 	if (GLInterface->GetMode() == GLInterfaceMode::MODE_OPENGL)
 		glPolygonMode(GL_FRONT_AND_BACK, g_ActiveConfig.bWireFrame ? GL_LINE : GL_FILL);
-
-	TextureCache::SetStage();
 }
 
 }

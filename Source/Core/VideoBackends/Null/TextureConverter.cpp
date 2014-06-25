@@ -350,7 +350,6 @@ void EncodeToRamYUYV(GLuint srcTexture, const TargetRectangle& sourceRc, u8* des
 	// Otherwise we get jaggies when a game uses yscaling (most PAL games)
 	EncodeToRamUsingShader(srcTexture, destAddr, dstWidth / 2, dstHeight, dstWidth*dstHeight*2, true);
 	FramebufferManager::SetFramebuffer(0);
-	TextureCache::DisableStage(0);
 	g_renderer->RestoreAPIState();
 	GL_REPORT_ERRORD();
 }
