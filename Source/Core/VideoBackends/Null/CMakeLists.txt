@@ -3,7 +3,6 @@ set(SRCS GLExtensions/GLExtensions.cpp
 	   GLUtil.cpp
 	   main.cpp
 	   NativeVertexFormat.cpp
-	   PostProcessing.cpp
 	   ProgramShaderCache.cpp
 	   RasterFont.cpp
 	   Render.cpp
