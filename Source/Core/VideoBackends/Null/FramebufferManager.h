@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "VideoBackends/Null/GLUtil.h"
 #include "VideoBackends/Null/Render.h"
 
 #include "VideoCommon/FramebufferManagerBase.h"

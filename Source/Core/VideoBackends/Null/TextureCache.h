@@ -6,7 +6,6 @@
 
 #include <map>
 
-#include "VideoBackends/Null/GLUtil.h"
 #include "VideoCommon/BPStructs.h"
 #include "VideoCommon/TextureCacheBase.h"
 #include "VideoCommon/VideoCommon.h"
