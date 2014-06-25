@@ -26,7 +26,6 @@
 #include "VideoBackends/Null/ProgramShaderCache.h"
 #include "VideoBackends/Null/RasterFont.h"
 #include "VideoBackends/Null/Render.h"
-#include "VideoBackends/Null/SamplerCache.h"
 #include "VideoBackends/Null/StreamBuffer.h"
 #include "VideoBackends/Null/TextureCache.h"
 #include "VideoBackends/Null/TextureConverter.h"

@@ -7,7 +7,6 @@ set(SRCS GLExtensions/GLExtensions.cpp
 	   ProgramShaderCache.cpp
 	   RasterFont.cpp
 	   Render.cpp
-	   SamplerCache.cpp
 	   StreamBuffer.cpp
 	   TextureCache.cpp
 	   TextureConverter.cpp
