@@ -98,14 +98,6 @@ static bool s_vsync;
 static std::thread scrshotThread;
 #endif
 
-// EFB cache related
-static const u32 EFB_CACHE_RECT_SIZE = 64; // Cache 64x64 blocks.
-static const u32 EFB_CACHE_WIDTH = (EFB_WIDTH + EFB_CACHE_RECT_SIZE - 1) / EFB_CACHE_RECT_SIZE; // round up
-static const u32 EFB_CACHE_HEIGHT = (EFB_HEIGHT + EFB_CACHE_RECT_SIZE - 1) / EFB_CACHE_RECT_SIZE;
-static bool s_efbCacheValid[2][EFB_CACHE_WIDTH * EFB_CACHE_HEIGHT];
-static bool s_efbCacheIsCleared = false;
-static std::vector<u32> s_efbCache[2][EFB_CACHE_WIDTH * EFB_CACHE_HEIGHT]; // 2 for PEEK_Z and PEEK_COLOR
-
 int GetNumMSAASamples(int MSAAMode)
 {
 	int samples;
@@ -609,7 +601,6 @@ Renderer::Renderer()
 			}
 	}
 	UpdateActiveConfig();
-	ClearEFBCache();
 }
 
 Renderer::~Renderer()
@@ -845,234 +836,10 @@ TargetRectangle Renderer::ConvertEFBRectangle(const EFBRectangle& rc)
 	return result;
 }
 
-void ClearEFBCache()
-{
-	if (!s_efbCacheIsCleared)
-	{
-		s_efbCacheIsCleared = true;
-		memset(s_efbCacheValid, 0, sizeof(s_efbCacheValid));
-	}
-}
-
-void Renderer::UpdateEFBCache(EFBAccessType type, u32 cacheRectIdx, const EFBRectangle& efbPixelRc, const TargetRectangle& targetPixelRc, const u32* data)
-{
-	u32 cacheType = (type == PEEK_Z ? 0 : 1);
-
-	if (!s_efbCache[cacheType][cacheRectIdx].size())
-		s_efbCache[cacheType][cacheRectIdx].resize(EFB_CACHE_RECT_SIZE * EFB_CACHE_RECT_SIZE);
-
-	u32 targetPixelRcWidth = targetPixelRc.right - targetPixelRc.left;
-	u32 efbPixelRcHeight = efbPixelRc.bottom - efbPixelRc.top;
-	u32 efbPixelRcWidth = efbPixelRc.right - efbPixelRc.left;
-
-	for (u32 yCache = 0; yCache < efbPixelRcHeight; ++yCache)
-	{
-		u32 yEFB = efbPixelRc.top + yCache;
-		u32 yPixel = (EFBToScaledY(EFB_HEIGHT - yEFB) + EFBToScaledY(EFB_HEIGHT - yEFB - 1)) / 2;
-		u32 yData = yPixel - targetPixelRc.bottom;
-
-		for (u32 xCache = 0; xCache < efbPixelRcWidth; ++xCache)
-		{
-			u32 xEFB = efbPixelRc.left + xCache;
-			u32 xPixel = (EFBToScaledX(xEFB) + EFBToScaledX(xEFB + 1)) / 2;
-			u32 xData = xPixel - targetPixelRc.left;
-			s_efbCache[cacheType][cacheRectIdx][yCache * EFB_CACHE_RECT_SIZE + xCache] = data[yData * targetPixelRcWidth + xData];
-		}
-	}
-
-	s_efbCacheValid[cacheType][cacheRectIdx] = true;
-	s_efbCacheIsCleared = false;
-}
-
-// This function allows the CPU to directly access the EFB.
-// There are EFB peeks (which will read the color or depth of a pixel)
-// and EFB pokes (which will change the color or depth of a pixel).
-//
-// The behavior of EFB peeks can only be modified by:
-// - GX_PokeAlphaRead
-// The behavior of EFB pokes can be modified by:
-// - GX_PokeAlphaMode (TODO)
-// - GX_PokeAlphaUpdate (TODO)
-// - GX_PokeBlendMode (TODO)
-// - GX_PokeColorUpdate (TODO)
-// - GX_PokeDither (TODO)
-// - GX_PokeDstAlpha (TODO)
-// - GX_PokeZMode (TODO)
+// No video, no access to EFB.
+// TODO: Set the option so Skip EFB Acesss is always enabled.
 u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
 {
-	u32 cacheRectIdx = (y / EFB_CACHE_RECT_SIZE) * EFB_CACHE_WIDTH
-					 + (x / EFB_CACHE_RECT_SIZE);
-
-	// Get the rectangular target region containing the EFB pixel
-	EFBRectangle efbPixelRc;
-	efbPixelRc.left = (x / EFB_CACHE_RECT_SIZE) * EFB_CACHE_RECT_SIZE;
-	efbPixelRc.top = (y / EFB_CACHE_RECT_SIZE) * EFB_CACHE_RECT_SIZE;
-	efbPixelRc.right = std::min(efbPixelRc.left + EFB_CACHE_RECT_SIZE, (u32)EFB_WIDTH);
-	efbPixelRc.bottom = std::min(efbPixelRc.top + EFB_CACHE_RECT_SIZE, (u32)EFB_HEIGHT);
-
-	TargetRectangle targetPixelRc = ConvertEFBRectangle(efbPixelRc);
-	u32 targetPixelRcWidth = targetPixelRc.right - targetPixelRc.left;
-	u32 targetPixelRcHeight = targetPixelRc.top - targetPixelRc.bottom;
-
-	// TODO (FIX) : currently, AA path is broken/offset and doesn't return the correct pixel
-	switch (type)
-	{
-	case PEEK_Z:
-		{
-			u32 z;
-
-			if (!s_efbCacheValid[0][cacheRectIdx])
-			{
-				if (s_MSAASamples > 1)
-				{
-					g_renderer->ResetAPIState();
-
-					// Resolve our rectangle.
-					FramebufferManager::GetEFBDepthTexture(efbPixelRc);
-					glBindFramebuffer(GL_READ_FRAMEBUFFER, FramebufferManager::GetResolvedFramebuffer());
-
-					g_renderer->RestoreAPIState();
-				}
-
-				u32* depthMap = new u32[targetPixelRcWidth * targetPixelRcHeight];
-
-				glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth, targetPixelRcHeight,
-							 GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, depthMap);
-				GL_REPORT_ERRORD();
-
-				UpdateEFBCache(type, cacheRectIdx, efbPixelRc, targetPixelRc, depthMap);
-
-				delete[] depthMap;
-			}
-
-			u32 xRect = x % EFB_CACHE_RECT_SIZE;
-			u32 yRect = y % EFB_CACHE_RECT_SIZE;
-			z = s_efbCache[0][cacheRectIdx][yRect * EFB_CACHE_RECT_SIZE + xRect];
-
-			// Scale the 32-bit value returned by glReadPixels to a 24-bit
-			// value (GC uses a 24-bit Z-buffer).
-			// TODO: in RE0 this value is often off by one, which causes lighting to disappear
-			if (bpmem.zcontrol.pixel_format == PEControl::RGB565_Z16)
-			{
-				// if Z is in 16 bit format you must return a 16 bit integer
-				z = z >> 16;
-			}
-			else
-			{
-				z = z >> 8;
-			}
-			return z;
-		}
-
-	case PEEK_COLOR: // GXPeekARGB
-		{
-			// Although it may sound strange, this really is A8R8G8B8 and not RGBA or 24-bit...
-
-			// Tested in Killer 7, the first 8bits represent the alpha value which is used to
-			// determine if we're aiming at an enemy (0x80 / 0x88) or not (0x70)
-			// Wind Waker is also using it for the pictograph to determine the color of each pixel
-
-			u32 color;
-
-			if (!s_efbCacheValid[1][cacheRectIdx])
-			{
-				if (s_MSAASamples > 1)
-				{
-					g_renderer->ResetAPIState();
-
-					// Resolve our rectangle.
-					FramebufferManager::GetEFBColorTexture(efbPixelRc);
-					glBindFramebuffer(GL_READ_FRAMEBUFFER, FramebufferManager::GetResolvedFramebuffer());
-
-					g_renderer->RestoreAPIState();
-				}
-
-				u32* colorMap = new u32[targetPixelRcWidth * targetPixelRcHeight];
-
-				if (GLInterface->GetMode() == GLInterfaceMode::MODE_OPENGLES3)
-				// XXX: Swap colours
-					glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth, targetPixelRcHeight,
-							 GL_RGBA, GL_UNSIGNED_BYTE, colorMap);
-				else
-					glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth, targetPixelRcHeight,
-							 GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, colorMap);
-				GL_REPORT_ERRORD();
-
-				UpdateEFBCache(type, cacheRectIdx, efbPixelRc, targetPixelRc, colorMap);
-
-				delete[] colorMap;
-			}
-
-			u32 xRect = x % EFB_CACHE_RECT_SIZE;
-			u32 yRect = y % EFB_CACHE_RECT_SIZE;
-			color = s_efbCache[1][cacheRectIdx][yRect * EFB_CACHE_RECT_SIZE + xRect];
-
-			// check what to do with the alpha channel (GX_PokeAlphaRead)
-			PixelEngine::UPEAlphaReadReg alpha_read_mode = PixelEngine::GetAlphaReadMode();
-
-			if (bpmem.zcontrol.pixel_format == PEControl::RGBA6_Z24)
-			{
-				color = RGBA8ToRGBA6ToRGBA8(color);
-			}
-			else if (bpmem.zcontrol.pixel_format == PEControl::RGB565_Z16)
-			{
-				color = RGBA8ToRGB565ToRGBA8(color);
-			}
-			if (bpmem.zcontrol.pixel_format != PEControl::RGBA6_Z24)
-			{
-				color |= 0xFF000000;
-			}
-			if (alpha_read_mode.ReadMode == 2) return color; // GX_READ_NONE
-			else if (alpha_read_mode.ReadMode == 1) return (color | 0xFF000000); // GX_READ_FF
-			else /*if(alpha_read_mode.ReadMode == 0)*/ return (color & 0x00FFFFFF); // GX_READ_00
-		}
-
-	case POKE_COLOR:
-	{
-		ResetAPIState();
-
-		glClearColor(float((poke_data >> 16) & 0xFF) / 255.0f,
-					 float((poke_data >>  8) & 0xFF) / 255.0f,
-					 float((poke_data >>  0) & 0xFF) / 255.0f,
-					 float((poke_data >> 24) & 0xFF) / 255.0f);
-
-		glEnable(GL_SCISSOR_TEST);
-		glScissor(targetPixelRc.left, targetPixelRc.bottom, targetPixelRc.GetWidth(), targetPixelRc.GetHeight());
-
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		RestoreAPIState();
-
-		// TODO: Could just update the EFB cache with the new value
-		ClearEFBCache();
-
-		break;
-	}
-
-	case POKE_Z:
-	{
-		ResetAPIState();
-
-		glDepthMask(GL_TRUE);
-		glClearDepthf(float(poke_data & 0xFFFFFF) / float(0xFFFFFF));
-
-		glEnable(GL_SCISSOR_TEST);
-		glScissor(targetPixelRc.left, targetPixelRc.bottom, targetPixelRc.GetWidth(), targetPixelRc.GetHeight());
-
-		glClear(GL_DEPTH_BUFFER_BIT);
-
-		RestoreAPIState();
-
-		// TODO: Could just update the EFB cache with the new value
-		ClearEFBCache();
-
-		break;
-	}
-
-	default:
-		break;
-	}
-
 	return 0;
 }
 
@@ -1107,8 +874,6 @@ void Renderer::ClearScreen(const EFBRectangle& rc, bool colorEnable, bool alphaE
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	RestoreAPIState();
-
-	ClearEFBCache();
 }
 
 void Renderer::ReinterpretPixelData(unsigned int convtype)
@@ -1466,9 +1231,6 @@ void Renderer::SwapImpl(u32 xfbAddr, u32 fbWidth, u32 fbHeight,const EFBRectangl
 	// Renderer::SetZBufferRender();
 	// SaveTexture("tex.png", GL_TEXTURE_2D, s_FakeZTarget,
 	//	      GetTargetWidth(), GetTargetHeight());
-
-	// Invalidate EFB cache
-	ClearEFBCache();
 }
 
 // ALWAYS call RestoreAPIState for each ResetAPIState call you're doing
