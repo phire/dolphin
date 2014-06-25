@@ -629,8 +629,7 @@ void Renderer::Shutdown()
 void Renderer::Init()
 {
 	// Initialize the FramebufferManager
-	g_framebuffer_manager = new FramebufferManager(s_target_width, s_target_height,
-			s_MSAASamples);
+	g_framebuffer_manager = new FramebufferManager(s_target_width, s_target_height);
 
 	s_pfont = new RasterFont();
 
@@ -876,14 +875,7 @@ void Renderer::ClearScreen(const EFBRectangle& rc, bool colorEnable, bool alphaE
 
 void Renderer::ReinterpretPixelData(unsigned int convtype)
 {
-	if (convtype == 0 || convtype == 2)
-	{
-		FramebufferManager::ReinterpretPixelData(convtype);
-	}
-	else
-	{
-		ERROR_LOG(VIDEO, "Trying to reinterpret pixel data with unsupported conversion type %d", convtype);
-	}
+
 }
 
 void DumpFrame(const std::vector<u8>& data, int w, int h)

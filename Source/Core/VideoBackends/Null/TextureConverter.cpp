@@ -182,11 +182,6 @@ void Init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, renderBufferWidth, renderBufferHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-
-	FramebufferManager::SetFramebuffer(s_texConvFrameBuffer[0]);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_dstTexture, 0);
-	FramebufferManager::SetFramebuffer(0);
-
 	glGenBuffers(1, &s_PBO);
 
 	CreatePrograms();
@@ -217,11 +212,6 @@ static void EncodeToRamUsingShader(GLuint srcTexture,
 						bool linearFilter)
 {
 
-
-	// switch to texture converter frame buffer
-	// attach render buffer as color destination
-	FramebufferManager::SetFramebuffer(s_texConvFrameBuffer[0]);
-	GL_REPORT_ERRORD();
 
 	// set source texture
 	glActiveTexture(GL_TEXTURE0+9);
@@ -349,7 +339,7 @@ void EncodeToRamYUYV(GLuint srcTexture, const TargetRectangle& sourceRc, u8* des
 	// yscale is enabled.
 	// Otherwise we get jaggies when a game uses yscaling (most PAL games)
 	EncodeToRamUsingShader(srcTexture, destAddr, dstWidth / 2, dstHeight, dstWidth*dstHeight*2, true);
-	FramebufferManager::SetFramebuffer(0);
+
 	g_renderer->RestoreAPIState();
 	GL_REPORT_ERRORD();
 }
@@ -369,7 +359,6 @@ void DecodeToTexture(u32 xfbAddr, int srcWidth, int srcHeight, GLuint destTextur
 
 	// switch to texture converter frame buffer
 	// attach destTexture as color destination
-	FramebufferManager::SetFramebuffer(s_texConvFrameBuffer[1]);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, destTexture, 0);
 
 	GL_REPORT_FBO_ERROR();
@@ -384,8 +373,6 @@ void DecodeToTexture(u32 xfbAddr, int srcWidth, int srcHeight, GLuint destTextur
 	s_yuyvToRgbProgram.Bind();
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-	FramebufferManager::SetFramebuffer(0);
 
 	g_renderer->RestoreAPIState();
 	GL_REPORT_ERRORD();
