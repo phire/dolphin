@@ -5,7 +5,8 @@
 #pragma once
 
 #include "VideoCommon/CPMemory.h"
-#include "VideoCommon/VertexManagerBase.h"
+#include "VideoCommon/NativeVertexFormat.h"
+#include "VideoCommon/VertexManagerBase.h"\
 
 namespace NullVideo
 {

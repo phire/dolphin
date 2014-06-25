@@ -6,7 +6,6 @@
 #include "Common/x64ABI.h"
 #include "Common/x64Emitter.h"
 
-#include "VideoBackends/Null/ProgramShaderCache.h"
 #include "VideoBackends/Null/VertexManager.h"
 
 #include "VideoCommon/CPMemory.h"

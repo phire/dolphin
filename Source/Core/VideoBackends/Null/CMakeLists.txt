@@ -3,7 +3,6 @@ set(SRCS GLExtensions/GLExtensions.cpp
 	   GLUtil.cpp
 	   main.cpp
 	   NativeVertexFormat.cpp
-	   ProgramShaderCache.cpp
 	   Render.cpp
 	   StreamBuffer.cpp
 	   TextureCache.cpp
