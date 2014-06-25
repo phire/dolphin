@@ -845,36 +845,6 @@ TargetRectangle Renderer::ConvertEFBRectangle(const EFBRectangle& rc)
 	return result;
 }
 
-// Function: This function handles the OpenGL glScissor() function
-// ----------------------------
-// Call browser: OpcodeDecoding.cpp ExecuteDisplayList > Decode() > LoadBPReg()
-//		case 0x52 > SetScissorRect()
-// ----------------------------
-// bpmem.scissorTL.x, y = 342x342
-// bpmem.scissorBR.x, y = 981x821
-// Renderer::GetTargetHeight() = the fixed ini file setting
-// donkopunchstania - it appears scissorBR is the bottom right pixel inside the scissor box
-// therefore the width and height are (scissorBR + 1) - scissorTL
-void Renderer::SetScissorRect(const EFBRectangle& rc)
-{
-	TargetRectangle trc = g_renderer->ConvertEFBRectangle(rc);
-	glScissor(trc.left, trc.bottom, trc.GetWidth(), trc.GetHeight());
-}
-
-void Renderer::SetColorMask()
-{
-	// Only enable alpha channel if it's supported by the current EFB format
-	GLenum ColorMask = GL_FALSE, AlphaMask = GL_FALSE;
-	if (bpmem.alpha_test.TestResult() != AlphaTest::FAIL)
-	{
-		if (bpmem.blendmode.colorupdate)
-			ColorMask = GL_TRUE;
-		if (bpmem.blendmode.alphaupdate && (bpmem.zcontrol.pixel_format == PEControl::RGBA6_Z24))
-			AlphaMask = GL_TRUE;
-	}
-	glColorMask(ColorMask,  ColorMask,  ColorMask,  AlphaMask);
-}
-
 void ClearEFBCache()
 {
 	if (!s_efbCacheIsCleared)
@@ -931,7 +901,7 @@ void Renderer::UpdateEFBCache(EFBAccessType type, u32 cacheRectIdx, const EFBRec
 u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
 {
 	u32 cacheRectIdx = (y / EFB_CACHE_RECT_SIZE) * EFB_CACHE_WIDTH
-	                 + (x / EFB_CACHE_RECT_SIZE);
+					 + (x / EFB_CACHE_RECT_SIZE);
 
 	// Get the rectangular target region containing the EFB pixel
 	EFBRectangle efbPixelRc;
@@ -967,7 +937,7 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
 				u32* depthMap = new u32[targetPixelRcWidth * targetPixelRcHeight];
 
 				glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth, targetPixelRcHeight,
-				             GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, depthMap);
+							 GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, depthMap);
 				GL_REPORT_ERRORD();
 
 				UpdateEFBCache(type, cacheRectIdx, efbPixelRc, targetPixelRc, depthMap);
@@ -1022,10 +992,10 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
 				if (GLInterface->GetMode() == GLInterfaceMode::MODE_OPENGLES3)
 				// XXX: Swap colours
 					glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth, targetPixelRcHeight,
-						     GL_RGBA, GL_UNSIGNED_BYTE, colorMap);
+							 GL_RGBA, GL_UNSIGNED_BYTE, colorMap);
 				else
 					glReadPixels(targetPixelRc.left, targetPixelRc.bottom, targetPixelRcWidth, targetPixelRcHeight,
-						     GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, colorMap);
+							 GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, colorMap);
 				GL_REPORT_ERRORD();
 
 				UpdateEFBCache(type, cacheRectIdx, efbPixelRc, targetPixelRc, colorMap);
@@ -1062,9 +1032,9 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
 		ResetAPIState();
 
 		glClearColor(float((poke_data >> 16) & 0xFF) / 255.0f,
-		             float((poke_data >>  8) & 0xFF) / 255.0f,
-		             float((poke_data >>  0) & 0xFF) / 255.0f,
-		             float((poke_data >> 24) & 0xFF) / 255.0f);
+					 float((poke_data >>  8) & 0xFF) / 255.0f,
+					 float((poke_data >>  0) & 0xFF) / 255.0f,
+					 float((poke_data >> 24) & 0xFF) / 255.0f);
 
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(targetPixelRc.left, targetPixelRc.bottom, targetPixelRc.GetWidth(), targetPixelRc.GetHeight());
@@ -1104,49 +1074,6 @@ u32 Renderer::AccessEFB(EFBAccessType type, u32 x, u32 y, u32 poke_data)
 	}
 
 	return 0;
-}
-
-void Renderer::SetViewport()
-{
-	// reversed gxsetviewport(xorig, yorig, width, height, nearz, farz)
-	// [0] = width/2
-	// [1] = height/2
-	// [2] = 16777215 * (farz - nearz)
-	// [3] = xorig + width/2 + 342
-	// [4] = yorig + height/2 + 342
-	// [5] = 16777215 * farz
-
-	int scissorXOff = bpmem.scissorOffset.x * 2;
-	int scissorYOff = bpmem.scissorOffset.y * 2;
-
-	// TODO: ceil, floor or just cast to int?
-	float X = EFBToScaledXf(xfmem.viewport.xOrig - xfmem.viewport.wd - (float)scissorXOff);
-	float Y = EFBToScaledYf((float)EFB_HEIGHT - xfmem.viewport.yOrig + xfmem.viewport.ht + (float)scissorYOff);
-	float Width = EFBToScaledXf(2.0f * xfmem.viewport.wd);
-	float Height = EFBToScaledYf(-2.0f * xfmem.viewport.ht);
-	float GLNear = (xfmem.viewport.farZ - xfmem.viewport.zRange) / 16777216.0f;
-	float GLFar = xfmem.viewport.farZ / 16777216.0f;
-	if (Width < 0)
-	{
-		X += Width;
-		Width *= -1;
-	}
-	if (Height < 0)
-	{
-		Y += Height;
-		Height *= -1;
-	}
-
-	// Update the view port
-	if (g_ogl_config.bSupportViewportFloat)
-	{
-		glViewportIndexedf(0, X, Y, Width, Height);
-	}
-	else
-	{
-		glViewport(ceil(X), ceil(Y), ceil(Width), ceil(Height));
-	}
-	glDepthRangef(GLNear, GLFar);
 }
 
 void Renderer::ClearScreen(const EFBRectangle& rc, bool colorEnable, bool alphaEnable, bool zEnable, u32 color, u32 z)
@@ -1194,103 +1121,6 @@ void Renderer::ReinterpretPixelData(unsigned int convtype)
 	{
 		ERROR_LOG(VIDEO, "Trying to reinterpret pixel data with unsupported conversion type %d", convtype);
 	}
-}
-
-void Renderer::SetBlendMode(bool forceUpdate)
-{
-	// Our render target always uses an alpha channel, so we need to override the blend functions to assume a destination alpha of 1 if the render target isn't supposed to have an alpha channel
-	// Example: D3DBLEND_DESTALPHA needs to be D3DBLEND_ONE since the result without an alpha channel is assumed to always be 1.
-	bool target_has_alpha = bpmem.zcontrol.pixel_format == PEControl::RGBA6_Z24;
-
-	bool useDstAlpha = !g_ActiveConfig.bDstAlphaPass && bpmem.dstalpha.enable && bpmem.blendmode.alphaupdate && target_has_alpha;
-	bool useDualSource = useDstAlpha && g_ActiveConfig.backend_info.bSupportsDualSourceBlend;
-
-	const GLenum glSrcFactors[8] =
-	{
-		GL_ZERO,
-		GL_ONE,
-		GL_DST_COLOR,
-		GL_ONE_MINUS_DST_COLOR,
-		(useDualSource)  ? GL_SRC1_ALPHA : (GLenum)GL_SRC_ALPHA,
-		(useDualSource)  ? GL_ONE_MINUS_SRC1_ALPHA : (GLenum)GL_ONE_MINUS_SRC_ALPHA,
-		(target_has_alpha) ? GL_DST_ALPHA : (GLenum)GL_ONE,
-		(target_has_alpha) ? GL_ONE_MINUS_DST_ALPHA : (GLenum)GL_ZERO
-	};
-	const GLenum glDestFactors[8] =
-	{
-		GL_ZERO,
-		GL_ONE,
-		GL_SRC_COLOR,
-		GL_ONE_MINUS_SRC_COLOR,
-		(useDualSource)  ? GL_SRC1_ALPHA : (GLenum)GL_SRC_ALPHA,
-		(useDualSource)  ? GL_ONE_MINUS_SRC1_ALPHA : (GLenum)GL_ONE_MINUS_SRC_ALPHA,
-		(target_has_alpha) ? GL_DST_ALPHA : (GLenum)GL_ONE,
-		(target_has_alpha) ? GL_ONE_MINUS_DST_ALPHA : (GLenum)GL_ZERO
-	};
-
-	// blend mode bit mask
-	// 0 - blend enable
-	// 1 - dst alpha enabled
-	// 2 - reverse subtract enable (else add)
-	// 3-5 - srcRGB function
-	// 6-8 - dstRGB function
-
-	u32 newval = useDualSource << 1;
-	newval |= bpmem.blendmode.subtract << 2;
-
-	if (bpmem.blendmode.subtract)
-		newval |= 0x0049;   // enable blending src 1 dst 1
-	else if (bpmem.blendmode.blendenable)
-	{
-		newval |= 1;    // enable blending
-		newval |= bpmem.blendmode.srcfactor << 3;
-		newval |= bpmem.blendmode.dstfactor << 6;
-	}
-
-	u32 changes = forceUpdate ? 0xFFFFFFFF : newval ^ s_blendMode;
-
-	if (changes & 1)
-		// blend enable change
-		(newval & 1) ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
-
-	if (changes & 4)
-	{
-		// subtract enable change
-		GLenum equation = newval & 4 ? GL_FUNC_REVERSE_SUBTRACT : GL_FUNC_ADD;
-		GLenum equationAlpha = useDualSource ? GL_FUNC_ADD : equation;
-
-		glBlendEquationSeparate(equation, equationAlpha);
-	}
-
-	if (changes & 0x1FA)
-	{
-		u32 srcidx = (newval >> 3) & 7;
-		u32 dstidx = (newval >> 6) & 7;
-		GLenum srcFactor = glSrcFactors[srcidx];
-		GLenum dstFactor = glDestFactors[dstidx];
-
-		// adjust alpha factors
-		if (useDualSource)
-		{
-			srcidx = BlendMode::ONE;
-			dstidx = BlendMode::ZERO;
-		}
-		else
-		{
-			// we can't use GL_DST_COLOR or GL_ONE_MINUS_DST_COLOR for source in alpha channel so use their alpha equivalent instead
-			if (srcidx == BlendMode::DSTCLR) srcidx = BlendMode::DSTALPHA;
-			if (srcidx == BlendMode::INVDSTCLR) srcidx = BlendMode::INVDSTALPHA;
-
-			// we can't use GL_SRC_COLOR or GL_ONE_MINUS_SRC_COLOR for destination in alpha channel so use their alpha equivalent instead
-			if (dstidx == BlendMode::SRCCLR) dstidx = BlendMode::SRCALPHA;
-			if (dstidx == BlendMode::INVSRCCLR) dstidx = BlendMode::INVSRCALPHA;
-		}
-		GLenum srcFactorAlpha = glSrcFactors[srcidx];
-		GLenum dstFactorAlpha = glDestFactors[dstidx];
-		// blend RGB change
-		glBlendFuncSeparate(srcFactor, dstFactor, srcFactorAlpha, dstFactorAlpha);
-	}
-	s_blendMode = newval;
 }
 
 void DumpFrame(const std::vector<u8>& data, int w, int h)
@@ -1676,117 +1506,6 @@ void Renderer::RestoreAPIState()
 	glBindVertexArray(vm->m_last_vao);
 
 	TextureCache::SetStage();
-}
-
-void Renderer::SetGenerationMode()
-{
-	// none, ccw, cw, ccw
-	if (bpmem.genMode.cullmode > 0)
-	{
-		// TODO: GX_CULL_ALL not supported, yet!
-		glEnable(GL_CULL_FACE);
-		glFrontFace(bpmem.genMode.cullmode == 2 ? GL_CCW : GL_CW);
-	}
-	else
-		glDisable(GL_CULL_FACE);
-}
-
-void Renderer::SetDepthMode()
-{
-	const GLenum glCmpFuncs[8] =
-	{
-		GL_NEVER,
-		GL_LESS,
-		GL_EQUAL,
-		GL_LEQUAL,
-		GL_GREATER,
-		GL_NOTEQUAL,
-		GL_GEQUAL,
-		GL_ALWAYS
-	};
-
-	if (bpmem.zmode.testenable)
-	{
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(bpmem.zmode.updateenable ? GL_TRUE : GL_FALSE);
-		glDepthFunc(glCmpFuncs[bpmem.zmode.func]);
-	}
-	else
-	{
-		// if the test is disabled write is disabled too
-		// TODO: When PE performance metrics are being emulated via occlusion queries, we should (probably?) enable depth test with depth function ALWAYS here
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
-	}
-}
-
-void Renderer::SetLogicOpMode()
-{
-	if (GLInterface->GetMode() != GLInterfaceMode::MODE_OPENGL)
-		return;
-	// Logic ops aren't available in GLES3/GLES2
-	const GLenum glLogicOpCodes[16] =
-	{
-		GL_CLEAR,
-		GL_AND,
-		GL_AND_REVERSE,
-		GL_COPY,
-		GL_AND_INVERTED,
-		GL_NOOP,
-		GL_XOR,
-		GL_OR,
-		GL_NOR,
-		GL_EQUIV,
-		GL_INVERT,
-		GL_OR_REVERSE,
-		GL_COPY_INVERTED,
-		GL_OR_INVERTED,
-		GL_NAND,
-		GL_SET
-	};
-
-	if (bpmem.blendmode.logicopenable)
-	{
-		glEnable(GL_COLOR_LOGIC_OP);
-		glLogicOp(glLogicOpCodes[bpmem.blendmode.logicmode]);
-	}
-	else
-	{
-		glDisable(GL_COLOR_LOGIC_OP);
-	}
-}
-
-void Renderer::SetDitherMode()
-{
-	if (bpmem.blendmode.dither)
-		glEnable(GL_DITHER);
-	else
-		glDisable(GL_DITHER);
-}
-
-void Renderer::SetLineWidth()
-{
-	float fratio = xfmem.viewport.wd != 0 ?
-		((float)Renderer::GetTargetWidth() / EFB_WIDTH) : 1.0f;
-	if (bpmem.lineptwidth.linesize > 0)
-		// scale by ratio of widths
-		glLineWidth((float)bpmem.lineptwidth.linesize * fratio / 6.0f);
-	if (GLInterface->GetMode() == GLInterfaceMode::MODE_OPENGL && bpmem.lineptwidth.pointsize > 0)
-		glPointSize((float)bpmem.lineptwidth.pointsize * fratio / 6.0f);
-}
-
-void Renderer::SetSamplerState(int stage, int texindex)
-{
-	auto const& tex = bpmem.tex[texindex];
-	auto const& tm0 = tex.texMode0[stage];
-	auto const& tm1 = tex.texMode1[stage];
-
-	g_sampler_cache->SetSamplerState((texindex * 4) + stage, tm0, tm1);
-}
-
-void Renderer::SetInterlacingMode()
-{
-	// TODO
 }
 
 void Renderer::FlipImageData(u8 *data, int w, int h, int pixel_width)

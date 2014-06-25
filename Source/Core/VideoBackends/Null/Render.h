@@ -46,17 +46,17 @@ public:
 	static void Init();
 	static void Shutdown();
 
-	void SetColorMask() override;
-	void SetBlendMode(bool forceUpdate) override;
-	void SetScissorRect(const EFBRectangle& rc) override;
-	void SetGenerationMode() override;
-	void SetDepthMode() override;
-	void SetLogicOpMode() override;
-	void SetDitherMode() override;
-	void SetLineWidth() override;
-	void SetSamplerState(int stage,int texindex) override;
-	void SetInterlacingMode() override;
-	void SetViewport() override;
+	void SetColorMask() override {}
+	void SetBlendMode(bool forceUpdate) override {}
+	void SetScissorRect(const EFBRectangle& rc) override {}
+	void SetGenerationMode() override {}
+	void SetDepthMode() override {}
+	void SetLogicOpMode() override {}
+	void SetDitherMode() override {}
+	void SetLineWidth() override {}
+	void SetSamplerState(int stage,int texindex) override {}
+	void SetInterlacingMode() override {}
+	void SetViewport() override {}
 
 	// TODO: Implement and use these
 	void ApplyState(bool bUseDstAlpha) override {}
