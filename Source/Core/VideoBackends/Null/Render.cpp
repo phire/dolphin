@@ -23,7 +23,6 @@
 #include "VideoBackends/Null/GLUtil.h"
 #include "VideoBackends/Null/main.h"
 #include "VideoBackends/Null/ProgramShaderCache.h"
-#include "VideoBackends/Null/RasterFont.h"
 #include "VideoBackends/Null/Render.h"
 #include "VideoBackends/Null/StreamBuffer.h"
 #include "VideoBackends/Null/TextureCache.h"
@@ -77,11 +76,6 @@ VideoConfig g_ogl_config;
 // Declarations and definitions
 // ----------------------------
 static int s_fps = 0;
-static GLuint s_ShowEFBCopyRegions_VBO = 0;
-static GLuint s_ShowEFBCopyRegions_VAO = 0;
-static SHADER s_ShowEFBCopyRegions;
-
-static RasterFont* s_pfont = nullptr;
 
 // 1 for no MSAA. Use s_MSAASamples > 1 to check for MSAA.
 static int s_MSAASamples = 1;
@@ -321,7 +315,6 @@ Renderer::Renderer()
 	OSDInternalH = 0;
 
 	s_fps=0;
-	s_ShowEFBCopyRegions_VBO = 0;
 	s_blendMode = 0;
 	InitFPSCounter();
 
@@ -615,14 +608,6 @@ void Renderer::Shutdown()
 
 	g_Config.bRunning = false;
 	UpdateActiveConfig();
-
-	glDeleteBuffers(1, &s_ShowEFBCopyRegions_VBO);
-	glDeleteVertexArrays(1, &s_ShowEFBCopyRegions_VAO);
-	s_ShowEFBCopyRegions_VBO = 0;
-
-	delete s_pfont;
-	s_pfont = nullptr;
-	s_ShowEFBCopyRegions.Destroy();
 }
 
 void Renderer::Init()
@@ -630,27 +615,7 @@ void Renderer::Init()
 	// Initialize the FramebufferManager
 	g_framebuffer_manager = new FramebufferManager(s_target_width, s_target_height);
 
-	s_pfont = new RasterFont();
-
-	ProgramShaderCache::CompileShader(s_ShowEFBCopyRegions,
-		"in vec2 rawpos;\n"
-		"in vec3 color0;\n"
-		"out vec4 c;\n"
-		"void main(void) {\n"
-		"	gl_Position = vec4(rawpos, 0.0, 1.0);\n"
-		"	c = vec4(color0, 1.0);\n"
-		"}\n",
-		"in vec4 c;\n"
-		"out vec4 ocol0;\n"
-		"void main(void) {\n"
-		"	ocol0 = c;\n"
-		"}\n");
-
 	// creating buffers
-	glGenBuffers(1, &s_ShowEFBCopyRegions_VBO);
-	glGenVertexArrays(1, &s_ShowEFBCopyRegions_VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, s_ShowEFBCopyRegions_VBO);
-	glBindVertexArray( s_ShowEFBCopyRegions_VAO );
 	glEnableVertexAttribArray(SHADER_POSITION_ATTRIB);
 	glVertexAttribPointer(SHADER_POSITION_ATTRIB, 2, GL_FLOAT, 0, sizeof(GLfloat)*5, nullptr);
 	glEnableVertexAttribArray(SHADER_COLOR0_ATTRIB);
@@ -660,166 +625,12 @@ void Renderer::Init()
 // Create On-Screen-Messages
 void Renderer::DrawDebugInfo()
 {
-	// Reset viewport for drawing text
-	glViewport(0, 0, GLInterface->GetBackBufferWidth(), GLInterface->GetBackBufferHeight());
 
-	// Draw various messages on the screen, like FPS, statistics, etc.
-	std::string debug_info;
-
-	if (g_ActiveConfig.bShowFPS)
-		debug_info += StringFromFormat("FPS: %d\n", s_fps);
-
-	if (SConfig::GetInstance().m_ShowLag)
-		debug_info += StringFromFormat("Lag: %" PRIu64 "\n", Movie::g_currentLagCount);
-
-	if (g_ActiveConfig.bShowInputDisplay)
-		debug_info += Movie::GetInputDisplay();
-
-	if (GLInterface->GetMode() == GLInterfaceMode::MODE_OPENGL && g_ActiveConfig.bShowEFBCopyRegions)
-	{
-		// Set Line Size
-		glLineWidth(3.0f);
-
-		// 2*Coords + 3*Color
-		u32 length = stats.efb_regions.size() * sizeof(GLfloat) * (2+3)*2*6;
-		glBindBuffer(GL_ARRAY_BUFFER, s_ShowEFBCopyRegions_VBO);
-		glBufferData(GL_ARRAY_BUFFER, length, nullptr, GL_STREAM_DRAW);
-		GLfloat *Vertices = (GLfloat*)glMapBufferRange(GL_ARRAY_BUFFER, 0, length, GL_MAP_WRITE_BIT);
-
-		// Draw EFB copy regions rectangles
-		int a = 0;
-		GLfloat color[3] = {0.0f, 1.0f, 1.0f};
-
-		for (const EFBRectangle& rect : stats.efb_regions)
-		{
-			GLfloat halfWidth = EFB_WIDTH / 2.0f;
-			GLfloat halfHeight = EFB_HEIGHT / 2.0f;
-			GLfloat x =  (GLfloat) -1.0f + ((GLfloat)rect.left / halfWidth);
-			GLfloat y =  (GLfloat) 1.0f - ((GLfloat)rect.top / halfHeight);
-			GLfloat x2 = (GLfloat) -1.0f + ((GLfloat)rect.right / halfWidth);
-			GLfloat y2 = (GLfloat) 1.0f - ((GLfloat)rect.bottom / halfHeight);
-
-			Vertices[a++] = x;
-			Vertices[a++] = y;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-			Vertices[a++] = x2;
-			Vertices[a++] = y;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-
-			Vertices[a++] = x2;
-			Vertices[a++] = y;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-			Vertices[a++] = x2;
-			Vertices[a++] = y2;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-
-			Vertices[a++] = x2;
-			Vertices[a++] = y2;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-			Vertices[a++] = x;
-			Vertices[a++] = y2;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-
-			Vertices[a++] = x;
-			Vertices[a++] = y2;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-			Vertices[a++] = x;
-			Vertices[a++] = y;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-
-			Vertices[a++] = x;
-			Vertices[a++] = y;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-			Vertices[a++] = x2;
-			Vertices[a++] = y2;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-
-			Vertices[a++] = x2;
-			Vertices[a++] = y;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-			Vertices[a++] = x;
-			Vertices[a++] = y2;
-			Vertices[a++] = color[0];
-			Vertices[a++] = color[1];
-			Vertices[a++] = color[2];
-
-			// TO DO: build something nicer here
-			GLfloat temp = color[0];
-			color[0] = color[1];
-			color[1] = color[2];
-			color[2] = temp;
-		}
-		glUnmapBuffer(GL_ARRAY_BUFFER);
-
-		s_ShowEFBCopyRegions.Bind();
-		glBindVertexArray( s_ShowEFBCopyRegions_VAO );
-		glDrawArrays(GL_LINES, 0, stats.efb_regions.size() * 2*6);
-
-		// Restore Line Size
-		SetLineWidth();
-
-		// Clear stored regions
-		stats.efb_regions.clear();
-	}
-
-	if (g_ActiveConfig.bOverlayStats)
-		debug_info += Statistics::ToString();
-
-	if (g_ActiveConfig.bOverlayProjStats)
-		debug_info += Statistics::ToStringProj();
-
-	if (!debug_info.empty())
-	{
-		// Render a shadow, and then the text.
-		Renderer::RenderText(debug_info, 21, 21, 0xDD000000);
-		Renderer::RenderText(debug_info, 20, 20, 0xFF00FFFF);
-	}
 }
 
 void Renderer::RenderText(const std::string& text, int left, int top, u32 color)
 {
-	const int nBackbufferWidth = (int)GLInterface->GetBackBufferWidth();
-	const int nBackbufferHeight = (int)GLInterface->GetBackBufferHeight();
 
-	s_pfont->printMultilineText(text,
-		left * 2.0f / (float)nBackbufferWidth - 1,
-		1 - top * 2.0f / (float)nBackbufferHeight,
-		0, nBackbufferWidth, nBackbufferHeight, color);
-
-	GL_REPORT_ERRORD();
 }
 
 TargetRectangle Renderer::ConvertEFBRectangle(const EFBRectangle& rc)

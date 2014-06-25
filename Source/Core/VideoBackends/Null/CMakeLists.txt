@@ -4,7 +4,6 @@ set(SRCS GLExtensions/GLExtensions.cpp
 	   main.cpp
 	   NativeVertexFormat.cpp
 	   ProgramShaderCache.cpp
-	   RasterFont.cpp
 	   Render.cpp
 	   StreamBuffer.cpp
 	   TextureCache.cpp
