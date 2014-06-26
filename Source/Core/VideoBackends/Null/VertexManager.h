@@ -15,11 +15,8 @@ namespace NullVideo
 		PortableVertexDeclaration vtx_decl;
 
 	public:
-		GLVertexFormat();
-		~GLVertexFormat();
-
-		virtual void Initialize(const PortableVertexDeclaration &_vtx_decl) override;
-		virtual void SetupVertexPointers() override;
+		virtual void Initialize(const PortableVertexDeclaration &_vtx_decl) override {}
+		virtual void SetupVertexPointers() override {}
 	};
 
 // Handles the OpenGL details of drawing lots of vertices quickly.
@@ -29,7 +26,9 @@ class VertexManager : public ::VertexManager
 public:
 	VertexManager();
 	~VertexManager();
-	NativeVertexFormat* CreateNativeVertexFormat() override;
+	NativeVertexFormat* CreateNativeVertexFormat() override {
+		return new GLVertexFormat();
+	}
 	void CreateDeviceObjects() override;
 	void DestroyDeviceObjects() override;
 

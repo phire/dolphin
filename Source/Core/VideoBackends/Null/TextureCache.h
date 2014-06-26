@@ -15,36 +15,38 @@ namespace NullVideo
 
 class TextureCache : public ::TextureCache
 {
-public:
-	TextureCache();
-
 private:
+	// Null Cache entry which gets returned to VideoCommon
 	struct TCacheEntry : TCacheEntryBase
 	{
 
 		PC_TexFormat pcfmt;
 
-		TCacheEntry();
-		~TCacheEntry();
-
 		void Load(unsigned int width, unsigned int height,
-			unsigned int expanded_width, unsigned int level) override;
+			unsigned int expanded_width, unsigned int level) override {}
 
 		void FromRenderTarget(u32 dstAddr, unsigned int dstFormat,
 			PEControl::PixelFormat srcFormat, const EFBRectangle& srcRect,
 			bool isIntensity, bool scaleByHalf, unsigned int cbufid,
-			const float *colmat) override;
+			const float *colmat) override {}
 
-		void Bind(unsigned int stage) override;
-		bool Save(const std::string& filename, unsigned int level) override;
+		void Bind(unsigned int stage) override {}
+		bool Save(const std::string& filename, unsigned int level) override {
+			return false;
+		}
 	};
 
-	~TextureCache();
-
 	TCacheEntryBase* CreateTexture(unsigned int width, unsigned int height,
-		unsigned int expanded_width, unsigned int tex_levels, PC_TexFormat pcfmt) override;
+		unsigned int expanded_width, unsigned int tex_levels, PC_TexFormat pcfmt) override {
+		TCacheEntry &entry = *new TCacheEntry;
+		return &entry;
+	}
 
-	TCacheEntryBase* CreateRenderTargetTexture(unsigned int scaled_tex_w, unsigned int scaled_tex_h) override;
+	TCacheEntryBase* CreateRenderTargetTexture(unsigned int scaled_tex_w,
+											   unsigned int scaled_tex_h) override {
+		TCacheEntry &entry = *new TCacheEntry;
+		return &entry;
+	}
 };
 
 }

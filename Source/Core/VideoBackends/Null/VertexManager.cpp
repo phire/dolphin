@@ -93,7 +93,6 @@ void VertexManager::vFlush(bool useDstAlpha)
 	PrepareDrawBuffers(stride);
 
 	Draw(stride);
-
 }
 
 

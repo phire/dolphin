@@ -1,8 +1,6 @@
-set(SRCS FramebufferManager.cpp
+set(SRCS
 	   main.cpp
-	   NativeVertexFormat.cpp
 	   Render.cpp
-	   TextureCache.cpp
 	   VertexManager.cpp)
 
 set(LIBS	videocommon

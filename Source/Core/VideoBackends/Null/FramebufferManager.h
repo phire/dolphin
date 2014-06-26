@@ -21,16 +21,24 @@ struct XFBSource : public XFBSourceBase
 class FramebufferManager : public FramebufferManagerBase
 {
 public:
-	FramebufferManager(int targetWidth, int targetHeight);
+	FramebufferManager(int targetWidth, int targetHeight) {
+		m_targetWidth = targetWidth;
+		m_targetHeight = targetHeight;
+	}
 
 private:
-	XFBSourceBase* CreateXFBSource(unsigned int target_width, unsigned int target_height) override;
-	void GetTargetSize(unsigned int *width, unsigned int *height, const EFBRectangle& sourceRc) override;
+	XFBSourceBase* CreateXFBSource(unsigned int target_width, unsigned int target_height) override {
+		return new XFBSource();
+	}
+	void GetTargetSize(unsigned int *width, unsigned int *height, const EFBRectangle& sourceRc) override {
+		*width = m_targetWidth;
+		*height = m_targetHeight;
+	}
 
-	void CopyToRealXFB(u32 xfbAddr, u32 fbWidth, u32 fbHeight, const EFBRectangle& sourceRc,float Gamma) override;
+	void CopyToRealXFB(u32 xfbAddr, u32 fbWidth, u32 fbHeight, const EFBRectangle& sourceRc,float Gamma) override {}
 
-	static int m_targetWidth;
-	static int m_targetHeight;
+	int m_targetWidth;
+	int m_targetHeight;
 };
 
 }  // namespace NullVideo
