@@ -352,8 +352,11 @@ int main(int argc, char* argv[])
 		if (GLWin.platform == EGL_PLATFORM_X11)
 		{
 #endif
-			XInitThreads();
-			X11_MainLoop();
+			if(SConfig::GetInstance().m_LocalCoreStartupParameter.m_strVideoBackend != "Null")
+			{
+				XInitThreads();
+				X11_MainLoop();
+			}
 #if USE_EGL
 		}
 #endif
