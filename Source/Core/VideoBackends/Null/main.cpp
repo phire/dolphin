@@ -4,36 +4,11 @@
 
 
 
-// OpenGL Backend Documentation
+// Null Backend Documentation
 /*
 
-1.1 Display settings
-
-Internal and fullscreen resolution: Since the only internal resolutions allowed
-are also fullscreen resolution allowed by the system there is only need for one
-resolution setting that applies to both the internal resolution and the
-fullscreen resolution.  - Apparently no, someone else doesn't agree
-
-Todo: Make the internal resolution option apply instantly, currently only the
-native and 2x option applies instantly. To do this we need to be able to change
-the reinitialize FramebufferManager:Init() while a game is running.
-
-1.2 Screenshots
-
-
-The screenshots should be taken from the internal representation of the picture
-regardless of what the current window size is. Since AA and wireframe is
-applied together with the picture resizing this rule is not currently applied
-to AA or wireframe pictures, they are instead taken from whatever the window
-size is.
-
-Todo: Render AA and wireframe to a separate picture used for the screenshot in
-addition to the one for display.
-
-1.3 AA
-
-Make AA apply instantly during gameplay if possible
-
+  The goal of the Null video backend is to allow benchmarking of the cpu parts
+  of dolphin without being effected by either the video card or the video driver.
 */
 
 #include <algorithm>
@@ -48,10 +23,7 @@ Make AA apply instantly during gameplay if possible
 #include "Core/Core.h"
 #include "Core/Host.h"
 
-#include "DolphinWX/GLInterface/GLInterface.h"
-
 #include "VideoBackends/Null/FramebufferManager.h"
-//#include "VideoBackends/Null/GLUtil.h"
 #include "VideoBackends/Null/Render.h"
 #include "VideoBackends/Null/TextureCache.h"
 #include "VideoBackends/Null/VertexManager.h"
@@ -74,9 +46,6 @@ Make AA apply instantly during gameplay if possible
 #include "VideoCommon/VideoConfig.h"
 #include "VideoCommon/VideoState.h"
 
-// FIXME
-void InitInterface();
-
 #ifdef _WIN32
 #include "Common/IniFile.h"
 #endif
@@ -91,13 +60,13 @@ namespace NullVideo
 
 unsigned int VideoBackend::PeekMessages()
 {
-	return 0; //GLInterface->PeekMessages();
+	return 0;
 }
 
 // Show the current FPS
 void VideoBackend::UpdateFPSDisplay(const std::string& text)
 {
-	//return GLInterface->UpdateFPSDisplay(StringFromFormat("%s | %s | %s", scm_rev_str, GetDisplayName().c_str(), text.c_str()));
+	printf("%s | %s | %s\n", scm_rev_str, GetDisplayName().c_str(), text.c_str());
 }
 
 std::string VideoBackend::GetName() const
@@ -111,59 +80,21 @@ std::string VideoBackend::GetDisplayName() const
 
 }
 
-void GetShaders(std::vector<std::string> &shaders)
-{
-	std::set<std::string> already_found;
-
-	shaders.clear();
-	static const std::string directories[] = {
-		File::GetUserPath(D_SHADERS_IDX),
-		File::GetSysDirectory() + SHADERS_DIR DIR_SEP,
-	};
-	for (auto& directory : directories)
-	{
-		if (!File::IsDirectory(directory))
-			continue;
-
-		File::FSTEntry entry;
-		File::ScanDirectoryTree(directory, entry);
-		for (auto& file : entry.children)
-		{
-			std::string name = file.virtualName;
-			if (name.size() < 5)
-				continue;
-			if (strcasecmp(name.substr(name.size() - 5).c_str(), ".glsl"))
-				continue;
-
-			name = name.substr(0, name.size() - 5);
-			if (already_found.find(name) != already_found.end())
-				continue;
-
-			already_found.insert(name);
-			shaders.push_back(name);
-		}
-	}
-	std::sort(shaders.begin(), shaders.end());
-}
-
 void InitBackendInfo()
 {
 	g_Config.backend_info.APIType = API_NONE;
 	g_Config.backend_info.bUseRGBATextures = true;
 	g_Config.backend_info.bUseMinimalMipCount = false;
 	g_Config.backend_info.bSupports3DVision = false;
-	//g_Config.backend_info.bSupportsDualSourceBlend = true; // is gpu dependent and must be set in renderer
-	//g_Config.backend_info.bSupportsEarlyZ = true; // is gpu dependent and must be set in renderer
+	g_Config.backend_info.bSupportsDualSourceBlend = true;
+	g_Config.backend_info.bSupportsEarlyZ = true;
 	g_Config.backend_info.bSupportsOversizedViewports = true;
 
 	g_Config.backend_info.Adapters.clear();
 
 	// aamodes
-	const char* caamodes[] = {_trans("None"), "2x", "4x", "8x", "4x SSAA"};
+	const char* caamodes[] = {_trans("None")};
 	g_Config.backend_info.AAModes.assign(caamodes, caamodes + sizeof(caamodes)/sizeof(*caamodes));
-
-	// pp shaders
-	GetShaders(g_Config.backend_info.PPShaders);
 }
 
 void VideoBackend::ShowConfig(void *_hParent)
@@ -188,11 +119,6 @@ bool VideoBackend::Initialize(void *&window_handle)
 	g_Config.VerifyValidity();
 	UpdateActiveConfig();
 
-	//InitInterface();
-	//GLInterface->SetMode(GLInterfaceMode::MODE_DETECT);
-	//if (!GLInterface->Create(window_handle))
-	//	return false;
-
 	// Do our OSD callbacks
 	OSD::DoCallbacks(OSD::OSD_INIT);
 
@@ -205,8 +131,6 @@ bool VideoBackend::Initialize(void *&window_handle)
 // Run from the graphics thread
 void VideoBackend::Video_Prepare()
 {
-	//GLInterface->MakeCurrent();
-
 	g_renderer = new Renderer;
 
 	s_efbAccessRequested = false;
@@ -238,8 +162,6 @@ void VideoBackend::Shutdown()
 
 	// Do our OSD callbacks
 	OSD::DoCallbacks(OSD::OSD_SHUTDOWN);
-
-	//GLInterface->Shutdown();
 }
 
 void VideoBackend::Video_Cleanup() {
@@ -265,7 +187,6 @@ void VideoBackend::Video_Cleanup() {
 		OpcodeDecoder_Shutdown();
 		delete g_renderer;
 		g_renderer = nullptr;
-		//GLInterface->ClearCurrent();
 	}
 }
 

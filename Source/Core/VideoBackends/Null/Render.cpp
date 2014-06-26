@@ -20,10 +20,7 @@
 #include "Core/Movie.h"
 
 #include "VideoBackends/Null/FramebufferManager.h"
-#include "VideoBackends/Null/main.h"
 #include "VideoBackends/Null/Render.h"
-#include "VideoBackends/Null/TextureCache.h"
-#include "VideoBackends/Null/VertexManager.h"
 
 #include "VideoCommon/BPFunctions.h"
 #include "VideoCommon/BPStructs.h"
@@ -48,39 +45,15 @@
 #include <mmsystem.h>
 #endif
 
-#ifdef _WIN32
-#endif
-#if defined _WIN32 || defined HAVE_LIBAV
-#include "VideoCommon/AVIDump.h"
-#endif
-
 extern int OSDInternalW, OSDInternalH;
 
 namespace NullVideo
 {
-
-enum MultisampleMode {
-	MULTISAMPLE_OFF,
-	MULTISAMPLE_2X,
-	MULTISAMPLE_4X,
-	MULTISAMPLE_8X,
-	MULTISAMPLE_SSAA_4X,
-};
-
-
 VideoConfig g_ogl_config;
 
 // Declarations and definitions
 // ----------------------------
 static int s_fps = 0;
-
-// 1 for no MSAA. Use s_MSAASamples > 1 to check for MSAA.
-static int s_MSAASamples = 1;
-static int s_LastMultisampleMode = 0;
-
-static u32 s_blendMode;
-
-static bool s_vsync;
 
 #if defined(HAVE_WX) && HAVE_WX
 static std::thread scrshotThread;
@@ -93,11 +66,8 @@ Renderer::Renderer()
 	OSDInternalH = 0;
 
 	s_fps=0;
-	s_blendMode = 0;
 	InitFPSCounter();
 
-	// Because of the fixed framebuffer size we need to disable the resolution
-	// options while running
 	g_Config.bRunning = true;
 
 	UpdateActiveConfig();
@@ -182,11 +152,6 @@ void Renderer::RestoreAPIState()
 {
 
 }
-
-}
-
-namespace NullVideo
-{
 
 bool Renderer::SaveScreenshot(const std::string &filename, const TargetRectangle &back_rc)
 {
