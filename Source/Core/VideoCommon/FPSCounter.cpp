@@ -9,6 +9,9 @@
 #include "Common/Timer.h"
 #include "VideoCommon/FPSCounter.h"
 #include "VideoCommon/VideoConfig.h"
+#include "Common/Hash.h"
+
+#include "stdlib.h"
 
 #define FPS_REFRESH_INTERVAL 1000
 
@@ -37,6 +40,9 @@ int FPSCounter::Update()
 		m_fps = m_counter - m_fps_last_counter;
 		m_fps_last_counter = m_counter;
 		m_bench_file.flush();
+
+		printf("Hashed %luMB/s\n", hashed / (1024*1024));
+		hashed = 0;
 	}
 
 	if (g_ActiveConfig.bLogRenderTimeToFile)

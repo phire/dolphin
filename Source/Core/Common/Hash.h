@@ -17,3 +17,5 @@ u64 GetHashHiresTexture(const u8 *src, int len, u32 samples);
 u64 GetMurmurHash3(const u8 *src, int len, u32 samples);
 u64 GetHash64(const u8 *src, int len, u32 samples);
 void SetHash64Function(bool useHiresTextures);
+
+extern u64 hashed;

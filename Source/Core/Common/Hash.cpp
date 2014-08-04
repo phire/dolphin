@@ -150,8 +150,12 @@ inline u64 fmix64(u64 k)
 	return k;
 }
 
+u64 hashed = 0;
+
 u64 GetMurmurHash3(const u8 *src, int len, u32 samples)
 {
+	hashed += len;
+
 	const u8 * data = (const u8*)src;
 	const int nblocks = len / 16;
 	u32 Step = (len / 8);
