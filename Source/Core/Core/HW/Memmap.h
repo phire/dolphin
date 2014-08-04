@@ -141,4 +141,20 @@ u32 TranslateAddress(u32 _Address, XCheckTLBFlag _Flag);
 void InvalidateTLBEntry(u32 _Address);
 extern u32 pagetable_base;
 extern u32 pagetable_hashmask;
+
+// functions for Memory locking
+
+enum PageLocation {
+	ON_CPU,
+	SHARED,
+	ON_GPU,
+	INVALID,
+};
+
+// Array to keep track of where pages are locked.
+extern PageLocation m_location[(RAM_SIZE + EXRAM_SIZE)/0x1000];
+
+void ProtectPage(u32 _Address, PageLocation _Location);
+void setRange(u32 _Address, u32 _Size, PageLocation _Location);
+bool RangeStale(u32 addr, u32 size);
 };

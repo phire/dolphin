@@ -23,7 +23,7 @@
 namespace EMM
 {
 
-static bool DoFault(u64 bad_address, SContext *ctx)
+static bool DoFaultFastmem(u64 bad_address, SContext *ctx)
 {
 	if (!JitInterface::IsInCodeSpace((u8*) ctx->CTX_PC))
 	{
@@ -57,6 +57,65 @@ static bool DoFault(u64 bad_address, SContext *ctx)
 	}
 
 	return true;
+}
+
+static bool DoFaultLocking(u64 addr, SContext *ctx)
+{
+	bool write = ctx->CTX_ERR & 2;
+	u32 gc_addr;
+
+	//printf("%s failed at 0x%08lx", write ? "Write" : "Read", addr);
+
+	// Verify page is actually where we expect a fault;
+	u64 memspace_bottom = (u64)Memory::base;
+	u64 memspace_top = memspace_bottom +
+#if _ARCH_64
+		0x100000000ULL;
+#else
+		0x40000000;
+#endif
+
+	// Is inside the the fastmem arena?
+	if (addr >= memspace_bottom && addr < memspace_top)
+	{
+		// make sure it's in a valid ram bank?
+		if(!Memory::IsRAMAddress(addr - memspace_bottom))
+			return false;
+		gc_addr = addr - memspace_bottom;
+	}
+	else
+	{
+		// make sure it's in one of the low address space memory mirrors.
+		if(addr >= u64(Memory::m_pRAM) && addr < u64(Memory::m_pRAM) + Memory::RAM_SIZE)
+			gc_addr = addr - u64(Memory::m_pRAM);
+		else if (addr >= u64(Memory::m_pEXRAM) && addr < u64(Memory::m_pEXRAM) + Memory::EXRAM_SIZE)
+			gc_addr = (addr - u64(Memory::m_pEXRAM)) + 0x10000000;
+		else
+			return false;
+	}
+
+	printf("%s failed at 0x%08lx (0x%04x)\n", write ? "Write" : "Read", addr, gc_addr);
+
+	// Ok our fault is within one of the ram banks, Lower the protection
+	if (write)
+		Memory::ProtectPage(gc_addr, Memory::ON_CPU);
+	else
+		Memory::ProtectPage(gc_addr, Memory::SHARED);
+
+	return true;
+}
+
+static bool DoFault(u64 bad_address, SContext *ctx, bool AccessError) {
+	if (AccessError) //(ctx->CTX_ERR & 0x1) // Page present bit
+	{
+		// Page access permission fault, caused by locking.
+		return DoFaultLocking(bad_address, ctx);
+	}
+	else
+	{
+		// Page not present faults, caused by fastmem.
+		return DoFaultFastmem(bad_address, ctx);
+	}
 }
 
 #ifdef _WIN32
@@ -264,7 +323,7 @@ static void sigsegv_handler(int sig, siginfo_t *info, void *raw_context)
 	// Get all the information we can out of the context.
 	mcontext_t *ctx = &context->uc_mcontext;
 	// assume it's not a write
-	if (!DoFault(bad_address, ctx))
+	if (!DoFault(bad_address, ctx, sicode == SEGV_ACCERR))
 	{
 		// retry and crash
 		signal(SIGSEGV, SIG_DFL);

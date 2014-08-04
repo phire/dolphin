@@ -36,6 +36,8 @@
 #include "VideoCommon/PixelEngine.h"
 #include "VideoCommon/VideoBackendBase.h"
 
+#include <sys/mman.h>
+
 namespace Memory
 {
 
@@ -71,6 +73,8 @@ u8 *m_pL1Cache;
 u8 *m_pEXRAM;
 u8 *m_pFakeVMEM;
 //u8 *m_pEFB;
+
+PageLocation m_location[(RAM_SIZE + EXRAM_SIZE)/0x1000];
 
 // 64-bit: Pointers to high-mem mirrors
 // 32-bit: Same as above
@@ -161,6 +165,8 @@ void Init()
 	INFO_LOG(MEMMAP, "Memory system initialized. RAM at %p (mirrors at 0 @ %p, 0x80000000 @ %p , 0xC0000000 @ %p)",
 		m_pRAM, m_pPhysicalRAM, m_pVirtualCachedRAM, m_pVirtualUncachedRAM);
 	m_IsInitialized = true;
+
+	memset(m_location, ON_CPU, sizeof(m_location));
 }
 
 void DoState(PointerWrap &p)
@@ -391,6 +397,103 @@ bool IsRAMAddress(const u32 addr, bool allow_locked_cache, bool allow_fake_vmem)
 			return false;
 	default:
 		return false;
+	}
+}
+
+PageLocation PageStatus(u32 addr)
+{
+	switch ((addr >> 24) & 0xFC)
+	{
+	case 0x00:
+	case 0x80:
+	case 0xC0:
+		addr = addr & 0x01FFF000;
+		if(addr < RAM_SIZE)
+		{
+			return m_location[addr >> 12];
+		}
+		break;
+	case 0x10:
+	case 0x90:
+	case 0xD0:
+		addr = addr & 0x0FFFF000;
+		if (SConfig::GetInstance().m_LocalCoreStartupParameter.bWii && addr < EXRAM_SIZE)
+		{
+			return m_location[(RAM_SIZE >> 12) + (addr >> 12)];
+		}
+		break;
+	}
+	return INVALID;
+}
+
+bool RangeStale(u32 addr, u32 size) {
+	u32 bottom_page = addr & 0xfffff000;
+	u32 top_page = addr + size;
+
+	for(u32 page = bottom_page; page <= top_page; page += 0x1000)
+	{
+		if(PageStatus(page) == ON_CPU) return true;
+	}
+	return false;
+}
+
+void ProtectPage(u32 addr, PageLocation _Location)
+{
+	int prot;
+	switch (_Location)
+	{
+	case ON_CPU:
+		prot = PROT_READ | PROT_WRITE;
+		break;
+	case SHARED:
+		prot = PROT_READ;
+		break;
+	case ON_GPU:
+		prot = PROT_NONE;
+		break;
+	}
+
+	switch ((addr >> 24) & 0xFC)
+	{
+	case 0x00:
+	case 0x80:
+	case 0xC0:
+		addr = addr & 0x01FFF000;
+		if(addr < RAM_SIZE)
+		{
+			//if(addr != 0x8149f000) {
+			mprotect(m_pRAM + addr, 0x1000, prot);
+			mprotect(m_pPhysicalRAM + addr, 0x1000, prot);
+			mprotect(m_pVirtualCachedRAM + addr, 0x1000, prot);
+			mprotect(m_pVirtualUncachedRAM + addr, 0x1000, prot);
+			//}
+			m_location[addr >> 12] = _Location;
+		}
+		break;
+	case 0x10:
+	case 0x90:
+	case 0xD0:
+		addr = addr & 0x0FFFF000;
+		if (SConfig::GetInstance().m_LocalCoreStartupParameter.bWii && addr < EXRAM_SIZE)
+		{
+			mprotect(m_pEXRAM + addr, 0x1000, prot);
+			mprotect(m_pPhysicalEXRAM + addr, 0x1000, prot);
+			mprotect(m_pVirtualCachedEXRAM + addr, 0x1000, prot);
+			mprotect(m_pVirtualUncachedEXRAM + addr, 0x1000, prot);
+			m_location[(RAM_SIZE >> 12) + (addr >> 12)] = _Location;
+		}
+		break;
+	}
+}
+
+void setRange(u32 _Address, u32 _Size, PageLocation _Location)
+{
+	u32 bottom_page = _Address & 0xfffff000;
+	u32 top_page = _Address + _Size;
+
+	for(u32 page = bottom_page; page <= top_page; page += 0x1000)
+	{
+		ProtectPage(page, _Location);
 	}
 }
 
