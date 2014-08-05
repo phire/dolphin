@@ -93,7 +93,7 @@ static bool DoFaultLocking(u64 addr, SContext *ctx, bool write)
 			return false;
 	}
 
-	printf("%s failed at 0x%08lx (0x%04x)\n", write ? "Write" : "Read", addr, gc_addr);
+	//printf("%s failed at 0x%08lx (0x%04x)\n", write ? "Write" : "Read", addr, gc_addr);
 
 	// Ok our fault is within one of the ram banks, Lower the protection
 	if (write)
@@ -326,10 +326,10 @@ static void sigsegv_handler(int sig, siginfo_t *info, void *raw_context)
 	// Get all the information we can out of the context.
 	mcontext_t *ctx = &context->uc_mcontext;
 	// assume it's not a write
-	if (!DoFault(bad_address, ctx, sicode == SEGV_ACCERR), ctx->CTX_ERR & 2)
+	if (!DoFault(bad_address, ctx, sicode == SEGV_ACCERR, ctx->CTX_ERR & 2))
 	{
-		// retry and crash
-		signal(SIGSEGV, SIG_DFL);
+		// crash
+		signal(SIGABRT, SIG_DFL);
 	}
 }
 
