@@ -437,6 +437,7 @@ void ClearCoverInterrupt()
 
 bool DVDRead(u32 _iDVDOffset, u32 _iRamAddress, u32 _iLength)
 {
+	Memory::setRange(_iRamAddress, _iLength, Memory::ON_CPU);
 	return VolumeHandler::ReadToPtr(Memory::GetPointer(_iRamAddress), _iDVDOffset, _iLength);
 }
 
