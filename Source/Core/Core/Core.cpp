@@ -257,6 +257,8 @@ static void CpuThread()
 		EMM::InstallExceptionHandler(); // Let's run under memory watch
 	#endif
 
+	// Memory::setRange(0, 24 * 1024 * 1024, Memory::ON_GPU); 
+
 	if (!g_stateFileName.empty())
 		State::LoadAs(g_stateFileName);
 

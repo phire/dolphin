@@ -36,7 +36,11 @@
 #include "VideoCommon/PixelEngine.h"
 #include "VideoCommon/VideoBackendBase.h"
 
+#ifndef WIN32
+
 #include <sys/mman.h>
+
+#endif // !WIN32
 
 namespace Memory
 {
@@ -443,15 +447,27 @@ void ProtectPage(u32 addr, PageLocation _Location)
 	switch (_Location)
 	{
 	case ON_CPU:
+#ifdef WIN32
+		prot = PAGE_READWRITE;
+#else
 		prot = PROT_READ | PROT_WRITE;
+#endif
 		break;
 	case SHARED:
+#ifdef WIN32
+		prot = PAGE_READONLY;
+#else
 		prot = PROT_READ;
+#endif
 		break;
 	case ON_GPU:
+#ifdef WIN32
+		prot = PAGE_NOACCESS;
+#else
 		prot = PROT_NONE;
+#endif
 		break;
-	}
+	} 
 
 	switch ((addr >> 24) & 0xFC)
 	{
@@ -462,10 +478,18 @@ void ProtectPage(u32 addr, PageLocation _Location)
 		if(addr < RAM_SIZE)
 		{
 			//if(addr != 0x8149f000) {
+#ifdef WIN32
+			DWORD out;
+			VirtualProtect(m_pRAM + addr, 0x1000, prot, &out);
+			VirtualProtect(m_pPhysicalRAM + addr, 0x1000, prot, &out);
+			VirtualProtect(m_pVirtualCachedRAM + addr, 0x1000, prot, &out);
+			VirtualProtect(m_pVirtualUncachedRAM + addr, 0x1000, prot, &out);
+#else
 			mprotect(m_pRAM + addr, 0x1000, prot);
 			mprotect(m_pPhysicalRAM + addr, 0x1000, prot);
 			mprotect(m_pVirtualCachedRAM + addr, 0x1000, prot);
 			mprotect(m_pVirtualUncachedRAM + addr, 0x1000, prot);
+#endif
 			//}
 			m_location[addr >> 12] = _Location;
 		}
@@ -476,10 +500,19 @@ void ProtectPage(u32 addr, PageLocation _Location)
 		addr = addr & 0x0FFFF000;
 		if (SConfig::GetInstance().m_LocalCoreStartupParameter.bWii && addr < EXRAM_SIZE)
 		{
+#ifdef WIN32
+			DWORD out;
+			VirtualProtect(m_pEXRAM + addr, 0x1000, prot, &out);
+			VirtualProtect(m_pPhysicalEXRAM + addr, 0x1000, prot, &out);
+			VirtualProtect(m_pVirtualCachedEXRAM + addr, 0x1000, prot, &out);
+			VirtualProtect(m_pVirtualUncachedEXRAM + addr, 0x1000, prot, &out);
+#else
 			mprotect(m_pEXRAM + addr, 0x1000, prot);
 			mprotect(m_pPhysicalEXRAM + addr, 0x1000, prot);
 			mprotect(m_pVirtualCachedEXRAM + addr, 0x1000, prot);
 			mprotect(m_pVirtualUncachedEXRAM + addr, 0x1000, prot);
+#endif
+
 			m_location[(RAM_SIZE >> 12) + (addr >> 12)] = _Location;
 		}
 		break;

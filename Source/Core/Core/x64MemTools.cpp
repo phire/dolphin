@@ -59,9 +59,8 @@ static bool DoFaultFastmem(u64 bad_address, SContext *ctx)
 	return true;
 }
 
-static bool DoFaultLocking(u64 addr, SContext *ctx)
+static bool DoFaultLocking(u64 addr, SContext *ctx, bool write)
 {
-	bool write = ctx->CTX_ERR & 2;
 	u32 gc_addr;
 
 	//printf("%s failed at 0x%08lx", write ? "Write" : "Read", addr);
@@ -105,11 +104,11 @@ static bool DoFaultLocking(u64 addr, SContext *ctx)
 	return true;
 }
 
-static bool DoFault(u64 bad_address, SContext *ctx, bool AccessError) {
+static bool DoFault(u64 bad_address, SContext *ctx, bool AccessError, bool write) {
 	if (AccessError) //(ctx->CTX_ERR & 0x1) // Page present bit
 	{
 		// Page access permission fault, caused by locking.
-		return DoFaultLocking(bad_address, ctx);
+		return DoFaultLocking(bad_address, ctx, write);
 	}
 	else
 	{
@@ -136,7 +135,11 @@ LONG NTAPI Handler(PEXCEPTION_POINTERS pPtrs)
 			u64 badAddress = (u64)pPtrs->ExceptionRecord->ExceptionInformation[1];
 			CONTEXT *ctx = pPtrs->ContextRecord;
 
-			if (DoFault(badAddress, ctx))
+			// TODO: it might be possible to get this infomation without a VirtualQuery
+			MEMORY_BASIC_INFORMATION page_info;
+			VirtualQuery((LPCVOID)badAddress, &page_info, sizeof(page_info));
+
+			if (DoFault(badAddress, ctx, page_info.Type == MEM_MAPPED, accessType == 1))
 			{
 				return (DWORD)EXCEPTION_CONTINUE_EXECUTION;
 			}
@@ -323,7 +326,7 @@ static void sigsegv_handler(int sig, siginfo_t *info, void *raw_context)
 	// Get all the information we can out of the context.
 	mcontext_t *ctx = &context->uc_mcontext;
 	// assume it's not a write
-	if (!DoFault(bad_address, ctx, sicode == SEGV_ACCERR))
+	if (!DoFault(bad_address, ctx, sicode == SEGV_ACCERR), ctx->CTX_ERR & 2)
 	{
 		// retry and crash
 		signal(SIGSEGV, SIG_DFL);
