@@ -390,12 +390,16 @@ TextureCache::TCacheEntryBase* TextureCache::Load(unsigned int const stage,
 	} else {
 		if (isPaletteTexture)
 		{
+			stale = true;
+			tex_hash = GetHash64(src_data, texture_size, g_ActiveConfig.iSafeTextureCache_ColorSamples);
+
 			const u32 palette_size = TexDecoder_GetPaletteSize(texformat);
 			tlut_hash = GetHash64(&texMem[tlutaddr], palette_size, g_ActiveConfig.iSafeTextureCache_ColorSamples);
 
 			// Note: see above
 			texID ^= ((u32)tlut_hash) ^(u32)(tlut_hash >> 32);
 		}
+
 	}
 
 	// D3D doesn't like when the specified mipmap count would require more than one 1x1-sized LOD in the mipmap chain
@@ -598,9 +602,9 @@ TextureCache::TCacheEntryBase* TextureCache::Load(unsigned int const stage,
 	INCSTAT(stats.numTexturesCreated);
 	SETSTAT(stats.numTexturesAlive, textures.size());
 
-	if(stale) {
+	//if(stale) {
 		Memory::setRange(address, texture_size, Memory::SHARED);
-	}
+	//}
 
 	return ReturnEntry(stage, entry);
 }
