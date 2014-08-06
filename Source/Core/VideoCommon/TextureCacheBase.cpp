@@ -398,6 +398,7 @@ TextureCache::TCacheEntryBase* TextureCache::Load(unsigned int const stage,
 
 			// Note: see above
 			texID ^= ((u32)tlut_hash) ^(u32)(tlut_hash >> 32);
+			tex_hash ^= tlut_hash;
 		}
 
 	}
