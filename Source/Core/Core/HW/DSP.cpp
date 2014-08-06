@@ -407,7 +407,7 @@ void RegisterMMIO(MMIO::Mapping* mmio, u32 base)
 				g_audioDMA.remaining_blocks_count = g_audioDMA.AudioDMAControl.NumBlocks;
 
 				// We make the samples ready as soon as possible
-				void *address = Memory::GetPointer(g_audioDMA.SourceAddress);
+				void *address = Memory::GetReadPointer(g_audioDMA.SourceAddress, g_audioDMA.AudioDMAControl.NumBlocks * 32);
 				AudioCommon::SendAIBuffer((short*)address, g_audioDMA.AudioDMAControl.NumBlocks * 8);
 				CoreTiming::ScheduleEvent_Threadsafe(80, et_GenerateDSPInterrupt, INT_AID);
 			}
@@ -501,7 +501,7 @@ void UpdateAudioDMA()
 			if (g_audioDMA.remaining_blocks_count != 0)
 			{
 				// We make the samples ready as soon as possible
-				void *address = Memory::GetPointer(g_audioDMA.SourceAddress);
+				void *address = Memory::GetReadPointer(g_audioDMA.SourceAddress, g_audioDMA.AudioDMAControl.NumBlocks * 32);
 				AudioCommon::SendAIBuffer((short*)address, g_audioDMA.AudioDMAControl.NumBlocks * 8);
 			}
 			GenerateDSPInterrupt(DSP::INT_AID);

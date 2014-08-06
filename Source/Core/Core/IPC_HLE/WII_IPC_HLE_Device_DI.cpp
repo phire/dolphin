@@ -118,7 +118,7 @@ bool CWII_IPC_HLE_Device_di::IOCtlV(u32 _CommandAddress)
 			// Read TMD to the buffer
 			VolumeHandler::RAWReadToPtr(pTMD, TMDOffset, TMDsz);
 
-			memcpy(Memory::GetPointer(CommandBuffer.PayloadBuffer[0].m_Address), pTMD, TMDsz);
+			Memory::WriteBigEData(pTMD, CommandBuffer.PayloadBuffer[0].m_Address, TMDsz);
 			WII_IPC_HLE_Interface::ES_DIVerify(pTMD, TMDsz);
 
 			ReturnValue = 1;
@@ -181,7 +181,7 @@ u32 CWII_IPC_HLE_Device_di::ExecuteCommand(u32 _BufferIn, u32 _BufferInSize, u32
 
 	case DVDLowReadDiskID:
 		{
-			VolumeHandler::RAWReadToPtr(Memory::GetPointer(_BufferOut), 0, _BufferOutSize);
+			VolumeHandler::RAWReadToPtr(Memory::GetWritePointer(_BufferOut, _BufferOutSize), 0, _BufferOutSize);
 
 			INFO_LOG(WII_IPC_DVD, "DVDLowReadDiskID %s",
 				ArrayToString(Memory::GetPointer(_BufferOut), _BufferOutSize, _BufferOutSize).c_str());
@@ -221,7 +221,7 @@ u32 CWII_IPC_HLE_Device_di::ExecuteCommand(u32 _BufferIn, u32 _BufferInSize, u32
 				Size = _BufferOutSize;
 			}
 
-			if (!VolumeHandler::ReadToPtr(Memory::GetPointer(_BufferOut), DVDAddress, Size))
+			if (!VolumeHandler::ReadToPtr(Memory::GetWritePointer(_BufferOut, Size), DVDAddress, Size))
 			{
 				PanicAlertT("DVDLowRead - Fatal Error: failed to read from volume");
 			}
@@ -314,7 +314,7 @@ u32 CWII_IPC_HLE_Device_di::ExecuteCommand(u32 _BufferIn, u32 _BufferInSize, u32
 				PanicAlertT("Detected attempt to read more data from the DVD than fit inside the out buffer. Clamp.");
 				Size = _BufferOutSize;
 			}
-			if (!VolumeHandler::RAWReadToPtr(Memory::GetPointer(_BufferOut), DVDAddress, Size))
+			if (!VolumeHandler::RAWReadToPtr(Memory::GetWritePointer(_BufferOut, Size), DVDAddress, Size))
 			{
 				PanicAlertT("DVDLowUnencryptedRead - Fatal Error: failed to read from volume");
 			}

@@ -201,7 +201,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 			{
 				//u32 has_addr = Memory::Read_U32(BufferIn + 0x04);
 				sockaddr_in local_name;
-				WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetPointer(BufferIn + 0x08);
+				WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetReadPointer(BufferIn + 0x08, sizeof(WiiSockAddrIn));
 				WiiSockMan::Convert(*wii_name, local_name);
 
 				int ret = bind(fd, (sockaddr*)&local_name, sizeof(local_name));
@@ -215,7 +215,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 			{
 				//u32 has_addr = Memory::Read_U32(BufferIn + 0x04);
 				sockaddr_in local_name;
-				WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetPointer(BufferIn + 0x08);
+				WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetReadPointer(BufferIn + 0x08, sizeof(WiiSockAddrIn));
 				WiiSockMan::Convert(*wii_name, local_name);
 
 				int ret = connect(fd, (sockaddr*)&local_name, sizeof(local_name));
@@ -230,7 +230,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 				if (BufferOutSize > 0)
 				{
 					sockaddr_in local_name;
-					WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetPointer(BufferOut);
+					WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetWritePointer(BufferOut, sizeof(WiiSockAddrIn));
 					WiiSockMan::Convert(*wii_name, local_name);
 
 					socklen_t addrlen = sizeof(sockaddr_in);
@@ -340,7 +340,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 					}
 					case IOCTLV_NET_SSL_WRITE:
 					{
-						int ret = ssl_write(&CWII_IPC_HLE_Device_net_ssl::_SSL[sslID].ctx, Memory::GetPointer(BufferOut2), BufferOutSize2);
+						int ret = ssl_write(&CWII_IPC_HLE_Device_net_ssl::_SSL[sslID].ctx, Memory::GetReadPointer(BufferOut2, BufferOutSize2), BufferOutSize2);
 
 #ifdef DEBUG_SSL
 						File::IOFile("ssl_write.bin", "ab").WriteBytes(Memory::GetPointer(BufferOut2), BufferOutSize2);
@@ -373,7 +373,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 					}
 					case IOCTLV_NET_SSL_READ:
 					{
-						int ret = ssl_read(&CWII_IPC_HLE_Device_net_ssl::_SSL[sslID].ctx, Memory::GetPointer(BufferIn2), BufferInSize2);
+						int ret = ssl_read(&CWII_IPC_HLE_Device_net_ssl::_SSL[sslID].ctx, Memory::GetWritePointer(BufferIn2, BufferInSize2), BufferInSize2);
 #ifdef DEBUG_SSL
 						if (ret > 0)
 						{
@@ -424,7 +424,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 
 					u32 flags = Memory::Read_U32(BufferIn2 + 0x04);
 					u32 has_destaddr = Memory::Read_U32(BufferIn2 + 0x08);
-					char * data = (char*)Memory::GetPointer(BufferIn);
+					char * data = (char*)Memory::GetReadPointer(BufferIn, BufferInSize);
 
 					// Act as non blocking when SO_MSG_NONBLOCK is specified
 					forceNonBlock = ((flags & SO_MSG_NONBLOCK) == SO_MSG_NONBLOCK);
@@ -434,7 +434,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 					sockaddr_in local_name = {0};
 					if (has_destaddr)
 					{
-						WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetPointer(BufferIn2 + 0x0C);
+						WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetReadPointer(BufferIn2 + 0x0C, sizeof(WiiSockAddrIn));
 						WiiSockMan::Convert(*wii_name, local_name);
 					}
 
@@ -458,15 +458,15 @@ void WiiSocket::Update(bool read, bool write, bool except)
 				case IOCTLV_SO_RECVFROM:
 				{
 					u32 flags = Memory::Read_U32(BufferIn + 0x04);
-					char * data = (char *)Memory::GetPointer(BufferOut);
 					int data_len = BufferOutSize;
+					char * data = (char *)Memory::GetWritePointer(BufferOut, data_len);
 
 					sockaddr_in local_name;
 					memset(&local_name, 0, sizeof(sockaddr_in));
 
 					if (BufferOutSize2 != 0)
 					{
-						WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetPointer(BufferOut2);
+						WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetReadPointer(BufferOut2, BufferOutSize2);
 						WiiSockMan::Convert(*wii_name, local_name);
 					}
 
@@ -500,7 +500,7 @@ void WiiSocket::Update(bool read, bool write, bool except)
 
 					if (BufferOutSize2 != 0)
 					{
-						WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetPointer(BufferOut2);
+						WiiSockAddrIn* wii_name = (WiiSockAddrIn*)Memory::GetWritePointer(BufferOut2, BufferOutSize2);
 						WiiSockMan::Convert(local_name, *wii_name, addrlen);
 					}
 					break;

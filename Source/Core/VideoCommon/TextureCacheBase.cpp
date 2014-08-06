@@ -362,7 +362,7 @@ TextureCache::TCacheEntryBase* TextureCache::Load(unsigned int const stage,
 	if (from_tmem)
 		src_data = &texMem[bpmem.tex[stage / 4].texImage1[stage % 4].tmem_even * TMEM_LINE_SIZE];
 	else {
-		src_data = Memory::GetPointer(address);
+		src_data = Memory::GetReadPointer(address, texture_size);
 		stale = Memory::RangeStale(address, texture_size);
 	}
 

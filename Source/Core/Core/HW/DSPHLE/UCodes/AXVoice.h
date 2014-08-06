@@ -81,7 +81,7 @@ union AXBuffers
 bool ReadPB(u32 addr, PB_TYPE& pb)
 {
 	u16* dst = (u16*)&pb;
-	const u16* src = (const u16*)Memory::GetPointer(addr);
+	const u16* src = (const u16*)Memory::GetReadPointer(addr, sizeof(PB_TYPE));
 	if (!src)
 		return false;
 
@@ -95,7 +95,7 @@ bool ReadPB(u32 addr, PB_TYPE& pb)
 bool WritePB(u32 addr, const PB_TYPE& pb)
 {
 	const u16* src = (const u16*)&pb;
-	u16* dst = (u16*)Memory::GetPointer(addr);
+	u16* dst = (u16*)Memory::GetWritePointer(addr, sizeof(PB_TYPE));
 	if (!dst)
 		return false;
 

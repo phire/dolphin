@@ -395,7 +395,7 @@ bool CWII_IPC_HLE_Device_es::IOCtlV(u32 _CommandAddress)
 			}
 			SContentAccess& rContent = itr->second;
 
-			u8* pDest = Memory::GetPointer(Addr);
+			u8* pDest = Memory::GetWritePointer(Addr, Size);
 
 			if (rContent.m_Position + Size > rContent.m_pContent->m_Size)
 			{
@@ -507,7 +507,7 @@ bool CWII_IPC_HLE_Device_es::IOCtlV(u32 _CommandAddress)
 
 			u64 TitleID = Memory::Read_U64(Buffer.InBuffer[0].m_Address);
 
-			char* Path = (char*)Memory::GetPointer(Buffer.PayloadBuffer[0].m_Address);
+			char* Path = (char*)Memory::GetWritePointer(Buffer.PayloadBuffer[0].m_Address, sizeof("/title/12345678/12345678/data"));
 			sprintf(Path, "/title/%08x/%08x/data", (u32)(TitleID >> 32), (u32)TitleID);
 
 			INFO_LOG(WII_IPC_ES, "IOCTL_ES_GETTITLEDIR: %s", Path);
@@ -666,11 +666,11 @@ bool CWII_IPC_HLE_Device_es::IOCtlV(u32 _CommandAddress)
 					// shouldn't matter at all.  Just fill out some fields just
 					// to be on the safe side.
 					u32 Address = Buffer.PayloadBuffer[0].m_Address;
-					memset(Memory::GetPointer(Address), 0, 0xD8);
+					Memory::Memset(Address, 0, 0xD8);
 					Memory::Write_U64(TitleID, Address + 4 + (0x1dc - 0x1d0)); // title ID
 					Memory::Write_U16(0xffff, Address + 4 + (0x1e4 - 0x1d0)); // unnnown
 					Memory::Write_U32(0xff00, Address + 4 + (0x1ec - 0x1d0)); // access mask
-					memset(Memory::GetPointer(Address + 4 + (0x222 - 0x1d0)), 0xff, 0x20); // content permissions
+					Memory::Memset(Address + 4 + (0x222 - 0x1d0), 0xff, 0x20); // content permissions
 				}
 				else
 				{
@@ -857,11 +857,11 @@ bool CWII_IPC_HLE_Device_es::IOCtlV(u32 _CommandAddress)
 	case IOCTL_ES_ENCRYPT:
 		{
 			u32 keyIndex    = Memory::Read_U32(Buffer.InBuffer[0].m_Address);
-			u8* IV          = Memory::GetPointer(Buffer.InBuffer[1].m_Address);
-			u8* source      = Memory::GetPointer(Buffer.InBuffer[2].m_Address);
+			u8* IV          = Memory::GetReadPointer(Buffer.InBuffer[1].m_Address, 16);
 			u32 size        = Buffer.InBuffer[2].m_Size;
-			u8* newIV       = Memory::GetPointer(Buffer.PayloadBuffer[0].m_Address);
-			u8* destination = Memory::GetPointer(Buffer.PayloadBuffer[1].m_Address);
+			u8* source      = Memory::GetReadPointer(Buffer.InBuffer[2].m_Address, size);
+			u8* newIV       = Memory::GetWritePointer(Buffer.PayloadBuffer[0].m_Address, size);
+			u8* destination = Memory::GetWritePointer(Buffer.PayloadBuffer[1].m_Address, size);
 
 			aes_context AES_ctx;
 			aes_setkey_enc(&AES_ctx, keyTable[keyIndex], 128);
@@ -875,11 +875,11 @@ bool CWII_IPC_HLE_Device_es::IOCtlV(u32 _CommandAddress)
 	case IOCTL_ES_DECRYPT:
 		{
 			u32 keyIndex    = Memory::Read_U32(Buffer.InBuffer[0].m_Address);
-			u8* IV          = Memory::GetPointer(Buffer.InBuffer[1].m_Address);
-			u8* source      = Memory::GetPointer(Buffer.InBuffer[2].m_Address);
+			u8* IV          = Memory::GetReadPointer(Buffer.InBuffer[1].m_Address, 16);
 			u32 size        = Buffer.InBuffer[2].m_Size;
-			u8* newIV       = Memory::GetPointer(Buffer.PayloadBuffer[0].m_Address);
-			u8* destination = Memory::GetPointer(Buffer.PayloadBuffer[1].m_Address);
+			u8* source      = Memory::GetReadPointer(Buffer.InBuffer[2].m_Address, size);
+			u8* newIV       = Memory::GetWritePointer(Buffer.PayloadBuffer[0].m_Address, size);
+			u8* destination = Memory::GetWritePointer(Buffer.PayloadBuffer[1].m_Address, size);
 
 			aes_context AES_ctx;
 			aes_setkey_dec(&AES_ctx, keyTable[keyIndex], 128);
@@ -1012,7 +1012,7 @@ bool CWII_IPC_HLE_Device_es::IOCtlV(u32 _CommandAddress)
 		{
 			WARN_LOG(WII_IPC_ES, "IOCTL_ES_GETDEVICECERT");
 			_dbg_assert_(WII_IPC_ES, Buffer.NumberPayloadBuffer == 1);
-			u8* destination = Memory::GetPointer(Buffer.PayloadBuffer[0].m_Address);
+			u8* destination = Memory::GetWritePointer(Buffer.PayloadBuffer[0].m_Address, 384);
 
 			EcWii &ec = EcWii::GetInstance();
 			get_ng_cert(destination, ec.getNgId(), ec.getNgKeyId(), ec.getNgPriv(), ec.getNgSig());

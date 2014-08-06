@@ -147,7 +147,7 @@ void UCodeInterface::PrepareBootUCode(u32 mail)
 		File::IOFile fp(ucode_dump_path, "wb");
 		if (fp)
 		{
-			fp.WriteArray((u8*)Memory::GetPointer(m_next_ucode.iram_mram_addr),
+			fp.WriteArray((u8*)Memory::GetWritePointer(m_next_ucode.iram_mram_addr, m_next_ucode.iram_size),
 			              m_next_ucode.iram_size);
 		}
 #endif

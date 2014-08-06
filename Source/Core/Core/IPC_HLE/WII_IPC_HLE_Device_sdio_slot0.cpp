@@ -399,7 +399,7 @@ u32 CWII_IPC_HLE_Device_sdio_slot0::ExecuteCommand(u32 _BufferIn, u32 _BufferInS
 				ERROR_LOG(WII_IPC_SD, "Seek failed WTF");
 
 
-			if (m_Card.ReadBytes(Memory::GetPointer(req.addr), size))
+			if (m_Card.ReadBytes(Memory::GetWritePointer(req.addr, size), size))
 			{
 				DEBUG_LOG(WII_IPC_SD, "Outbuffer size %i got %i", _rwBufferSize, size);
 			}
@@ -428,7 +428,7 @@ u32 CWII_IPC_HLE_Device_sdio_slot0::ExecuteCommand(u32 _BufferIn, u32 _BufferInS
 			if (!m_Card.Seek(req.arg, SEEK_SET))
 				ERROR_LOG(WII_IPC_SD, "fseeko failed WTF");
 
-			if (!m_Card.WriteBytes(Memory::GetPointer(req.addr), size))
+			if (!m_Card.WriteBytes(Memory::GetReadPointer(req.addr, size), size))
 			{
 				ERROR_LOG(WII_IPC_SD, "Write Failed - error: %i, eof: %i",
 					ferror(m_Card.GetHandle()), feof(m_Card.GetHandle()));

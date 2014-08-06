@@ -39,7 +39,7 @@ void CBoot::Load_FST(bool _bIsWii)
 		return;
 
 	// copy first 20 bytes of disc to start of Mem 1
-	VolumeHandler::ReadToPtr(Memory::GetPointer(0x80000000), 0, 0x20);
+	VolumeHandler::ReadToPtr(Memory::GetWritePointer(0x80000000, 0x20), 0, 0x20);
 
 	// copy of game id
 	Memory::Write_U32(Memory::Read_U32(0x80000000), 0x80003180);
@@ -56,7 +56,7 @@ void CBoot::Load_FST(bool _bIsWii)
 	Memory::Write_U32(arenaHigh, 0x00000034);
 
 	// load FST
-	VolumeHandler::ReadToPtr(Memory::GetPointer(arenaHigh), fstOffset, fstSize);
+	VolumeHandler::ReadToPtr(Memory::GetWritePointer(arenaHigh, fstSize), fstOffset, fstSize);
 	Memory::Write_U32(arenaHigh, 0x00000038);
 	Memory::Write_U32(maxFstSize, 0x0000003c);
 }
@@ -423,7 +423,7 @@ bool CBoot::BootUp()
 	{
 		HLE::Patch(0x80001800, "HBReload");
 		const u8 stubstr[] = { 'S', 'T', 'U', 'B', 'H', 'A', 'X', 'X' };
-		Memory::WriteBigEData(stubstr, 0x80001804, 8);
+		Memory::WriteBigEData(stubstr, 0x00001804, 8);
 	}
 
 	// Not part of the binary itself, but either we or Gecko OS might insert

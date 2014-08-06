@@ -178,7 +178,7 @@ void CEXIETHERNET::DMAWrite(u32 addr, u32 size)
 		transfer.direction == transfer.WRITE &&
 		transfer.address == BBA_WRTXFIFOD)
 	{
-		DirectFIFOWrite(Memory::GetPointer(addr), size);
+		DirectFIFOWrite(Memory::GetReadPointer(addr, size), size);
 	}
 	else
 	{
@@ -192,7 +192,7 @@ void CEXIETHERNET::DMARead(u32 addr, u32 size)
 {
 	DEBUG_LOG(SP1, "DMA read: %08x %x", addr, size);
 
-	memcpy(Memory::GetPointer(addr), &mBbaMem[transfer.address], size);
+	Memory::WriteBigEData(&mBbaMem[transfer.address], addr, size);
 
 	transfer.address += size;
 }

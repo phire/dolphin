@@ -228,7 +228,7 @@ bool CWII_IPC_HLE_Device_FileIO::Read(u32 _CommandAddress)
 		{
 			INFO_LOG(WII_IPC_FILEIO, "FileIO: Read 0x%x bytes to 0x%08x from %s", Size, Address, m_Name.c_str());
 			file.Seek(m_SeekPos, SEEK_SET);
-			ReturnValue = (u32)fread(Memory::GetPointer(Address), 1, Size, file.GetHandle());
+			ReturnValue = (u32)fread(Memory::GetWritePointer(Address, Size), 1, Size, file.GetHandle());
 			if (ReturnValue != Size && ferror(file.GetHandle()))
 			{
 				ReturnValue = FS_EACCESS;
@@ -266,7 +266,7 @@ bool CWII_IPC_HLE_Device_FileIO::Write(u32 _CommandAddress)
 		{
 			INFO_LOG(WII_IPC_FILEIO, "FileIO: Write 0x%04x bytes from 0x%08x to %s", Size, Address, m_Name.c_str());
 			file.Seek(m_SeekPos, SEEK_SET);
-			if (file.WriteBytes(Memory::GetPointer(Address), Size))
+			if (file.WriteBytes(Memory::GetWritePointer(Address, Size), Size))
 			{
 				ReturnValue = Size;
 				m_SeekPos += Size;

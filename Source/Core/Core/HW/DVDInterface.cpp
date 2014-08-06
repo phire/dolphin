@@ -437,8 +437,7 @@ void ClearCoverInterrupt()
 
 bool DVDRead(u32 _iDVDOffset, u32 _iRamAddress, u32 _iLength)
 {
-	Memory::setRange(_iRamAddress, _iLength, Memory::ON_CPU);
-	return VolumeHandler::ReadToPtr(Memory::GetPointer(_iRamAddress), _iDVDOffset, _iLength);
+	return VolumeHandler::ReadToPtr(Memory::GetWritePointer(_iRamAddress, _iLength), _iDVDOffset, _iLength);
 }
 
 void RegisterMMIO(MMIO::Mapping* mmio, u32 base)
@@ -591,7 +590,7 @@ void ExecuteCommand()
 			// small safety check, dunno if it's needed
 			if ((m_DICMDBUF[1].Hex == 0) && (m_DILENGTH.Length == 0x20))
 			{
-				u8* driveInfo = Memory::GetPointer(m_DIMAR.Address);
+				u8* driveInfo = Memory::GetWritePointer(m_DIMAR.Address, 9);
 				// gives the correct output in GCOS - 06 2001/08 (61)
 				// there may be other stuff missing ?
 				driveInfo[4] = 0x20;
@@ -669,7 +668,7 @@ void ExecuteCommand()
 						else if ((iDVDOffset == 0x1f900000) || (iDVDOffset == 0x1f900020))
 						{
 							ERROR_LOG(DVDINTERFACE, "GC-AM: READ MEDIA BOARD COMM AREA (1f900020)");
-							memcpy(Memory::GetPointer(m_DIMAR.Address), media_buffer + iDVDOffset - 0x1f900000, m_DILENGTH.Length);
+							Memory::WriteBigEData(media_buffer + iDVDOffset - 0x1f900000, m_DIMAR.Address, m_DILENGTH.Length);
 							for (u32 i = 0; i < m_DILENGTH.Length; i += 4)
 								ERROR_LOG(DVDINTERFACE, "GC-AM: %08x", Memory::Read_U32(m_DIMAR.Address + i));
 							break;
@@ -828,7 +827,7 @@ void ExecuteCommand()
 			else
 			{
 				u32 addr = m_DIMAR.Address;
-				memcpy(media_buffer + offset, Memory::GetPointer(addr), len);
+				memcpy(media_buffer + offset, Memory::GetReadPointer(addr, len), len);
 				while (len >= 4)
 				{
 					ERROR_LOG(DVDINTERFACE, "GC-AM Media Board WRITE (0xAA): %08x: %08x", iDVDOffset, Memory::Read_U32(addr));

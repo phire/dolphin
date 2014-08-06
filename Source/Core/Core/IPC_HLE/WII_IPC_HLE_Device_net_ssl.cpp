@@ -135,7 +135,7 @@ bool CWII_IPC_HLE_Device_net_ssl::IOCtlV(u32 _CommandAddress)
 	case IOCTLV_NET_SSL_NEW:
 	{
 		int verifyOption = Memory::Read_U32(BufferOut);
-		const char * hostname = (const char*) Memory::GetPointer(BufferOut2);
+		const char * hostname = (const char*) Memory::GetReadPointer(BufferOut2, BufferOutSize2);
 
 		int freeSSL = this->getSSLFreeID();
 		if (freeSSL)
@@ -253,7 +253,7 @@ _SSL_NEW_ERROR:
 			WII_SSL* ssl = &_SSL[sslID];
 			int ret = x509_crt_parse_der(
 				&ssl->cacert,
-				Memory::GetPointer(BufferOut2),
+				Memory::GetReadPointer(BufferOut2, BufferOutSize2),
 				BufferOutSize2);
 
 			if (ret)
@@ -436,7 +436,7 @@ _SSL_NEW_ERROR:
 			_BufferIn, BufferInSize, _BufferIn2, BufferInSize2,
 			_BufferIn3, BufferInSize3, BufferOut, BufferOutSize,
 			BufferOut2, BufferOutSize2, BufferOut3, BufferOutSize3);
-		INFO_LOG(WII_IPC_SSL, "%s", Memory::GetPointer(BufferOut2));
+		INFO_LOG(WII_IPC_SSL, "%s", Memory::GetReadPointer(BufferOut2, BufferOutSize2));
 		break;
 	}
 	case IOCTLV_NET_SSL_READ:

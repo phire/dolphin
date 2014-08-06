@@ -471,7 +471,7 @@ bool CWII_IPC_HLE_Device_net_wd_command::IOCtlV(u32 CommandAddress)
 		// XXX - unused
 		// ScanInfo *scan = (ScanInfo *)Memory::GetPointer(CommandBuffer.InBuffer.at(0).m_Address);
 
-		u16* results = (u16*)Memory::GetPointer(CommandBuffer.PayloadBuffer.at(0).m_Address);
+		u16* results = (u16*)Memory::GetWritePointer(CommandBuffer.PayloadBuffer.at(0).m_Address, sizeof(BSSInfo) + 2);
 		// first u16 indicates number of BSSInfo following
 		results[0] = Common::swap16(1);
 
@@ -494,7 +494,7 @@ bool CWII_IPC_HLE_Device_net_wd_command::IOCtlV(u32 CommandAddress)
 
 	case IOCTLV_WD_GET_INFO:
 		{
-		Info* info = (Info*)Memory::GetPointer(CommandBuffer.PayloadBuffer.at(0).m_Address);
+		Info* info = (Info*)Memory::GetWritePointer(CommandBuffer.PayloadBuffer.at(0).m_Address, sizeof(Info));
 		memset(info, 0, sizeof(Info));
 		// Probably used to disallow certain channels?
 		memcpy(info->country, "US", 2);
@@ -531,7 +531,7 @@ bool CWII_IPC_HLE_Device_net_wd_command::IOCtlV(u32 CommandAddress)
 				CommandBuffer.InBuffer.at(i).m_Address, CommandBuffer.InBuffer.at(i).m_Size);
 			INFO_LOG(WII_IPC_NET, "%s",
 				ArrayToString(
-					Memory::GetPointer(CommandBuffer.InBuffer.at(i).m_Address),
+					Memory::GetReadPointer(CommandBuffer.InBuffer.at(i).m_Address, CommandBuffer.InBuffer.at(i).m_Size),
 					CommandBuffer.InBuffer.at(i).m_Size).c_str()
 				);
 		}
@@ -918,7 +918,7 @@ bool CWII_IPC_HLE_Device_net_ip_top::IOCtl(u32 _CommandAddress)
 
 	case IOCTL_SO_INETATON:
 	{
-		struct hostent* remoteHost = gethostbyname((char*)Memory::GetPointer(BufferIn));
+		struct hostent* remoteHost = gethostbyname((char*)Memory::GetReadPointer(BufferIn, sizeof(struct hostent)));
 
 		Memory::Write_U32(Common::swap32(*(u32*)remoteHost->h_addr_list[0]), BufferOut);
 		INFO_LOG(WII_IPC_NET, "IOCTL_SO_INETATON = %d "
@@ -949,8 +949,8 @@ bool CWII_IPC_HLE_Device_net_ip_top::IOCtl(u32 _CommandAddress)
 			Memory::Read_U8(BufferIn + 8 + 3)
 			);
 		INFO_LOG(WII_IPC_NET, "IOCTL_SO_INETNTOP %s", ip_s);
-		memset(Memory::GetPointer(BufferOut), 0, BufferOutSize);
-		memcpy(Memory::GetPointer(BufferOut), ip_s, strlen(ip_s));
+		Memory::Memset(BufferOut, 0, BufferOutSize);
+		Memory::WriteBigEData((u8*)ip_s, (BufferOut), strlen(ip_s));
 		break;
 	}
 
@@ -1032,11 +1032,11 @@ bool CWII_IPC_HLE_Device_net_ip_top::IOCtl(u32 _CommandAddress)
 
 	case IOCTL_SO_GETHOSTBYNAME:
 		{
-			hostent* remoteHost = gethostbyname((char*)Memory::GetPointer(BufferIn));
+			hostent* remoteHost = gethostbyname((char*)Memory::GetReadPointer(BufferIn, sizeof(hostent)));
 
 			INFO_LOG(WII_IPC_NET, "IOCTL_SO_GETHOSTBYNAME "
 				"Address: %s, BufferIn: (%08x, %i), BufferOut: (%08x, %i)",
-				(char*)Memory::GetPointer(BufferIn), BufferIn, BufferInSize, BufferOut, BufferOutSize);
+				(char*)Memory::GetReadPointer(BufferIn, BufferInSize), BufferIn, BufferInSize, BufferOut, BufferOutSize);
 
 			if (remoteHost)
 			{
@@ -1118,7 +1118,7 @@ bool CWII_IPC_HLE_Device_net_ip_top::IOCtl(u32 _CommandAddress)
 		if (BufferInSize)
 		{
 			ERROR_LOG(WII_IPC_NET, "in addr %x size %x", BufferIn, BufferInSize);
-			ERROR_LOG(WII_IPC_NET, "\n%s", ArrayToString(Memory::GetPointer(BufferIn), BufferInSize, 4).c_str());
+			ERROR_LOG(WII_IPC_NET, "\n%s", ArrayToString(Memory::GetReadPointer(BufferIn, BufferInSize), BufferInSize, 4).c_str());
 		}
 
 		if (BufferOutSize)
@@ -1388,7 +1388,7 @@ bool CWII_IPC_HLE_Device_net_ip_top::IOCtlV(u32 CommandAddress)
 		INFO_LOG(WII_IPC_NET, "IOCTLV_SO_GETADDRINFO "
 			"(BufferIn: (%08x, %i), BufferOut: (%08x, %i)",
 			_BufferIn, BufferInSize, _BufferOut, BufferOutSize);
-		INFO_LOG(WII_IPC_NET, "IOCTLV_SO_GETADDRINFO: %s", Memory::GetPointer(_BufferIn));
+		INFO_LOG(WII_IPC_NET, "IOCTLV_SO_GETADDRINFO: %s", Memory::GetReadPointer(_BufferIn, BufferInSize));
 		ReturnValue = ret;
 		break;
 	}
@@ -1435,7 +1435,7 @@ bool CWII_IPC_HLE_Device_net_ip_top::IOCtlV(u32 CommandAddress)
 		s32 icmp_length = sizeof(data);
 
 		if (BufferInSize2 == sizeof(data))
-			memcpy(data, Memory::GetPointer(_BufferIn2), BufferInSize2);
+			memcpy(data, Memory::GetReadPointer(_BufferIn2, BufferInSize2), BufferInSize2);
 		else
 		{
 			// TODO sequence number is incremented either statically, by
@@ -1464,7 +1464,7 @@ bool CWII_IPC_HLE_Device_net_ip_top::IOCtlV(u32 CommandAddress)
 				CommandBuffer.InBuffer.at(i).m_Address, CommandBuffer.InBuffer.at(i).m_Size);
 			ERROR_LOG(WII_IPC_NET, "\n%s",
 				ArrayToString(
-				Memory::GetPointer(CommandBuffer.InBuffer.at(i).m_Address),
+				Memory::GetReadPointer(CommandBuffer.InBuffer.at(i).m_Address, CommandBuffer.InBuffer.at(i).m_Size),
 				CommandBuffer.InBuffer.at(i).m_Size, 4).c_str()
 				);
 		}

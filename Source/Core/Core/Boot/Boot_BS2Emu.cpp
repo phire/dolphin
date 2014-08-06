@@ -56,7 +56,7 @@ bool CBoot::EmulatedBS2_GC()
 	// Write necessary values
 	// Here we write values to memory that the apploader does not take care of. Game info goes
 	// to 0x80000000 according to YAGCD 4.2.
-	DVDInterface::DVDRead(0x00000000, 0x80000000, 0x20); // write disc info
+	DVDInterface::DVDRead(0x00000000, 0x00000000, 0x20); // write disc info
 
 	Memory::Write_U32(0x0D15EA5E, 0x80000020); // Booted from bootrom. 0xE5207C22 = booted from jtag
 	Memory::Write_U32(Memory::REALRAM_SIZE, 0x80000028); // Physical Memory Size (24MB on retail)
@@ -91,7 +91,7 @@ bool CBoot::EmulatedBS2_GC()
 		INFO_LOG(BOOT, "GC BS2: Not running apploader!");
 		return false;
 	}
-	VolumeHandler::ReadToPtr(Memory::GetPointer(0x81200000), iAppLoaderOffset + 0x20, iAppLoaderSize);
+	VolumeHandler::ReadToPtr(Memory::GetPointer(0x01200000), iAppLoaderOffset + 0x20, iAppLoaderSize);
 
 	// Setup pointers like real BS2 does
 	if (SConfig::GetInstance().m_LocalCoreStartupParameter.bNTSC)

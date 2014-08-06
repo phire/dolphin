@@ -78,7 +78,7 @@ static DataReadU32xNfunc DataReadU32xFuncs[16] = {
 static u32 InterpretDisplayList(u32 address, u32 size)
 {
 	u8* old_pVideoData = g_pVideoData;
-	u8* startAddress = Memory::GetPointer(address);
+	u8* startAddress = Memory::GetReadPointer(address, size);
 
 	u32 cycles = 0;
 

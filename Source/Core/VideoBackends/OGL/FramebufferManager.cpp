@@ -326,7 +326,7 @@ GLuint FramebufferManager::GetEFBDepthTexture(const EFBRectangle& sourceRc)
 
 void FramebufferManager::CopyToRealXFB(u32 xfbAddr, u32 fbWidth, u32 fbHeight, const EFBRectangle& sourceRc,float Gamma)
 {
-	u8* xfb_in_ram = Memory::GetPointer(xfbAddr);
+	u8* xfb_in_ram = Memory::GetWritePointer(xfbAddr, fbWidth * fbHeight * 2);
 	if (!xfb_in_ram)
 	{
 		WARN_LOG(VIDEO, "Tried to copy to invalid XFB address");

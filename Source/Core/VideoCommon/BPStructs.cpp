@@ -269,9 +269,9 @@ static void BPWritten(const BPCmd& bp)
 
 			// TODO - figure out a cleaner way.
 			if (Core::g_CoreStartupParameter.bWii)
-				ptr = Memory::GetPointer(bpmem.tmem_config.tlut_src << 5);
+				ptr = Memory::GetReadPointer(bpmem.tmem_config.tlut_src << 5, tlutXferCount);
 			else
-				ptr = Memory::GetPointer((bpmem.tmem_config.tlut_src & 0xFFFFF) << 5);
+				ptr = Memory::GetReadPointer((bpmem.tmem_config.tlut_src & 0xFFFFF) << 5, tlutXferCount);
 
 			if (ptr)
 				memcpy(texMem + tlutTMemAddr, ptr, tlutXferCount);

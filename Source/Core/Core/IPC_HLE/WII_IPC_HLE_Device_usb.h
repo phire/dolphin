@@ -123,7 +123,7 @@ private:
 
 		inline void FillBuffer(const void* src, const size_t size) const
 		{
-			memcpy(Memory::GetPointer(m_buffer), src, size);
+			Memory::WriteBigEData((u8*)src, m_buffer, size);
 		}
 
 		inline void SetRetVal(const u32 retval) const

@@ -32,7 +32,7 @@ void HLE_OSPanic()
 void HLE_GeneralDebugPrint()
 {
 	std::string ReportMessage;
-	if (*(u32*)Memory::GetPointer(GPR(3)) > 0x80000000)
+	if (*(u32*)Memory::GetPPCPointer(GPR(3)) > 0x80000000)
 	{
 		GetStringVA(ReportMessage, 4);
 	}
@@ -63,7 +63,7 @@ void GetStringVA(std::string& _rOutBuffer, u32 strReg)
 	char ArgumentBuffer[256];
 	u32 ParameterCounter = strReg+1;
 	u32 FloatingParameterCounter = 1;
-	char *pString = (char*)Memory::GetPointer(GPR(strReg));
+	char *pString = (char*)Memory::GetPPCPointer(GPR(strReg));
 	if (!pString)
 	{
 		ERROR_LOG(OSREPORT, "r%i invalid", strReg);
@@ -108,7 +108,7 @@ void GetStringVA(std::string& _rOutBuffer, u32 strReg)
 			switch (*pString)
 			{
 			case 's':
-				_rOutBuffer += StringFromFormat(ArgumentBuffer, (char*)Memory::GetPointer((u32)Parameter));
+				_rOutBuffer += StringFromFormat(ArgumentBuffer, (char*)Memory::GetPPCPointer((u32)Parameter));
 				break;
 
 			case 'd':

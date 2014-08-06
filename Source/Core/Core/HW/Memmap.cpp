@@ -317,9 +317,6 @@ std::string GetString(u32 em_address)
 	return str;
 }
 
-// GetPointer must always return an address in the bottom 32 bits of address space, so that 64-bit
-// programs don't have problems directly addressing any part of memory.
-// TODO re-think with respect to other BAT setups...
 u8 *GetPointer(const u32 _Address)
 {
 	switch (_Address >> 28)
@@ -370,6 +367,22 @@ u8 *GetPointer(const u32 _Address)
 	return nullptr;
 }
 
+u8 *GetPPCPointer(const u32 _Address) {
+	// This function to be implemented after GetPointer above gets converted to get Physical Pointer.
+	return GetPointer(_Address);
+}
+
+u8 *GetWritePointer(const u32 _Address, const u32 _Size) {
+	setRange(_Address, _Size, ON_CPU);
+	return GetPointer(_Address);
+}
+
+u8 *GetReadPointer(const u32 _Address, const u32 _Size) {
+	// Need a "set to at least SHARED minimum" function
+	// Right now nobody sets to ON_GPU, so no need to call this.
+	//setRange(_Address, _Size, SHARED);
+	return GetPointer(_Address);
+}
 
 bool IsRAMAddress(const u32 addr, bool allow_locked_cache, bool allow_fake_vmem)
 {

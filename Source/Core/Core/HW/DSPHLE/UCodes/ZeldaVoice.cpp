@@ -13,7 +13,7 @@
 
 void ZeldaUCode::ReadVoicePB(u32 _Addr, ZeldaVoicePB& PB)
 {
-	u16 *memory = (u16*)Memory::GetPointer(_Addr);
+	u16 *memory = (u16*)Memory::GetReadPointer(_Addr, 0x180);
 
 	// Perform byteswap
 	for (int i = 0; i < (0x180 / 2); i++)
@@ -32,7 +32,7 @@ void ZeldaUCode::ReadVoicePB(u32 _Addr, ZeldaVoicePB& PB)
 
 void ZeldaUCode::WritebackVoicePB(u32 _Addr, ZeldaVoicePB& PB)
 {
-	u16 *memory = (u16*)Memory::GetPointer(_Addr);
+	u16 *memory = (u16*)Memory::GetWritePointer(_Addr, 0x100);
 
 	// Word swap all 32-bit variables.
 	PB.RestartPos = (PB.RestartPos << 16) | (PB.RestartPos >> 16);
@@ -461,8 +461,7 @@ void Decoder21_ReadAudio(ZeldaVoicePB &PB, int size, s16 *_Buffer)
 	// ACC1 is the read size
 
 	const u32 ram_mask = 0x1FFFFFF;
-	const u8 *source = Memory::GetPointer(0x80000000);
-	const u16 *src = (u16 *)(source + (ACC0 & ram_mask));
+	const u16 *src = (u16 *)Memory::GetReadPointer(ACC0 & ram_mask, ACC1 >> 16);
 
 	for (u32 i = 0; i < (ACC1 >> 16); i++)
 	{

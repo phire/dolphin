@@ -235,13 +235,13 @@ bool CWII_IPC_HLE_Device_usb_oh1_57e_305::IOCtlV(u32 _CommandAddress)
 					#endif
 
 					CtrlBuffer BulkBuffer(_CommandAddress);
-					hci_acldata_hdr_t* pACLHeader = (hci_acldata_hdr_t*)Memory::GetPointer(BulkBuffer.m_buffer);
+					hci_acldata_hdr_t* pACLHeader = (hci_acldata_hdr_t*)Memory::GetReadPointer(BulkBuffer.m_buffer, sizeof(hci_acldata_hdr_t));
 
 					_dbg_assert_(WII_IPC_WIIMOTE, HCI_BC_FLAG(pACLHeader->con_handle) == HCI_POINT2POINT);
 					_dbg_assert_(WII_IPC_WIIMOTE, HCI_PB_FLAG(pACLHeader->con_handle) == HCI_PACKET_START);
 
 					SendToDevice(HCI_CON_HANDLE(pACLHeader->con_handle),
-						Memory::GetPointer(BulkBuffer.m_buffer + sizeof(hci_acldata_hdr_t)),
+						Memory::GetReadPointer(BulkBuffer.m_buffer + sizeof(hci_acldata_hdr_t), pACLHeader->length),
 						pACLHeader->length);
 
 					_SendReply = true;
@@ -345,7 +345,7 @@ void CWII_IPC_HLE_Device_usb_oh1_57e_305::SendACLPacket(u16 _ConnectionHandle, u
 	{
 		DEBUG_LOG(WII_IPC_WIIMOTE, "ACL endpoint valid, sending packet to %08x", m_ACLEndpoint.m_address);
 
-		hci_acldata_hdr_t* pHeader = (hci_acldata_hdr_t*)Memory::GetPointer(m_ACLEndpoint.m_buffer);
+		hci_acldata_hdr_t* pHeader = (hci_acldata_hdr_t*)Memory::GetWritePointer(m_ACLEndpoint.m_buffer, sizeof(hci_acldata_hdr_t) + _Size);
 		pHeader->con_handle = HCI_MK_CON_HANDLE(_ConnectionHandle, HCI_PACKET_START, HCI_POINT2POINT);
 		pHeader->length     = _Size;
 
@@ -519,7 +519,7 @@ void CWII_IPC_HLE_Device_usb_oh1_57e_305::ACLPool::WriteToEndpoint(CtrlBuffer& e
 	DEBUG_LOG(WII_IPC_WIIMOTE, "ACL packet being written from "
 		"queue to %08x", endpoint.m_address);
 
-	hci_acldata_hdr_t* pHeader = (hci_acldata_hdr_t*)Memory::GetPointer(endpoint.m_buffer);
+	hci_acldata_hdr_t* pHeader = (hci_acldata_hdr_t*)Memory::GetWritePointer(endpoint.m_buffer, sizeof(hci_acldata_hdr_t) + size);
 	pHeader->con_handle = HCI_MK_CON_HANDLE(conn_handle, HCI_PACKET_START, HCI_POINT2POINT);
 	pHeader->length = size;
 
@@ -1052,7 +1052,7 @@ bool CWII_IPC_HLE_Device_usb_oh1_57e_305::SendEventConPacketTypeChange(u16 _conn
 void CWII_IPC_HLE_Device_usb_oh1_57e_305::ExecuteHCICommandMessage(const SHCICommandMessage& _rHCICommandMessage)
 {
 	u8* pInput = Memory::GetPointer(_rHCICommandMessage.m_PayLoadAddr + 3);
-	SCommandMessage* pMsg = (SCommandMessage*)Memory::GetPointer(_rHCICommandMessage.m_PayLoadAddr);
+	SCommandMessage* pMsg = (SCommandMessage*)Memory::GetReadPointer(_rHCICommandMessage.m_PayLoadAddr, sizeof(SCommandMessage));
 
 	u16 ocf = HCI_OCF(pMsg->Opcode);
 	u16 ogf = HCI_OGF(pMsg->Opcode);
