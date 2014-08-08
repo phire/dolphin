@@ -454,33 +454,41 @@ bool RangeStale(u32 addr, u32 size) {
 	return false;
 }
 
+// TODO: find a better place for this function
+inline void _mprotect(void *address, size_t size, int prot)
+{
+#ifdef WIN32
+	DWORD out; // VirtualProtect needs a non-null pointer to return the previous protection status.
+	VirtualProtect(address, size, prot, &out);
+#else
+	mprotect(address, size, prot);
+#endif
+}
+
+// TODO: And these defines
+#ifndef WIN32
+	#define PAGE_READWRITE (PROT_READ | PROT_WRITE)
+	#define PAGE_READONLY  (PROT_READ)
+	#define PAGE_NOACCESS  (PROT_NONE)
+#endif
+
 void ProtectPage(u32 addr, PageLocation _Location)
 {
 	int prot;
 	switch (_Location)
 	{
 	case ON_CPU:
-#ifdef WIN32
 		prot = PAGE_READWRITE;
-#else
-		prot = PROT_READ | PROT_WRITE;
-#endif
 		break;
 	case SHARED:
-#ifdef WIN32
 		prot = PAGE_READONLY;
-#else
-		prot = PROT_READ;
-#endif
 		break;
 	case ON_GPU:
-#ifdef WIN32
 		prot = PAGE_NOACCESS;
-#else
-		prot = PROT_NONE;
-#endif
 		break;
-	} 
+	default:
+		return;
+	}
 
 	switch ((addr >> 24) & 0xFC)
 	{
@@ -490,20 +498,10 @@ void ProtectPage(u32 addr, PageLocation _Location)
 		addr = addr & 0x01FFF000;
 		if(addr < RAM_SIZE)
 		{
-			//if(addr != 0x8149f000) {
-#ifdef WIN32
-			DWORD out;
-			VirtualProtect(m_pRAM + addr, 0x1000, prot, &out);
-			VirtualProtect(m_pPhysicalRAM + addr, 0x1000, prot, &out);
-			VirtualProtect(m_pVirtualCachedRAM + addr, 0x1000, prot, &out);
-			VirtualProtect(m_pVirtualUncachedRAM + addr, 0x1000, prot, &out);
-#else
-			mprotect(m_pRAM + addr, 0x1000, prot);
-			mprotect(m_pPhysicalRAM + addr, 0x1000, prot);
-			mprotect(m_pVirtualCachedRAM + addr, 0x1000, prot);
-			mprotect(m_pVirtualUncachedRAM + addr, 0x1000, prot);
-#endif
-			//}
+			_mprotect(m_pRAM + addr, 0x1000, prot);
+			_mprotect(m_pPhysicalRAM + addr, 0x1000, prot);
+			_mprotect(m_pVirtualCachedRAM + addr, 0x1000, prot);
+			_mprotect(m_pVirtualUncachedRAM + addr, 0x1000, prot);
 			m_location[addr >> 12] = _Location;
 		}
 		break;
@@ -513,19 +511,10 @@ void ProtectPage(u32 addr, PageLocation _Location)
 		addr = addr & 0x0FFFF000;
 		if (SConfig::GetInstance().m_LocalCoreStartupParameter.bWii && addr < EXRAM_SIZE)
 		{
-#ifdef WIN32
-			DWORD out;
-			VirtualProtect(m_pEXRAM + addr, 0x1000, prot, &out);
-			VirtualProtect(m_pPhysicalEXRAM + addr, 0x1000, prot, &out);
-			VirtualProtect(m_pVirtualCachedEXRAM + addr, 0x1000, prot, &out);
-			VirtualProtect(m_pVirtualUncachedEXRAM + addr, 0x1000, prot, &out);
-#else
-			mprotect(m_pEXRAM + addr, 0x1000, prot);
-			mprotect(m_pPhysicalEXRAM + addr, 0x1000, prot);
-			mprotect(m_pVirtualCachedEXRAM + addr, 0x1000, prot);
-			mprotect(m_pVirtualUncachedEXRAM + addr, 0x1000, prot);
-#endif
-
+			_mprotect(m_pEXRAM + addr, 0x1000, prot);
+			_mprotect(m_pPhysicalEXRAM + addr, 0x1000, prot);
+			_mprotect(m_pVirtualCachedEXRAM + addr, 0x1000, prot);
+			_mprotect(m_pVirtualUncachedEXRAM + addr, 0x1000, prot);
 			m_location[(RAM_SIZE >> 12) + (addr >> 12)] = _Location;
 		}
 		break;
