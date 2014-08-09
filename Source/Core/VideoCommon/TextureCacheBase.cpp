@@ -528,6 +528,7 @@ TextureCache::TCacheEntryBase* TextureCache::Load(unsigned int const stage,
 		// Currently, we might try to reuse a texture which appears to have more levels than actual, maybe..
 		entry->num_mipmaps = maxlevel + 1;
 		entry->type = TCET_NORMAL;
+		entry->stale = true;
 
 		GFX_DEBUGGER_PAUSE_AT(NEXT_NEW_TEXTURE, true);
 	}
