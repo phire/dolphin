@@ -45,6 +45,8 @@ public:
 		// used to delete textures which haven't been used for TEXTURE_KILL_THRESHOLD frames
 		int frameCount;
 
+		// set to indicate a newer version of this texture may be avaliabe in cpu memory
+		bool stale;
 
 		void SetGeneralParameters(u32 _addr, u32 _size, u32 _format, unsigned int _num_mipmaps)
 		{

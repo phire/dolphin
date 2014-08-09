@@ -302,6 +302,9 @@ void TextureCache::TCacheEntry::FromRenderTarget(u32 dstAddr, unsigned int dstFo
 		GL_REPORT_ERRORD();
 	}
 
+	// FIXME, we need to get a pointer which doesn't page fault.
+
+
 	if (false == g_ActiveConfig.bCopyEFBToTexture)
 	{
 		int encoded_size = TextureConverter::EncodeToRamFromTexture(
@@ -313,7 +316,8 @@ void TextureCache::TCacheEntry::FromRenderTarget(u32 dstAddr, unsigned int dstFo
 			scaleByHalf,
 			srcRect);
 
-		u8* dst = Memory::GetWritePointer(addr, encoded_size);
+
+		u8* dst = Memory::GetReadPointer(addr, encoded_size);
 		u64 const new_hash = GetHash64(dst,encoded_size,g_ActiveConfig.iSafeTextureCache_ColorSamples);
 
 		// Mark texture entries in destination address range dynamic unless caching is enabled and the texture entry is up to date
@@ -321,8 +325,6 @@ void TextureCache::TCacheEntry::FromRenderTarget(u32 dstAddr, unsigned int dstFo
 			TextureCache::MakeRangeDynamic(addr,encoded_size);
 		else if (!TextureCache::Find(addr, new_hash))
 			TextureCache::MakeRangeDynamic(addr,encoded_size);
-
-		Memory::setRange(addr, encoded_size, Memory::SHARED);
 
 		hash = new_hash;
 	}

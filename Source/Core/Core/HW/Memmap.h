@@ -157,7 +157,7 @@ enum PageLocation {
 // Array to keep track of where pages are locked.
 extern PageLocation m_location[(RAM_SIZE + EXRAM_SIZE)/0x1000];
 
-void ProtectPage(u32 _Address, PageLocation _Location);
-void setRange(u32 _Address, u32 _Size, PageLocation _Location);
+void ProtectPage(u32 _Address, PageLocation _Location, bool no_callbacks=false);
+void setRange(u32 _Address, u32 _Size, PageLocation _Location, bool no_callbacks=false);
 bool RangeStale(u32 addr, u32 size);
 };

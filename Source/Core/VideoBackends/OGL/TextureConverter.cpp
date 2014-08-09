@@ -310,7 +310,9 @@ int EncodeToRamFromTexture(u32 address,GLuint source_texture, bool bFromZBuffer,
 
 	int size_in_bytes = TexDecoder_GetTextureSizeInBytes(width, height, format);
 
-	u8 *dest_ptr = Memory::GetWritePointer(address, size_in_bytes);
+	// FIXME, video backend shouldn't use getWritePointer
+	Memory::setRange(address, size_in_bytes, Memory::ON_CPU, true);
+	u8 *dest_ptr = Memory::GetPointer(address); //, size_in_bytes);
 
 	u16 blkW = TexDecoder_GetBlockWidthInTexels(format) - 1;
 	u16 blkH = TexDecoder_GetBlockHeightInTexels(format) - 1;

@@ -35,6 +35,7 @@
 
 #include "VideoCommon/PixelEngine.h"
 #include "VideoCommon/VideoBackendBase.h"
+#include "VideoCommon/TextureCacheBase.h"
 
 #ifndef WIN32
 
@@ -472,13 +473,16 @@ inline void _mprotect(void *address, size_t size, int prot)
 	#define PAGE_NOACCESS  (PROT_NONE)
 #endif
 
-void ProtectPage(u32 addr, PageLocation _Location)
+void ProtectPage(u32 addr, PageLocation _Location, bool no_callbacks)
 {
 	int prot;
 	switch (_Location)
 	{
 	case ON_CPU:
 		prot = PAGE_READWRITE;
+		if(!no_callbacks) {
+			TextureCache::InvalidateRange(addr&0x0ffff000, 0x1000);
+		}
 		break;
 	case SHARED:
 		prot = PAGE_READONLY;
@@ -521,14 +525,16 @@ void ProtectPage(u32 addr, PageLocation _Location)
 	}
 }
 
-void setRange(u32 _Address, u32 _Size, PageLocation _Location)
+void setRange(u32 _Address, u32 _Size, PageLocation _Location, bool no_callbacks)
 {
 	u32 bottom_page = _Address & 0xfffff000;
 	u32 top_page = _Address + _Size;
 
 	for(u32 page = bottom_page; page <= top_page; page += 0x1000)
 	{
-		ProtectPage(page, _Location);
+		if(PageStatus(page) != _Location) {
+			ProtectPage(page, _Location, no_callbacks);
+		}
 	}
 }
 
