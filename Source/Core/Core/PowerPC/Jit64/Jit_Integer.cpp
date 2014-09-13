@@ -239,6 +239,7 @@ void Jit64::reg_imm(UGeckoInstruction inst)
 
 bool Jit64::CheckMergedBranch(int crf)
 {
+	return false;
 	const UGeckoInstruction& next = js.next_inst;
 	return (((next.OPCD == 16 /* bcx */) ||
 	        ((next.OPCD == 19) && (next.SUBOP10 == 528) /* bcctrx */) ||

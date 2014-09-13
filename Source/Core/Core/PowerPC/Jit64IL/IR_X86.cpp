@@ -794,6 +794,9 @@ static void DoWriteCode(IRBuilder* ibuild, JitIL* Jit, u32 exitAddress)
 		case BreakPointCheck:
 		case Int3:
 		case Tramp:
+		case TraceTrue:
+		case TraceFalse:
+		case TracePC:
 			// No liveness effects
 			break;
 		case SExt8:
@@ -2150,8 +2153,22 @@ static void DoWriteCode(IRBuilder* ibuild, JitIL* Jit, u32 exitAddress)
 						break;
 				}
 				FixupBranch cont = Jit->J_CC(flag);
+
+				regSpillCallerSaved(RI);
+				if(*I >> 8)
+					Jit->ABI_CallFunction((void *)&traceTrue);
+				else
+					Jit->ABI_CallFunction((void *)&traceFalse);
+
 				regWriteExit(RI, getOp2(I));
 				Jit->SetJumpTarget(cont);
+
+				regSpillCallerSaved(RI);
+				if(*I >> 8)
+					Jit->ABI_CallFunction((void *)&traceFalse);
+				else
+					Jit->ABI_CallFunction((void *)&traceTrue);
+
 				if (RI.IInfo[I - RI.FirstI] & 4)
 					regClearInst(RI, getOp1(getOp1(I)));
 				if (RI.IInfo[I - RI.FirstI] & 8)
@@ -2161,8 +2178,22 @@ static void DoWriteCode(IRBuilder* ibuild, JitIL* Jit, u32 exitAddress)
 			{
 				Jit->CMP(32, regLocForInst(RI, getOp1(I)), Imm8(0));
 				FixupBranch cont = Jit->J_CC(CC_Z);
+
+				regSpillCallerSaved(RI);
+				if(*I >> 8)
+					Jit->ABI_CallFunction((void *)&traceTrue);
+				else
+					Jit->ABI_CallFunction((void *)&traceFalse);
+
 				regWriteExit(RI, getOp2(I));
 				Jit->SetJumpTarget(cont);
+
+				regSpillCallerSaved(RI);
+				if(*I >> 8)
+					Jit->ABI_CallFunction((void *)&traceFalse);
+				else
+					Jit->ABI_CallFunction((void *)&traceTrue);
+
 				if (RI.IInfo[I - RI.FirstI] & 4)
 					regClearInst(RI, getOp1(I));
 			}
@@ -2301,6 +2332,31 @@ static void DoWriteCode(IRBuilder* ibuild, JitIL* Jit, u32 exitAddress)
 		}
 		case Tramp: break;
 		case Nop: break;
+		case TraceTrue:
+		{
+			unsigned InstLoc = ibuild->GetImmValue(getOp1(I));
+
+			Jit->MOV(32, PPCSTATE(pc), Imm32(InstLoc));
+			regSpillCallerSaved(RI);
+			Jit->ABI_CallFunction((void *)&traceTrue);
+			break;
+		}
+		case TraceFalse:
+		{
+			unsigned InstLoc = ibuild->GetImmValue(getOp1(I));
+
+			Jit->MOV(32, PPCSTATE(pc), Imm32(InstLoc));
+			regSpillCallerSaved(RI);
+			Jit->ABI_CallFunction((void *)&traceFalse);
+			break;
+		}
+		case TracePC:
+		{
+			unsigned InstLoc = ibuild->GetImmValue(getOp1(I));
+
+			Jit->MOV(32, PPCSTATE(pc), Imm32(InstLoc));
+			break;
+		}
 		default:
 			PanicAlert("Unknown JIT instruction; aborting!");
 			exit(1);

@@ -149,7 +149,8 @@ void JitILBase::bcx(UGeckoInstruction inst)
 	}
 	else
 	{
-		ibuild.EmitBranchCond(Test, ibuild.EmitIntConst(destination));
+		ibuild.EmitTracePc(ibuild.EmitIntConst(js.compilerPC));
+		ibuild.EmitBranchCond(Test, ibuild.EmitIntConst(destination), 1);
 	}
 	ibuild.EmitBranchUncond(ibuild.EmitIntConst(js.compilerPC + 4));
 }
@@ -173,8 +174,9 @@ void JitILBase::bcctrx(UGeckoInstruction inst)
 	{
 		test = ibuild.EmitIntConst(1);
 	}
+	ibuild.EmitTracePc(ibuild.EmitIntConst(js.compilerPC));
 	test = ibuild.EmitICmpEq(test, ibuild.EmitIntConst(0));
-	ibuild.EmitBranchCond(test, ibuild.EmitIntConst(js.compilerPC + 4));
+	ibuild.EmitBranchCond(test, ibuild.EmitIntConst(js.compilerPC + 4), 0);
 
 	IREmitter::InstLoc destination = ibuild.EmitLoadCTR();
 	destination = ibuild.EmitAnd(destination, ibuild.EmitIntConst(-4));
@@ -203,7 +205,8 @@ void JitILBase::bclrx(UGeckoInstruction inst)
 
 	IREmitter::InstLoc test = TestBranch(ibuild, inst);
 	test = ibuild.EmitICmpEq(test, ibuild.EmitIntConst(0));
-	ibuild.EmitBranchCond(test, ibuild.EmitIntConst(js.compilerPC + 4));
+	ibuild.EmitTracePc(ibuild.EmitIntConst(js.compilerPC));
+	ibuild.EmitBranchCond(test, ibuild.EmitIntConst(js.compilerPC + 4), 0);
 
 	IREmitter::InstLoc destination = ibuild.EmitLoadLink();
 	destination = ibuild.EmitAnd(destination, ibuild.EmitIntConst(-4));

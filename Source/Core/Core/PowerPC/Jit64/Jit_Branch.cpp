@@ -103,6 +103,8 @@ void Jit64::bcx(UGeckoInstruction inst)
 	INSTRUCTION_START
 	JITDISABLE(bJITBranchOff);
 
+	MOV(32, PPCSTATE(pc), Imm32(js.compilerPC));
+
 	// USES_CR
 
 	FixupBranch pCTRDontBranch;
@@ -131,6 +133,14 @@ void Jit64::bcx(UGeckoInstruction inst)
 	else
 		destination = js.compilerPC + SignExt16(inst.BD << 2);
 
+	if ((inst.BO & BO_DONT_CHECK_CONDITION) == 0 || (inst.BO & BO_DONT_DECREMENT_FLAG) == 0) {
+
+		ABI_PushRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
+		ABI_CallFunction((void *)traceTrue);
+		ABI_PopRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
+
+	}
+
 	gpr.Flush(FLUSH_MAINTAIN_STATE);
 	fpr.Flush(FLUSH_MAINTAIN_STATE);
 	WriteExit(destination);
@@ -139,6 +149,12 @@ void Jit64::bcx(UGeckoInstruction inst)
 		SetJumpTarget( pConditionDontBranch );
 	if ((inst.BO & BO_DONT_DECREMENT_FLAG) == 0)
 		SetJumpTarget( pCTRDontBranch );
+
+	if ((inst.BO & BO_DONT_CHECK_CONDITION) == 0 || inst.BO & BO_BRANCH_IF_CTR_0) {
+		ABI_PushRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
+		ABI_CallFunction((void *)traceFalse);
+		ABI_PopRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
+	}
 
 	if (!analyzer.HasOption(PPCAnalyst::PPCAnalyzer::OPTION_CONDITIONAL_CONTINUE))
 	{
@@ -177,6 +193,8 @@ void Jit64::bcctrx(UGeckoInstruction inst)
 		// BO_2 == 001zy -> b if false
 		// BO_2 == 011zy -> b if true
 
+		MOV(32, PPCSTATE(pc), Imm32(js.compilerPC));
+
 		FixupBranch b = JumpIfCRFieldBit(inst.BI >> 2, 3 - (inst.BI & 3),
 		                                 !(inst.BO_2 & BO_BRANCH_IF_TRUE));
 		MOV(32, R(RSCRATCH), PPCSTATE_CTR);
@@ -185,11 +203,19 @@ void Jit64::bcctrx(UGeckoInstruction inst)
 		if (inst.LK_3)
 			MOV(32, PPCSTATE_LR, Imm32(js.compilerPC + 4)); // LR = PC + 4;
 
+		ABI_PushRegistersAndAdjustStack(CallerSavedRegistersInUse() | (1 << RSCRATCH), 0);
+		ABI_CallFunction((void *)traceTrue);
+		ABI_PopRegistersAndAdjustStack(CallerSavedRegistersInUse() | (1 << RSCRATCH), 0);
+
 		gpr.Flush(FLUSH_MAINTAIN_STATE);
 		fpr.Flush(FLUSH_MAINTAIN_STATE);
 		WriteExitDestInRSCRATCH();
 		// Would really like to continue the block here, but it ends. TODO.
 		SetJumpTarget(b);
+
+		ABI_PushRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
+		ABI_CallFunction((void *)traceFalse);
+		ABI_PopRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
 
 		if (!analyzer.HasOption(PPCAnalyst::PPCAnalyzer::OPTION_CONDITIONAL_CONTINUE))
 		{
@@ -204,6 +230,8 @@ void Jit64::bclrx(UGeckoInstruction inst)
 {
 	INSTRUCTION_START
 	JITDISABLE(bJITBranchOff);
+
+	MOV(32, PPCSTATE(pc), Imm32(js.compilerPC));
 
 	FixupBranch pCTRDontBranch;
 	if ((inst.BO & BO_DONT_DECREMENT_FLAG) == 0)  // Decrement and test CTR
@@ -233,6 +261,12 @@ void Jit64::bclrx(UGeckoInstruction inst)
 	if (inst.LK)
 		MOV(32, PPCSTATE_LR, Imm32(js.compilerPC + 4));
 
+	if ((inst.BO & BO_DONT_CHECK_CONDITION) == 0 || (inst.BO & BO_DONT_DECREMENT_FLAG) == 0 ) {
+		ABI_PushRegistersAndAdjustStack(CallerSavedRegistersInUse() | (1 << RSCRATCH), 0);
+		ABI_CallFunction((void *)traceTrue);
+		ABI_PopRegistersAndAdjustStack(CallerSavedRegistersInUse() | (1 << RSCRATCH), 0);
+	}
+
 	gpr.Flush(FLUSH_MAINTAIN_STATE);
 	fpr.Flush(FLUSH_MAINTAIN_STATE);
 	WriteExitDestInRSCRATCH();
@@ -241,6 +275,13 @@ void Jit64::bclrx(UGeckoInstruction inst)
 		SetJumpTarget( pConditionDontBranch );
 	if ((inst.BO & BO_DONT_DECREMENT_FLAG) == 0)
 		SetJumpTarget( pCTRDontBranch );
+
+	if ((inst.BO & BO_DONT_CHECK_CONDITION) == 0 || ( (inst.BO & BO_DONT_DECREMENT_FLAG) == 0 && inst.BO & BO_BRANCH_IF_CTR_0)) {
+
+		ABI_PushRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
+		ABI_CallFunction((void *)traceFalse);
+		ABI_PopRegistersAndAdjustStack(CallerSavedRegistersInUse(), 0);
+	}
 
 	if (!analyzer.HasOption(PPCAnalyst::PPCAnalyzer::OPTION_CONDITIONAL_CONTINUE))
 	{

@@ -7,6 +7,33 @@
 #include "Core/PowerPC/Jit64/Jit.h"
 #include "Core/PowerPC/Jit64/JitAsm.h"
 
+FILE *tracefile;
+void trace(bool b) {
+	static u32 lastPC = 0;
+	static u64 count = 0;
+	static bool lastb = false;
+
+	if(lastPC == PC && lastb == b) {
+		count++;
+	} else {
+		if ( count != 0 ) {
+			fprintf(tracefile, " x%lu", count+1);
+			count = 0;
+		}
+		fprintf(tracefile, "\n%s-%08x", b ? "True" : "False", PC);
+		lastPC = PC;
+		lastb = b;
+	}
+}
+
+void traceTrue() {
+	trace(true);
+}
+void traceFalse() {
+	trace(false);
+}
+
+
 using namespace Gen;
 
 // PLAN: no more block numbers - crazy opcodes just contain offset within
@@ -15,6 +42,8 @@ using namespace Gen;
 
 void Jit64AsmRoutineManager::Generate()
 {
+	tracefile = fopen("log.txt", "w");
+
 	enterCode = AlignCode16();
 	ABI_PushRegistersAndAdjustStack(ABI_ALL_CALLEE_SAVED, 8);
 
@@ -48,8 +77,10 @@ void Jit64AsmRoutineManager::Generate()
 			SetJumpTarget(skipToRealDispatch);
 
 			dispatcherNoCheck = GetCodePtr();
+			//ABI_CallFunction((void *)&trace);
 			MOV(32, R(RSCRATCH), PPCSTATE(pc));
 			dispatcherPcInRSCRATCH = GetCodePtr();
+
 
 			u32 mask = 0;
 			FixupBranch no_mem;

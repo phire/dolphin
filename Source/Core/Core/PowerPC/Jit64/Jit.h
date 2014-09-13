@@ -37,6 +37,9 @@
 #include "Core/PowerPC/JitCommon/JitBase.h"
 #include "Core/PowerPC/JitCommon/JitCache.h"
 
+void traceFalse();
+void traceTrue();
+
 class Jit64 : public Jitx86Base
 {
 private:

@@ -1070,17 +1070,18 @@ InstLoc IRBuilder::FoldRol(InstLoc Op1, InstLoc Op2)
 	return EmitBiOp(Rol, Op1, Op2);
 }
 
-InstLoc IRBuilder::FoldBranchCond(InstLoc Op1, InstLoc Op2)
+InstLoc IRBuilder::FoldBranchCond(InstLoc Op1, InstLoc Op2, unsigned extra)
 {
+	/*
 	if (isImm(*Op1))
 	{
 		if (GetImmValue(Op1))
 			return EmitBranchUncond(Op2);
 
 		return nullptr;
-	}
+	}*/
 
-	return EmitBiOp(BranchCond, Op1, Op2);
+	return EmitBiOp(BranchCond, Op1, Op2, extra);
 }
 
 InstLoc IRBuilder::FoldIdleBranch(InstLoc Op1, InstLoc Op2)
@@ -1244,7 +1245,7 @@ InstLoc IRBuilder::FoldBiOp(unsigned Opcode, InstLoc Op1, InstLoc Op2, unsigned 
 		case Rol:
 			return FoldRol(Op1, Op2);
 		case BranchCond:
-			return FoldBranchCond(Op1, Op2);
+			return FoldBranchCond(Op1, Op2, extra);
 		case IdleBranch:
 			return FoldIdleBranch(Op1, Op2);
 		case ICmpEq: case ICmpNe:
@@ -1352,7 +1353,7 @@ unsigned IRBuilder::getNumberOfOperands(InstLoc I) const
 		numberOfOperands[CInt32] = 0;
 
 		static unsigned ZeroOp[] = { LoadCR, LoadLink, LoadMSR, LoadGReg, LoadCTR, InterpreterBranch, LoadCarry, RFIExit, LoadFReg, LoadFRegDENToZero, LoadGQR, Int3, };
-		static unsigned UOp[] = { StoreLink, BranchUncond, StoreCR, StoreMSR, StoreFPRF, StoreGReg, StoreCTR, Load8, Load16, Load32, SExt16, SExt8, Cntlzw, Not, StoreCarry, SystemCall, ShortIdleLoop, LoadSingle, LoadDouble, LoadPaired, StoreFReg, DupSingleToMReg, DupSingleToPacked, ExpandPackedToMReg, CompactMRegToPacked, FSNeg, FDNeg, FPDup0, FPDup1, FPNeg, DoubleToSingle, StoreGQR, StoreSRR, ConvertFromFastCR, ConvertToFastCR, FastCRSOSet, FastCREQSet, FastCRGTSet, FastCRLTSet, };
+		static unsigned UOp[] = { StoreLink, BranchUncond, StoreCR, StoreMSR, StoreFPRF, StoreGReg, StoreCTR, Load8, Load16, Load32, SExt16, SExt8, Cntlzw, Not, StoreCarry, SystemCall, ShortIdleLoop, LoadSingle, LoadDouble, LoadPaired, StoreFReg, DupSingleToMReg, DupSingleToPacked, ExpandPackedToMReg, CompactMRegToPacked, FSNeg, FDNeg, FPDup0, FPDup1, FPNeg, DoubleToSingle, StoreGQR, StoreSRR, ConvertFromFastCR, ConvertToFastCR, FastCRSOSet, FastCREQSet, FastCRGTSet, FastCRLTSet, TraceFalse, TraceTrue, TracePC };
 		static unsigned BiOp[] = { BranchCond, IdleBranch, And, Xor, Sub, Or, Add, Mul, Rol, Shl, Shrl, Sarl, ICmpEq, ICmpNe, ICmpUgt, ICmpUlt, ICmpSgt, ICmpSlt, ICmpSge, ICmpSle, Store8, Store16, Store32, ICmpCRSigned, ICmpCRUnsigned, FallBackToInterpreter, StoreSingle, StoreDouble, StorePaired, InsertDoubleInMReg, FSMul, FSAdd, FSSub, FDMul, FDAdd, FDSub, FPAdd, FPMul, FPSub, FPMerge00, FPMerge01, FPMerge10, FPMerge11, FDCmpCR, };
 		for (auto& op : ZeroOp)
 			numberOfOperands[op] = 0;
@@ -1484,7 +1485,7 @@ static const std::string opcodeNames[] = {
 	"FDCmpCR", "CInt16", "CInt32", "SystemCall", "RFIExit",
 	"InterpreterBranch", "IdleBranch", "ShortIdleLoop",
 	"FPExceptionCheckStart", "FPExceptionCheckEnd", "ISIException", "ExtExceptionCheck",
-	"Tramp", "BlockStart", "BlockEnd", "Int3",
+	"Tramp", "BlockStart", "BlockEnd", "Int3", "TraceTrue", "TraceFalse", "TracePC",
 };
 static const unsigned alwaysUsedList[] = {
 	FallBackToInterpreter, StoreGReg, StoreCR, StoreLink, StoreCTR, StoreMSR,
@@ -1493,7 +1494,7 @@ static const unsigned alwaysUsedList[] = {
 	BlockStart, BlockEnd, IdleBranch, BranchCond, BranchUncond, ShortIdleLoop,
 	SystemCall, InterpreterBranch, RFIExit, FPExceptionCheck,
 	DSIExceptionCheck, ISIException, ExtExceptionCheck, BreakPointCheck,
-	Int3, Tramp, Nop
+	Int3, Tramp, Nop, TraceFalse, TraceTrue,
 };
 static const unsigned extra8RegList[] = {
 	LoadGReg, LoadCR, LoadGQR, LoadFReg, LoadFRegDENToZero,

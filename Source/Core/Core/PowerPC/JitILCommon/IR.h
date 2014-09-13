@@ -8,6 +8,9 @@
 
 #include "Common/x64Emitter.h"
 
+void traceFalse();
+void traceTrue();
+
 namespace IREmitter
 {
 
@@ -174,7 +177,8 @@ enum Opcode
 	BlockStart, BlockEnd,
 
 	// used for debugging
-	Int3
+	Int3,
+	TraceTrue, TraceFalse, TracePC,
 };
 
 typedef unsigned Inst;
@@ -242,7 +246,7 @@ private:
 	InstLoc FoldShl(InstLoc Op1, InstLoc Op2);
 	InstLoc FoldShrl(InstLoc Op1, InstLoc Op2);
 	InstLoc FoldXor(InstLoc Op1, InstLoc Op2);
-	InstLoc FoldBranchCond(InstLoc Op1, InstLoc Op2);
+	InstLoc FoldBranchCond(InstLoc Op1, InstLoc Op2, unsigned extra);
 	InstLoc FoldIdleBranch(InstLoc Op1, InstLoc Op2);
 	InstLoc FoldICmp(unsigned Opcode, InstLoc Op1, InstLoc Op2);
 	InstLoc FoldICmpCRSigned(InstLoc Op1, InstLoc Op2);
@@ -271,9 +275,9 @@ public:
 		return FoldUOp(BranchUncond, val);
 	}
 
-	InstLoc EmitBranchCond(InstLoc check, InstLoc dest)
+	InstLoc EmitBranchCond(InstLoc check, InstLoc dest, unsigned extra)
 	{
-		return FoldBiOp(BranchCond, check, dest);
+		return FoldBiOp(BranchCond, check, dest, extra);
 	}
 
 	InstLoc EmitIdleBranch(InstLoc check, InstLoc dest)
@@ -764,6 +768,21 @@ public:
 	InstLoc EmitINT3()
 	{
 		return FoldZeroOp(Int3, 0);
+	}
+
+	InstLoc EmitTraceTrue(InstLoc op1)
+	{
+		return FoldUOp(TraceTrue, op1);
+	}
+
+	InstLoc EmitTraceFalse(InstLoc op1)
+	{
+		return FoldUOp(TraceFalse, op1);
+	}
+
+	InstLoc EmitTracePc(InstLoc op1)
+	{
+		return FoldUOp(TracePC, op1);
 	}
 
 	void StartBackPass() { curReadPtr = InstList.data() + InstList.size(); }
