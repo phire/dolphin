@@ -53,6 +53,15 @@ enum
 	FL_OUT_FLOAT_S     = (1<<29),
 	// Used in the case of double ops (they don't modify the top half of the output)
 	FL_INOUT_FLOAT_D   = FL_IN_FLOAT_D | FL_OUT_FLOAT_D,
+	FL_EX_BPU          = (1<<30),
+	FL_EX_IU1          = (1l<<31),
+	FL_EX_IUx          = (1l<<32), // Can run on both IU1 and IU2
+	FL_EX_FPU          = (1l<<33),
+	FL_EX_LSU          = (1l<<34),
+	FL_EX_SRU          = (1l<<35),
+	FL_SERIAL_EXECUTE  = (1l<<36),
+	FL_SERIAL_COMPLETE = (1l<<37),
+	FL_SERIAL_REFETCH  = (1l<<38),
 };
 
 enum
@@ -98,7 +107,7 @@ struct GekkoOPInfo
 {
 	const char *opname;
 	int type;
-	int flags;
+	u64 flags;
 	int numCycles;
 	u64 runCount;
 	int compileCount;
