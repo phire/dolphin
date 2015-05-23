@@ -40,11 +40,16 @@ VideoConfig::VideoConfig()
 	// disable all features by default
 	backend_info.APIType = API_NONE;
 	backend_info.bSupportsExclusiveFullscreen = false;
+	backend_info.bSupportsGeometryShaders = false;
+	backend_info.bSupports3DVision = false;
+	backend_info.bSupportsPostProcessing = false;
 
 	// Game-specific stereoscopy settings
 	bStereoEFBMonoDepth = false;
 	iStereoDepthPercentage = 100;
 	iStereoConvergenceMinimum = 0;
+
+	g_Config.backend_info.Adapters.clear();
 }
 
 void VideoConfig::Load(const std::string& ini_file)

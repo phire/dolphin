@@ -2,6 +2,7 @@
 // Licensed under GPLv2
 // Refer to the license.txt file included.
 
+#include "VideoBackends/CrossPhire/VideoBackend.h"
 // TODO: ugly
 #ifdef _WIN32
 #include "VideoBackends/D3D/VideoBackend.h"
@@ -51,6 +52,7 @@ void VideoBackend::PopulateList()
 	if (IsGteVista())
 		g_available_video_backends.push_back(backends[1] = new DX11::VideoBackend);
 #endif
+	g_available_video_backends.push_back(backends[2] = new CrossPhire::VideoBackend);
 	g_available_video_backends.push_back(backends[3] = new SW::VideoSoftware);
 
 	for (VideoBackend* backend : backends)
