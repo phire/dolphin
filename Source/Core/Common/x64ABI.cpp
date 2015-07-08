@@ -155,6 +155,12 @@ void XEmitter::ABI_CallFunctionCCCP(const void *func, u32 param1, u32 param2, u3
 	ABI_CallFunction(func);
 }
 
+void XEmitter::ABI_CallFunctionP(const void *func, void *param1)
+{
+	MOV(64, R(ABI_PARAM1), Imm64((u64)param1));
+	ABI_CallFunction(func);
+}
+
 void XEmitter::ABI_CallFunctionPC(const void *func, void *param1, u32 param2)
 {
 	MOV(64, R(ABI_PARAM1), Imm64((u64)param1));

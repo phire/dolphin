@@ -266,6 +266,11 @@ namespace JitInterface
 		}
 	}
 
+	void ICacheMiss(JitBlock *block)
+	{
+		jit->GetBlockCache()->InvalidateICache(block->originalAddress, block->originalSize, true);
+	}
+
 	void Shutdown()
 	{
 		if (jit)

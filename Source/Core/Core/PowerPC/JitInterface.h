@@ -9,6 +9,7 @@
 #include "Core/MachineContext.h"
 #include "Core/PowerPC/CPUCoreBase.h"
 #include "Core/PowerPC/Profiler.h"
+#include "Core/PowerPC/JitCommon/JitCache.h"
 
 namespace JitInterface
 {
@@ -41,6 +42,8 @@ namespace JitInterface
 	void InvalidateICache(u32 address, u32 size, bool forced);
 
 	void CompileExceptionCheck(ExceptionType type);
+
+	void ICacheMiss(JitBlock *);
 
 	void Shutdown();
 }

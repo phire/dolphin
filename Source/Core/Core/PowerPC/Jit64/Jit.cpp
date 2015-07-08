@@ -577,6 +577,68 @@ const u8* Jit64::DoJit(u32 em_address, PPCAnalyst::CodeBuffer *code_buf, JitBloc
 		ABI_PopRegistersAndAdjustStack({}, 0);
 	}
 
+	// Icache code
+	// Check all cache lines are valid.
+	std::vector<FixupBranch> fixups;
+	for(u32 cacheline = em_address & 0x3fffffe0; cacheline < (nextPC & 0x3fffffe0); cacheline += 32)
+	{
+		u32 set = (cacheline >> 5) & 0x7f;
+		u32 tag = (cacheline >> 12);
+		u8 way = ppcState.iCache.GetWay(cacheline);
+
+		if(way == 0xff)
+			continue;
+
+
+		MOV(8, R(RSCRATCH), M(&ppcState.iCache.valid[set]));
+		TEST(32, M(&ppcState.iCache.valid[set]), Imm32(1 << way));
+		fixups.push_back(J_CC(CC_Z, true));
+		// TODO: We could OR the valid bit onto the subtraction of tags, and only do 1 subtraction.
+		MOV(32, R(RSCRATCH2), M(&ppcState.iCache.tags[set][way]));
+		CMP(32, M(&ppcState.iCache.tags[set][way]), Imm32(tag));
+		fixups.push_back(J_CC(CC_NE, true));
+
+		if(ppcState.iCache.valid[set] & (1 << way) == 0)
+			PanicAlert("iCache isn't valid, cacheline: %x, set: %i, way: %i, tag: %x", cacheline, set, way, tag);
+		if(ppcState.iCache.tags[set][way] != tag)
+			PanicAlert("iCache has wrong tag, cacheline: %x, set: %i, way: %i, expected: %x, actual %x", cacheline, set, way, tag, ppcState.iCache.tags[set][way]);
+
+	} // TODO: would we be better off with a loop? in another function?
+
+	// They are valid, set the PLRU bits
+	for(u32 cacheline = em_address & 0x3fffffe0; cacheline < (nextPC & 0x3fffffe0); cacheline += 32)
+	{
+		u32 set = (cacheline >> 5) & 0x7f;
+		u8 way = ppcState.iCache.GetWay(cacheline);
+
+		if(way == 0xff)
+			continue;
+
+		static const u8 plru_mask[8] =  {0x7F, 0x74, 0x6c, 0x6c, 0x5a, 0x5a, 0x3a, 0x3a};
+		static const u8 plru_value[8] = {0x0B, 0x03, 0x11, 0x01, 0x24, 0x04, 0x40, 0x00};
+
+		MOV(8, R(RSCRATCH), M(&ppcState.iCache.plru[set]));
+		AND(8, R(RSCRATCH), Imm8(plru_mask[way]));
+		OR(8, R(RSCRATCH), Imm8(plru_value[way]));
+		MOV(8, M(&ppcState.iCache.plru[set]), R(RSCRATCH));
+	}
+
+	if(!fixups.empty())
+	{
+		SwitchToFarCode();
+			for(auto &fixup : fixups)
+				SetJumpTarget(fixup);
+
+			// If a FPU exception occurs, the exception handler will read
+			// from PC.  Update PC with the latest value in case that happens.
+			MOV(32, PPCSTATE(pc), Imm32(js.blockStart));
+			ABI_PushRegistersAndAdjustStack({}, 0);
+			ABI_CallFunctionP((void *)&JitInterface::ICacheMiss, (void *)b);
+			ABI_PopRegistersAndAdjustStack({}, 0);
+			JMP(asm_routines.dispatcher, true);
+		SwitchToNearCode();
+	}
+
 	// Conditionally add profiling code.
 	if (Profiler::g_ProfileBlocks)
 	{

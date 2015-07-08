@@ -152,4 +152,25 @@ namespace PowerPC
 		return res;
 	}
 
+	u32 InstructionCache::GetWay(u32 addr) const
+	{
+		if (!HID0.ICE) // instruction cache is disabled
+			return 0xff;
+
+		u32 t;
+		if (addr & ICACHE_VMEM_BIT)
+		{
+			t = lookup_table_vmem[(addr >> 5) & 0xfffff];
+		}
+		else if (addr & ICACHE_EXRAM_BIT)
+		{
+			t = lookup_table_ex[(addr >> 5) & 0x1fffff];
+		}
+		else
+		{
+			t = lookup_table[(addr >> 5) & 0xfffff];
+		}
+		return t;
+	}
+
 }

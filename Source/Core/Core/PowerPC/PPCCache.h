@@ -33,6 +33,7 @@ namespace PowerPC
 
 		InstructionCache();
 		u32 ReadInstruction(u32 addr);
+		u32 GetWay(u32 addr) const;
 		void Invalidate(u32 addr);
 		void Init();
 		void Reset();
