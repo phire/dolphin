@@ -94,7 +94,7 @@ public:
 	void CheckInvalidState();
 
 protected:
-	void InitializeShared();
+	void InitializeShared(std::string old_config_file_name);
 
 	bool m_initialized = false;
 	bool m_invalid = false;

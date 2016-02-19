@@ -153,14 +153,8 @@ void VideoSoftware::ShowConfig(void *hParent)
 
 bool VideoSoftware::Initialize(void *window_handle)
 {
-	InitializeShared();
+	InitializeShared("gfx_software.ini");
 	InitBackendInfo();
-
-	g_Config.Load((File::GetUserPath(D_CONFIG_IDX) + "gfx_software.ini").c_str());
-	g_Config.GameIniLoad();
-	g_Config.UpdateProjectionHack();
-	g_Config.VerifyValidity();
-	UpdateActiveConfig();
 
 	SWOGLWindow::Init(window_handle);
 

@@ -144,9 +144,20 @@ u16 VideoBackendBase::Video_GetBoundingBox(int index)
 	return result;
 }
 
-void VideoBackendBase::InitializeShared()
+void VideoBackendBase::InitializeShared(std::string old_config_file_name)
 {
 	VideoCommon_Init();
+
+	frameCount = 0;
+
+	if (File::Exists(File::GetUserPath(D_CONFIG_IDX) + "GFX.ini"))
+		g_Config.Load(File::GetUserPath(D_CONFIG_IDX) + "GFX.ini");
+	else
+		g_Config.Load(File::GetUserPath(D_CONFIG_IDX) + old_config_file_name);
+	g_Config.GameIniLoad();
+	g_Config.UpdateProjectionHack();
+	g_Config.VerifyValidity();
+	UpdateActiveConfig();
 
 	s_FifoShuttingDown.Clear();
 	memset((void*)&s_beginFieldArgs, 0, sizeof(s_beginFieldArgs));
