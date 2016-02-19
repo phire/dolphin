@@ -14,6 +14,7 @@
 #endif
 #include "VideoBackends/OGL/VideoBackend.h"
 #include "VideoBackends/Software/VideoBackend.h"
+#include "VideoBackends/VK/VideoBackend.h"
 
 #include "VideoCommon/VideoBackendBase.h"
 
@@ -47,6 +48,7 @@ void VideoBackendBase::PopulateList()
 		g_available_video_backends.push_back(std::make_unique<DX12::VideoBackend>());
 	}
 #endif
+	g_available_video_backends.push_back(std::make_unique<VK::VideoBackend>());
 	g_available_video_backends.push_back(std::make_unique<SW::VideoSoftware>());
 
 	const auto iter = std::find_if(g_available_video_backends.begin(), g_available_video_backends.end(), [](const auto& backend) {

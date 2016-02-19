@@ -81,6 +81,9 @@
     <ProjectReference Include="$(CoreDir)VideoBackends\D3D12\D3D12.vcxproj">
       <Project>{570215b7-e32f-4438-95ae-c8d955f9fca3}</Project>
     </ProjectReference>
+	<ProjectReference Include="$(CoreDir)VideoBackends\VK\VK.vcxproj">
+      <Project>{7f4c080c-bb56-48f8-84f0-8bae02899e15}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
