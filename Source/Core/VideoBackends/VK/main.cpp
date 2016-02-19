@@ -2,6 +2,8 @@
 // Licensed under GPLv2+
 // Refer to the license.txt file included.
 
+#include <vulkan/vulkan.h>
+
 #include "Common/Common.h"
 
 #include "Core/ConfigManager.h"
@@ -27,6 +29,38 @@
 
 
 namespace VK {
+
+VkInstance s_vulkan_instance;
+std::vector<VkPhysicalDevice> s_physical_devices;
+
+static bool CreateInstance()
+{
+	VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO, nullptr };
+	appInfo.pApplicationName = "Dolphin Emulator";
+	appInfo.applicationVersion = 0; // TODO: provide meaningful version number
+	appInfo.pEngineName = nullptr;
+	appInfo.engineVersion = 0;
+	appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 2); // Technically we implement 1.0.3, but AMDs vulkan drivers only implement 1.0.2
+
+	VkInstanceCreateInfo instanceInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0 };
+	instanceInfo.pApplicationInfo = &appInfo;
+	instanceInfo.enabledLayerCount = 0;
+	instanceInfo.enabledExtensionCount = 0;
+
+	VkResult ret = vkCreateInstance(&instanceInfo, nullptr, &s_vulkan_instance);
+	if (ret != VK_SUCCESS)
+	{
+		ERROR_LOG(VIDEO, "Couldn't create Vulkan instance, error %i", ret);
+		return false;
+	}
+
+	u32 num_physical_devices;
+	vkEnumeratePhysicalDevices(s_vulkan_instance, &num_physical_devices, nullptr);
+	s_physical_devices.assign(num_physical_devices, VkPhysicalDevice());
+	vkEnumeratePhysicalDevices(s_vulkan_instance, &num_physical_devices, s_physical_devices.data());
+
+	return true;
+}
 
 // Draw messages on top of the screen
 unsigned int VideoBackend::PeekMessages()
@@ -56,6 +90,21 @@ static void InitBackendInfo()
 
 	g_Config.backend_info.Adapters.clear();
 
+	if(s_physical_devices.empty())
+	{
+		g_Config.backend_info.Adapters.push_back("No display adapters found");
+	}
+
+	for (auto physicalDevice : s_physical_devices)
+	{
+		VkPhysicalDeviceProperties properties;
+		vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+		g_Config.backend_info.Adapters.push_back(properties.deviceName);
+
+		// TODO, fill out more backend info for the currently selected device.
+	}
+
 	// aamodes - 1 is to stay consistent with D3D (means no AA)
 	g_Config.backend_info.AAModes = { 1 };
 }
@@ -63,22 +112,27 @@ static void InitBackendInfo()
 void VideoBackend::ShowConfig(void* parent_handle)
 {
 	if (!m_initialized)
+	{
+		CreateInstance();
 		InitBackendInfo();
+	}
 
 	Host_ShowVideoConfig(parent_handle, GetDisplayName(), "gfx_vulkan");
 }
 
 bool VideoBackend::Initialize(void* window_handle)
 {
-	InitializeShared("gfx_vulkan.ini");
-	InitBackendInfo();
+	if (!m_initialized)
+	{
+		if (!CreateInstance() || s_physical_devices.empty())
+			return false;
+		InitBackendInfo();
+	}
 
-	// InitInterface();
+	InitializeShared("gfx_vulkan.ini");
 
 	// Do our OSD callbacks
 	OSD::DoCallbacks(OSD::CallbackType::Initialization);
-
-	m_initialized = true;
 
 	return true;
 }
@@ -87,8 +141,7 @@ bool VideoBackend::Initialize(void* window_handle)
 // Run from the graphics thread
 void VideoBackend::Video_Prepare()
 {
-
-	g_renderer = std::make_unique<Renderer>();
+	g_renderer = std::make_unique<Renderer>(s_physical_devices[g_Config.iAdapter]);
 
 	CommandProcessor::Init();
 	PixelEngine::Init();
@@ -116,6 +169,8 @@ void VideoBackend::Video_Prepare()
 
 void VideoBackend::Shutdown()
 {
+	vkDestroyInstance(s_vulkan_instance, nullptr);
+	s_physical_devices.clear();
 	m_initialized = false;
 
 	// Do our OSD callbacks

@@ -6,6 +6,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="VertexManager.cpp" />
+    <ClCompile Include="Renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VideoBackend.h" />

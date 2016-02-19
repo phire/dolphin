@@ -5,6 +5,8 @@
 #pragma once
 
 #include <string>
+#include <vulkan/vulkan.h>
+
 #include "VideoCommon/RenderBase.h"
 
 namespace VK
@@ -13,7 +15,7 @@ namespace VK
 class Renderer : public ::Renderer
 {
 public:
-	Renderer() {};
+	Renderer(VkPhysicalDevice physicalDevice);
 
 	static void Init();
 	static void Shutdown();
@@ -35,6 +37,11 @@ public:
 	void ReinterpretPixelData(unsigned int convtype) override { };
 
 	int GetMaxTextureSize() override { return 1; };
+
+private:
+	VkPhysicalDevice m_physical_device;
+	VkDevice m_device;
+	bool CreateDevice(VkPhysicalDevice physicalDevice);
 };
 
 }
