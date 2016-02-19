@@ -7,6 +7,9 @@
 #include "Core/ConfigManager.h"
 #include "Core/Host.h"
 
+#include "VideoBackends/VK/Renderer.h"
+#include "VideoBackends/VK/TextureCache.h"
+#include "VideoBackends/VK/VertexManager.h"
 #include "VideoBackends/VK/VideoBackend.h"
 
 #include "VideoCommon/BPStructs.h"
@@ -85,13 +88,13 @@ bool VideoBackend::Initialize(void* window_handle)
 void VideoBackend::Video_Prepare()
 {
 
-	//g_renderer = std::make_unique<Renderer>();
+	g_renderer = std::make_unique<Renderer>();
 
 	CommandProcessor::Init();
 	PixelEngine::Init();
 
 	BPInit();
-	//g_vertex_manager = std::make_unique<VertexManager>();
+	g_vertex_manager = std::make_unique<VertexManager>();
 	//g_perf_query = GetPerfQuery();
 	Fifo::Init(); // must be done before OpcodeDecoder::Init()
 	OpcodeDecoder::Init();
@@ -100,7 +103,7 @@ void VideoBackend::Video_Prepare()
 	PixelShaderManager::Init();
 	GeometryShaderManager::Init();
 	//ProgramShaderCache::Init();
-	//g_texture_cache = std::make_unique<TextureCache>();
+	g_texture_cache = std::make_unique<TextureCache>();
 	//g_sampler_cache = std::make_unique<SamplerCache>();
 	//Renderer::Init();
 	VertexLoaderManager::Init();
@@ -121,8 +124,8 @@ void VideoBackend::Shutdown()
 
 void VideoBackend::Video_Cleanup()
 {
-	//if (!g_renderer)
-	//	return;
+	if (!g_renderer)
+		return;
 
 	Fifo::Shutdown();
 
@@ -133,17 +136,17 @@ void VideoBackend::Video_Cleanup()
 	//TextureConverter::Shutdown();
 	VertexLoaderManager::Shutdown();
 	//g_sampler_cache.reset();
-	//g_texture_cache.reset();
+	g_texture_cache.reset();
 	//ProgramShaderCache::Shutdown();
 	VertexShaderManager::Shutdown();
 	PixelShaderManager::Shutdown();
 	GeometryShaderManager::Shutdown();
 
 	g_perf_query.reset();
-	//g_vertex_manager.reset();
+	g_vertex_manager.reset();
 
 	OpcodeDecoder::Shutdown();
-	//g_renderer.reset();
+	g_renderer.reset();
 }
 
 }

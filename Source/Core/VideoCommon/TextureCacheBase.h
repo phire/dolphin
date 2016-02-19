@@ -133,8 +133,8 @@ public:
 		PEControl::PixelFormat srcFormat, const EFBRectangle& srcRect,
 		bool isIntensity, bool scaleByHalf) = 0;
 
-	virtual void CompileShaders() = 0; // currently only implemented by OGL
-	virtual void DeleteShaders() = 0; // currently only implemented by OGL
+	virtual void CompileShaders() { } // currently only implemented by OGL
+	virtual void DeleteShaders() { } // currently only implemented by OGL
 
 	static TCacheEntryBase* Load(const u32 stage);
 	static void UnbindTextures();

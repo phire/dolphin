@@ -5,8 +5,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="VertexManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VideoBackend.h" />
+    <ClInclude Include="TextureCache.h" />
+    <ClInclude Include="VertexManager.h" />
+    <ClInclude Include="Renderer.h" />
   </ItemGroup>
 </Project>

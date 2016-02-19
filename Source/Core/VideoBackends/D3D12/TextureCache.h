@@ -58,9 +58,6 @@ private:
 		PEControl::PixelFormat src_format, const EFBRectangle& src_rect,
 		bool is_intensity, bool scale_by_half) override;
 
-	void CompileShaders() override { }
-	void DeleteShaders() override { }
-
 	std::unique_ptr<D3DStreamBuffer> m_palette_stream_buffer;
 
 	ID3D12Resource* m_palette_uniform_buffer = nullptr;

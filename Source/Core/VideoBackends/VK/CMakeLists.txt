@@ -1,5 +1,6 @@
 set(SRCS
 	   main.cpp
+	   VertexManager.cpp
 	   )
 
 set(LIBS	${LIBS}
