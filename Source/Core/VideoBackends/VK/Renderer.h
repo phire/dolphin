@@ -45,6 +45,7 @@ private:
 	VkDevice m_device;
 	VkSurfaceKHR m_surface;
 	VkSwapchainKHR m_swapchain;
+	VkQueue m_queue;
 	void CreateDevice(VkPhysicalDevice physicalDevice);
 	void CreateSwapchain();
 };

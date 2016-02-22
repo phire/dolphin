@@ -97,6 +97,57 @@ Renderer::Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : m_ph
 	m_swapchain = VK_NULL_HANDLE;
 	CreateDevice(physicalDevice);
 	CreateSwapchain();
+	vkGetDeviceQueue(m_device, 0, 0, &m_queue); // FIXME: Hardcoded to the first queue
+
+	// Temporary code to prove that we can display something on the screen (clear the buffer to 'sky blue')
+
+	VkImage swapchainImages[3];
+	u32 count = 3;
+	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, swapchainImages);
+
+	u32 nextImage;
+	vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, nullptr, nullptr, &nextImage);
+
+	VkCommandPool commandPool;
+	VkCommandPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr };
+	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	poolInfo.queueFamilyIndex = 0;
+	vkCreateCommandPool(m_device, &poolInfo, nullptr, &commandPool);
+
+	VkCommandBuffer cmdBuf;
+	VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr };
+	allocateInfo.commandBufferCount = 1;
+	allocateInfo.commandPool = commandPool;
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	vkAllocateCommandBuffers(m_device, &allocateInfo, &cmdBuf);
+
+	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(cmdBuf, &beginInfo);
+
+	VkClearColorValue clearColor = {1.0f, 0.2f, 0.0f, 1.0f};
+	VkImageSubresourceRange range;
+	range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	range.baseMipLevel = 0;
+	range.layerCount = 1;
+	range.baseArrayLayer = 0;
+	range.levelCount = 1;
+	vkCmdClearColorImage(cmdBuf, swapchainImages[nextImage], VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &range);
+
+	vkEndCommandBuffer(cmdBuf);
+	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuf;
+	submitInfo.signalSemaphoreCount = 0;
+	submitInfo.waitSemaphoreCount = 0;
+	vkQueueSubmit(m_queue, 1, &submitInfo, nullptr);
+
+	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
+	presentInfo.pWaitSemaphores = 0;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &m_swapchain;
+	presentInfo.pImageIndices = &nextImage;
+	vkQueuePresentKHR(m_queue, &presentInfo);
 }
 
 Renderer::~Renderer()
