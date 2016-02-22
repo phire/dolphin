@@ -2,6 +2,8 @@
 // Licensed under GPLv2+
 // Refer to the license.txt file included.
 
+#define VK_USE_PLATFORM_WIN32_KHR
+
 #include <vulkan/vulkan.h>
 
 #include "Common/Common.h"
@@ -32,6 +34,18 @@ namespace VK {
 
 VkInstance s_vulkan_instance;
 std::vector<VkPhysicalDevice> s_physical_devices;
+VkSurfaceKHR s_surface;
+VkDebugReportCallbackEXT s_debug_callback;
+
+VkBool32 debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
+                              int32_t messageCode,  const char* pLayerPrefix, const char* pMessage, void* pUserData)
+{
+	if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+		ERROR_LOG(HOST_GPU, "[%s] Code %i: %s", pLayerPrefix, messageCode, pMessage);
+	else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+		WARN_LOG(HOST_GPU, "[%s] Code %i: %s", pLayerPrefix, messageCode, pMessage);
+	return false;
+}
 
 static bool CreateInstance()
 {
@@ -44,8 +58,15 @@ static bool CreateInstance()
 
 	VkInstanceCreateInfo instanceInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0 };
 	instanceInfo.pApplicationInfo = &appInfo;
-	instanceInfo.enabledLayerCount = 0;
-	instanceInfo.enabledExtensionCount = 0;
+	instanceInfo.enabledLayerCount = 1;
+	char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
+	instanceInfo.ppEnabledLayerNames = layers;
+	instanceInfo.enabledExtensionCount = 2;
+	char* extensions[] = {
+		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+	};
+	instanceInfo.ppEnabledExtensionNames = extensions;
 
 	VkResult ret = vkCreateInstance(&instanceInfo, nullptr, &s_vulkan_instance);
 	if (ret != VK_SUCCESS)
@@ -53,6 +74,16 @@ static bool CreateInstance()
 		ERROR_LOG(VIDEO, "Couldn't create Vulkan instance, error %i", ret);
 		return false;
 	}
+
+	PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
+	CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(s_vulkan_instance, "vkCreateDebugReportCallbackEXT");
+
+	VkDebugReportCallbackCreateInfoEXT callbackInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT, nullptr };
+	callbackInfo.pfnCallback = (PFN_vkDebugReportCallbackEXT)debugCallback;
+	callbackInfo.pUserData = nullptr;
+	callbackInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+
+	CreateDebugReportCallback(s_vulkan_instance, &callbackInfo, nullptr, &s_debug_callback);
 
 	u32 num_physical_devices;
 	vkEnumeratePhysicalDevices(s_vulkan_instance, &num_physical_devices, nullptr);
@@ -129,6 +160,18 @@ bool VideoBackend::Initialize(void* window_handle)
 		InitBackendInfo();
 	}
 
+	if (window_handle != nullptr)
+	{
+		VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0 };
+		surfaceInfo.hinstance = 0; // I hope the vulkan implementation doesn't actually need this.
+		surfaceInfo.hwnd = reinterpret_cast<HWND>(window_handle);
+
+		if (vkCreateWin32SurfaceKHR(s_vulkan_instance, &surfaceInfo, nullptr, &s_surface) != VK_SUCCESS) {
+			PanicAlert("Couldn't create a surface for vulkan.");
+			s_surface = VK_NULL_HANDLE;
+		}
+	}
+
 	InitializeShared("gfx_vulkan.ini");
 
 	// Do our OSD callbacks
@@ -141,7 +184,9 @@ bool VideoBackend::Initialize(void* window_handle)
 // Run from the graphics thread
 void VideoBackend::Video_Prepare()
 {
-	g_renderer = std::make_unique<Renderer>(s_physical_devices[g_Config.iAdapter]);
+
+
+	g_renderer = std::make_unique<Renderer>(s_physical_devices[g_Config.iAdapter], s_surface);
 
 	CommandProcessor::Init();
 	PixelEngine::Init();
@@ -169,8 +214,14 @@ void VideoBackend::Video_Prepare()
 
 void VideoBackend::Shutdown()
 {
-	vkDestroyInstance(s_vulkan_instance, nullptr);
+	vkDestroySurfaceKHR(s_vulkan_instance, s_surface, nullptr);
 	s_physical_devices.clear();
+
+	PFN_vkDestroyDebugReportCallbackEXT DestoryDebugReportCallback;
+	DestoryDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(s_vulkan_instance, "vkDestroyDebugReportCallbackEXT");
+	DestoryDebugReportCallback(s_vulkan_instance, s_debug_callback, nullptr);
+
+	vkDestroyInstance(s_vulkan_instance, nullptr);
 	m_initialized = false;
 
 	// Do our OSD callbacks

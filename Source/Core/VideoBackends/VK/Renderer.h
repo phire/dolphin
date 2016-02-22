@@ -15,7 +15,7 @@ namespace VK
 class Renderer : public ::Renderer
 {
 public:
-	Renderer(VkPhysicalDevice physicalDevice);
+	Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 	static void Init();
 	static void Shutdown();
@@ -41,7 +41,10 @@ public:
 private:
 	VkPhysicalDevice m_physical_device;
 	VkDevice m_device;
-	bool CreateDevice(VkPhysicalDevice physicalDevice);
+	VkSurfaceKHR m_surface;
+	VkSwapchainKHR m_swapchain;
+	void CreateDevice(VkPhysicalDevice physicalDevice);
+	void CreateSwapchain();
 };
 
 }
