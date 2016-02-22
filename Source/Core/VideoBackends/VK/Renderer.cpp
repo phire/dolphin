@@ -55,6 +55,11 @@ void Renderer::CreateSwapchain()
 	if (m_surface == VK_NULL_HANDLE)
 		return;
 
+	// Check that the device actually supports this surface.
+	VkBool32 supported;
+	vkGetPhysicalDeviceSurfaceSupportKHR(m_physical_device, 0, m_surface, &supported);
+	_assert_msg_(VIDEO, supported, "Vulkan: Surface not supported by this device");
+
 	// Dolphin almost never renders at the correct resolution, so we always render
 	// into an off-screen buffer and just scale/post-process into the final buffer.
 	// This allows us to enable a few optimizations for the swapchain.
@@ -65,21 +70,51 @@ void Renderer::CreateSwapchain()
 
 	VkSwapchainKHR oldSwapchain;
 
+	// Get capabilities of the surface, mostly for the window dimensions
 	VkSurfaceCapabilitiesKHR surfaceCapablities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physical_device, m_surface, &surfaceCapablities);
+	_assert_msg_(VIDEO, surfaceCapablities.minImageCount <= 3 && surfaceCapablities.maxImageCount >= 3,
+		"Vulkan implementation is fussy about number of surface images. Wants between %i and %i",
+		surfaceCapablities.minImageCount, surfaceCapablities.maxImageCount);
+	_assert_(surfaceCapablities.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT); // zero chance of this happening
+
+	// Get supported image formats
+	u32 numFormats = 0;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, m_surface, &numFormats, nullptr);
+	std::vector<VkSurfaceFormatKHR> formats(numFormats);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, m_surface, &numFormats, formats.data());
+
+	// Get the list of present modes.
+	u32 numModes = 0;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_surface, &numModes, nullptr);
+	std::vector<VkPresentModeKHR> presentModes(numModes);
+	vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_surface, &numModes, presentModes.data());
+
+	// Find the best presentation mode we have (preferably non-vsynced)
+	VkPresentModeKHR bestPresetMode = VK_PRESENT_MODE_FIFO_KHR; // vsync, all vulkan implementations are required to support this.
+	for (auto mode : presentModes)
+	{
+		if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+			bestPresetMode = mode; // Doesn't vsync or tear, more latency than tearing
+		else if(mode == VK_PRESENT_MODE_IMMEDIATE_KHR && bestPresetMode != VK_PRESENT_MODE_MAILBOX_KHR)
+			bestPresetMode = mode; // Standard tearing mode.
+		else if(mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR && bestPresetMode == VK_PRESENT_MODE_FIFO_KHR)
+			bestPresetMode = mode; // Normally vsyncs, but tears if a frame is late.
+	}
 
 	VkSwapchainCreateInfoKHR info = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0 };
 	info.surface = m_surface;
 	info.minImageCount = 3; // Tripple buffering!
-	info.imageFormat = VK_FORMAT_R8G8B8A8_UINT;
-	info.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+	// I'm not sure what the best way to go about selecting a color format is. Lets just pick the first one.
+	info.imageFormat = formats[0].format;
+	info.imageColorSpace = formats[0].colorSpace;
 	info.imageExtent = surfaceCapablities.currentExtent; // Match the screen size.
 	info.imageArrayLayers = 1; // No stereoscopy.
 	info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Only attach a color buffer
 	info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	info.preTransform = VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR; // Use OS rotation
+	info.preTransform = surfaceCapablities.currentTransform; // use current transform
 	info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // Ignore alpha
-	info.presentMode = VK_PRESENT_MODE_MAILBOX_KHR; // TODO: this forces VSYNC on
+	info.presentMode = bestPresetMode;
 	info.clipped = true; // Allow implementation to rendering of skip hidden pixels
 	info.oldSwapchain = oldSwapchain = m_swapchain;
 
@@ -101,9 +136,10 @@ Renderer::Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : m_ph
 
 	// Temporary code to prove that we can display something on the screen (clear the buffer to 'sky blue')
 
-	VkImage swapchainImages[3];
-	u32 count = 3;
-	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, swapchainImages);
+	u32 count = 0;
+	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, nullptr);
+	std::vector<VkImage> swapchainImages(count);
+	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, swapchainImages.data());
 
 	u32 nextImage;
 	vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, nullptr, nullptr, &nextImage);
