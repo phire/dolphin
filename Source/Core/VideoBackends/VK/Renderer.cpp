@@ -2,8 +2,6 @@
 // Licensed under GPLv2+
 // Refer to the license.txt file included.
 
-#include <vulkan/vulkan.h>
-
 #include "Common/Assert.h"
 #include "Common/Common.h"
 #include "Common/Logging/Log.h"
@@ -37,13 +35,17 @@ void Renderer::CreateDevice(VkPhysicalDevice physicalDevice)
 	info.pEnabledFeatures = &features;
 	info.queueCreateInfoCount = 1;
 	info.pQueueCreateInfos = &queues;
-	info.enabledExtensionCount = 0;
+	info.enabledExtensionCount = 1;
+	const char* extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	info.ppEnabledExtensionNames = extensions;
 	info.enabledLayerCount = 1;
-	char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
+	const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
 	info.ppEnabledLayerNames = layers;
 
 	VkResult ret = vkCreateDevice(physicalDevice, &info, nullptr, &m_device);
 	_assert_msg_(Video, ret == VK_SUCCESS, "Couldn't create a Vulkan device. Error code %i", ret);
+
+	VulkanLoadDeviceFunctions(m_device);
 }
 
 // Create a swapchain that matches the current window dimensions.
@@ -78,7 +80,7 @@ void Renderer::CreateSwapchain()
 	info.preTransform = VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR; // Use OS rotation
 	info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // Ignore alpha
 	info.presentMode = VK_PRESENT_MODE_MAILBOX_KHR; // TODO: this forces VSYNC on
-	info.clipped = true;
+	info.clipped = true; // Allow implementation to rendering of skip hidden pixels
 	info.oldSwapchain = oldSwapchain = m_swapchain;
 
 	VkResult ret = vkCreateSwapchainKHR(m_device, &info, nullptr, &m_swapchain);
@@ -95,6 +97,13 @@ Renderer::Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : m_ph
 	m_swapchain = VK_NULL_HANDLE;
 	CreateDevice(physicalDevice);
 	CreateSwapchain();
+}
+
+Renderer::~Renderer()
+{
+	if (m_swapchain != VK_NULL_HANDLE)
+		vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+	vkDestroyDevice(m_device, nullptr);
 }
 
 }

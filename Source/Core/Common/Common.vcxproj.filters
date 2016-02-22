@@ -16,6 +16,9 @@
     <Filter Include="GL\GLExtensions">
       <UniqueIdentifier>{c1d6f1fe-5ec5-406d-84f2-ed64d733d2c3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="VK">
+      <UniqueIdentifier>{f540e6a4-be36-4be0-b4c4-fc7d32154961}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Atomic.h" />
@@ -224,6 +227,9 @@
     </ClInclude>
     <ClInclude Include="Assert.h" />
     <ClInclude Include="NonCopyable.h" />
+    <ClInclude Include="VK\VkLoader.h">
+      <Filter>VK</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BreakPoints.cpp" />
@@ -284,6 +290,9 @@
       <Filter>GL\GLInterface</Filter>
     </ClCompile>
     <ClCompile Include="ucrtFreadWorkaround.cpp" />
+    <ClCompile Include="VK\VkLoader.cpp">
+      <Filter>VK</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

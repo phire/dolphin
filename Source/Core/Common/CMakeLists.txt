@@ -68,6 +68,10 @@ set(SRCS ${SRCS}
 	GL/GLExtensions/GLExtensions.cpp
 	GL/GLInterface/GLInterface.cpp)
 
+# Vulkan Loader
+set(SRCS ${SRCS}
+	VK/VkLoader.cpp)
+
 if(USE_EGL)
     set(SRCS ${SRCS} GL/GLInterface/EGL.cpp)
     if(ANDROID)

@@ -5,7 +5,8 @@
 #pragma once
 
 #include <string>
-#include <vulkan/vulkan.h>
+
+#include "Common/VK/VkLoader.h"
 
 #include "VideoCommon/RenderBase.h"
 
@@ -16,6 +17,7 @@ class Renderer : public ::Renderer
 {
 public:
 	Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+	~Renderer();
 
 	static void Init();
 	static void Shutdown();

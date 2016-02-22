@@ -4,9 +4,8 @@
 
 #define VK_USE_PLATFORM_WIN32_KHR
 
-#include <vulkan/vulkan.h>
-
 #include "Common/Common.h"
+#include "Common/VK/VkLoader.h"
 
 #include "Core/ConfigManager.h"
 #include "Core/Host.h"
@@ -49,6 +48,12 @@ VkBool32 debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT o
 
 static bool CreateInstance()
 {
+	if (!VulkanLoad())
+	{
+		PanicAlert("Vulkan Loader not found, have you installed drivers with vulkan support?");
+		return false;
+	}
+
 	VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO, nullptr };
 	appInfo.pApplicationName = "Dolphin Emulator";
 	appInfo.applicationVersion = 0; // TODO: provide meaningful version number
@@ -59,12 +64,13 @@ static bool CreateInstance()
 	VkInstanceCreateInfo instanceInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0 };
 	instanceInfo.pApplicationInfo = &appInfo;
 	instanceInfo.enabledLayerCount = 1;
-	char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
+	const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
 	instanceInfo.ppEnabledLayerNames = layers;
-	instanceInfo.enabledExtensionCount = 2;
-	char* extensions[] = {
+	instanceInfo.enabledExtensionCount = 3;
+	const char* extensions[] = {
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-		VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+		VK_KHR_SURFACE_EXTENSION_NAME
 	};
 	instanceInfo.ppEnabledExtensionNames = extensions;
 
@@ -75,15 +81,14 @@ static bool CreateInstance()
 		return false;
 	}
 
-	PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
-	CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(s_vulkan_instance, "vkCreateDebugReportCallbackEXT");
+	VulkanLoadInstanceFunctions(s_vulkan_instance);
 
 	VkDebugReportCallbackCreateInfoEXT callbackInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT, nullptr };
 	callbackInfo.pfnCallback = (PFN_vkDebugReportCallbackEXT)debugCallback;
 	callbackInfo.pUserData = nullptr;
 	callbackInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
-	CreateDebugReportCallback(s_vulkan_instance, &callbackInfo, nullptr, &s_debug_callback);
+	vkCreateDebugReportCallbackEXT(s_vulkan_instance, &callbackInfo, nullptr, &s_debug_callback);
 
 	u32 num_physical_devices;
 	vkEnumeratePhysicalDevices(s_vulkan_instance, &num_physical_devices, nullptr);
@@ -184,8 +189,6 @@ bool VideoBackend::Initialize(void* window_handle)
 // Run from the graphics thread
 void VideoBackend::Video_Prepare()
 {
-
-
 	g_renderer = std::make_unique<Renderer>(s_physical_devices[g_Config.iAdapter], s_surface);
 
 	CommandProcessor::Init();
@@ -217,9 +220,7 @@ void VideoBackend::Shutdown()
 	vkDestroySurfaceKHR(s_vulkan_instance, s_surface, nullptr);
 	s_physical_devices.clear();
 
-	PFN_vkDestroyDebugReportCallbackEXT DestoryDebugReportCallback;
-	DestoryDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(s_vulkan_instance, "vkDestroyDebugReportCallbackEXT");
-	DestoryDebugReportCallback(s_vulkan_instance, s_debug_callback, nullptr);
+	vkDestroyDebugReportCallbackEXT(s_vulkan_instance, s_debug_callback, nullptr);
 
 	vkDestroyInstance(s_vulkan_instance, nullptr);
 	m_initialized = false;
