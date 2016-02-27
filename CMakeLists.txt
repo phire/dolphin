@@ -869,6 +869,9 @@ if(NOT DISABLE_WX)
 	add_definitions(-DHAVE_WX=1)
 endif(NOT DISABLE_WX)
 
+# TODO: check for shared glslang
+add_subdirectory(Externals/glslang)
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD|NetBSD")
 	set(LIBS ${LIBS} usbhid)
 endif()
