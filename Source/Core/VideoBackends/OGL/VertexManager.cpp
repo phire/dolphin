@@ -74,7 +74,7 @@ void VertexManager::PrepareDrawBuffers(u32 stride)
 	ADDSTAT(stats.thisFrame.bytesIndexStreamed, index_data_size);
 }
 
-void VertexManager::ResetBuffer(u32 stride)
+void VertexManager::ResetBuffer(u32 stride, u32 count)
 {
 	if (s_cull_all)
 	{

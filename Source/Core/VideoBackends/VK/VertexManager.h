@@ -6,35 +6,41 @@
 
 #include <memory>
 
+#include "VideoBackends/VK/MemoryAllocator.h"
+
 #include "VideoCommon/VertexManagerBase.h"
+
 
 namespace VK
 {
 
-// TODO: This is a dummy vertex manager that just plops the vertices into a buffer in main memory.
-
 class VertexManager : public VertexManagerBase
 {
 public:
-	VertexManager()
-	{
-		vertexBuffer.reset(new u8[MAXVBUFFERSIZE]);
-
-		s_pBaseBufferPointer = vertexBuffer.get();
-		s_pEndBufferPointer = s_pBaseBufferPointer + MAXVBUFFERSIZE;
-
-		indexBuffer.reset(new u16[MAXIBUFFERSIZE]);
-	}
+	VertexManager();
 protected:
 	NativeVertexFormat* CreateNativeVertexFormat(const PortableVertexDeclaration& vtx_decl) override;
 
-	virtual void ResetBuffer(u32 stride) override;
+	virtual void ResetBuffer(u32 stride, u32 count) override;
 
 private:
-	virtual void vFlush(bool useDstAlpha) override { }
+	virtual void vFlush(bool useDstAlpha) override;
+	void PrepareDrawBuffers(u32 stride);
 
-	std::unique_ptr<u8[]> vertexBuffer;
-	std::unique_ptr<u16[]> indexBuffer;
+	void StartCommandBuffer();
+
+	void SignalFence(VkFence fence);
+	void SetFence(VkFence fence);
+
+	//This are the initially requested size for the buffers expressed in bytes
+	const u32 MAX_IBUFFER_SIZE = 2 * 1024 * 1024;
+	const u32 MAX_VBUFFER_SIZE = 32 * 1024 * 1024;
+
+	std::unique_ptr<MappedBuffer> vertexBuffer;
+	std::unique_ptr<MappedBuffer> indexBuffer;
+
+	VkCommandBuffer cmdBuffer; // Currently recording command Buffer
+	VkPipeline currentPipeline;
 };
 
 }

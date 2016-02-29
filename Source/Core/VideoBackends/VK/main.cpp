@@ -10,6 +10,7 @@
 #include "Core/ConfigManager.h"
 #include "Core/Host.h"
 
+#include "VideoBackends/VK/CompileGlsl.h"
 #include "VideoBackends/VK/Renderer.h"
 #include "VideoBackends/VK/TextureCache.h"
 #include "VideoBackends/VK/VertexManager.h"
@@ -63,7 +64,7 @@ static bool CreateInstance()
 
 	VkInstanceCreateInfo instanceInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0 };
 	instanceInfo.pApplicationInfo = &appInfo;
-	instanceInfo.enabledLayerCount = 1;
+	instanceInfo.enabledLayerCount = 0;
 	const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
 	instanceInfo.ppEnabledLayerNames = layers;
 	instanceInfo.enabledExtensionCount = 3;
@@ -123,6 +124,8 @@ static void InitBackendInfo()
 	g_Config.backend_info.bSupports3DVision = false;
 	g_Config.backend_info.bSupportsPostProcessing = false; // TODO
 	g_Config.backend_info.bSupportsSSAA = false; // not yet
+	g_Config.backend_info.bSupportsPrimitiveRestart = true; // Compulsory for vulkan implementations
+	g_Config.backend_info.bSupportsBindingLayout = true; // Also Compulsorary
 
 	g_Config.backend_info.Adapters.clear();
 
@@ -189,6 +192,7 @@ bool VideoBackend::Initialize(void* window_handle)
 // Run from the graphics thread
 void VideoBackend::Video_Prepare()
 {
+	InitilizeGlslang();
 	g_renderer = std::make_unique<Renderer>(s_physical_devices[g_Config.iAdapter], s_surface);
 
 	CommandProcessor::Init();
@@ -203,7 +207,6 @@ void VideoBackend::Video_Prepare()
 	VertexShaderManager::Init();
 	PixelShaderManager::Init();
 	GeometryShaderManager::Init();
-	//ProgramShaderCache::Init();
 	g_texture_cache = std::make_unique<TextureCache>();
 	//g_sampler_cache = std::make_unique<SamplerCache>();
 	//Renderer::Init();
@@ -244,7 +247,6 @@ void VideoBackend::Video_Cleanup()
 	VertexLoaderManager::Shutdown();
 	//g_sampler_cache.reset();
 	g_texture_cache.reset();
-	//ProgramShaderCache::Shutdown();
 	VertexShaderManager::Shutdown();
 	PixelShaderManager::Shutdown();
 	GeometryShaderManager::Shutdown();
@@ -254,6 +256,8 @@ void VideoBackend::Video_Cleanup()
 
 	OpcodeDecoder::Shutdown();
 	g_renderer.reset();
+
+	ShutdownGlslang();
 }
 
 }

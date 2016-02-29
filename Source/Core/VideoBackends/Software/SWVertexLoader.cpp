@@ -51,7 +51,7 @@ SWVertexLoader::~SWVertexLoader()
 	m_SetupUnit = nullptr;
 }
 
-void SWVertexLoader::ResetBuffer(u32 stride)
+void SWVertexLoader::ResetBuffer(u32 stride, u32 count)
 {
 	s_pCurBufferPointer = s_pBaseBufferPointer = LocalVBuffer.data();
 	s_pEndBufferPointer = s_pCurBufferPointer + LocalVBuffer.size();

@@ -185,7 +185,7 @@ void VertexManager::vFlush(bool useDstAlpha)
 	g_renderer->RestoreState();
 }
 
-void VertexManager::ResetBuffer(u32 stride)
+void VertexManager::ResetBuffer(u32 stride, u32 count)
 {
 	s_pCurBufferPointer = s_pBaseBufferPointer;
 	IndexGenerator::Start(GetIndexBuffer());

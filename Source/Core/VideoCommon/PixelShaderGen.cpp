@@ -372,7 +372,7 @@ ShaderCode GeneratePixelShaderCode(DSTALPHA_MODE dstAlphaMode, API_TYPE ApiType,
 
 	if (ApiType == API_OPENGL)
 	{
-		out.Write("SAMPLER_BINDING(0) uniform sampler2DArray samp[8];\n");
+		//out.Write("SAMPLER_BINDING(0) uniform sampler2DArray samp[8];\n");
 	}
 	else // D3D
 	{
@@ -492,9 +492,9 @@ ShaderCode GeneratePixelShaderCode(DSTALPHA_MODE dstAlphaMode, API_TYPE ApiType,
 
 	if (ApiType == API_OPENGL)
 	{
-		out.Write("out vec4 ocol0;\n");
+		out.Write("layout (location = 0) out vec4 ocol0;\n");
 		if (dstAlphaMode == DSTALPHA_DUAL_SOURCE_BLEND)
-			out.Write("out vec4 ocol1;\n");
+			out.Write("layout (location = 1) out vec4 ocol1;\n");
 
 		if (uid_data->per_pixel_depth)
 			out.Write("#define depth gl_FragDepth\n");
@@ -511,19 +511,19 @@ ShaderCode GeneratePixelShaderCode(DSTALPHA_MODE dstAlphaMode, API_TYPE ApiType,
 		}
 		else
 		{
-			out.Write("%s in float4 colors_0;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
-			out.Write("%s in float4 colors_1;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
+			out.Write("layout(location = 1) %s in float4 colors_0;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
+			out.Write("layout(location = 2) %s in float4 colors_1;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
 			// compute window position if needed because binding semantic WPOS is not widely supported
 			// Let's set up attributes
 			for (unsigned int i = 0; i < uid_data->genMode_numtexgens; ++i)
 			{
-				out.Write("%s in float3 uv%d;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa), i);
+				out.Write("layout(location = %d) %s in float3 uv%d;\n", i + 3, GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa), i);
 			}
-			out.Write("%s in float4 clipPos;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
+			out.Write("layout(location = 0) %s in float4 clipPos;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
 			if (uid_data->per_pixel_lighting)
 			{
-				out.Write("%s in float3 Normal;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
-				out.Write("%s in float3 WorldPos;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
+				out.Write("layout(location = 11) %s in float3 Normal;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
+				out.Write("layout(location = 12) %s in float3 WorldPos;\n", GetInterpolationQualifier(ApiType, uid_data->msaa, uid_data->ssaa));
 			}
 		}
 

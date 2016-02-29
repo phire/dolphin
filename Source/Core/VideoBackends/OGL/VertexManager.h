@@ -36,7 +36,7 @@ public:
 	GLuint m_index_buffers;
 	GLuint m_last_vao;
 protected:
-	void ResetBuffer(u32 stride) override;
+	void ResetBuffer(u32 stride, u32 count) override;
 
 private:
 	void Draw(u32 stride);

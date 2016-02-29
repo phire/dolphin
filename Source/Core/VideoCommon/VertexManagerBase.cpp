@@ -96,7 +96,7 @@ DataReader VertexManagerBase::PrepareForAdditionalData(int primitive, u32 count,
 	// need to alloc new buffer
 	if (s_is_flushed)
 	{
-		g_vertex_manager->ResetBuffer(stride);
+		g_vertex_manager->ResetBuffer(stride, count);
 		s_is_flushed = false;
 	}
 

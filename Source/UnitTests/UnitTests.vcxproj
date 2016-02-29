@@ -49,7 +49,7 @@
         dolphin codebase.
         -->
       <AdditionalLibraryDirectories>$(ExternalsDir)OpenAL\$(PlatformName);$(ExternalsDir)ffmpeg\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>C:\VulkanSDK\1.0.3.1\Bin\vulkan-1.lib;iphlpapi.lib;winmm.lib;setupapi.lib;opengl32.lib;glu32.lib;rpcrt4.lib;comctl32.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>iphlpapi.lib;winmm.lib;setupapi.lib;opengl32.lib;glu32.lib;rpcrt4.lib;comctl32.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/NODEFAULTLIB:libcmt %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">/NODEFAULTLIB:libcmt %(AdditionalOptions)</AdditionalOptions>
@@ -83,6 +83,9 @@
     </ProjectReference>
     <ProjectReference Include="$(CoreDir)VideoBackends\VK\VK.vcxproj">
       <Project>{7f4c080c-bb56-48f8-84f0-8bae02899e15}</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(ExternalsDir)glslang\glslang.vcxproj">
+      <Project>{EDFA2E87-8AC1-4853-95D4-D7594FF81947}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

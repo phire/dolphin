@@ -1,5 +1,7 @@
 set(SRCS
 	   main.cpp
+	   MemoryAllocator.cpp
+	   Renderer.cpp
 	   VertexManager.cpp
 	   )
 

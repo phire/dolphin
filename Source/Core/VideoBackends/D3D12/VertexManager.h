@@ -25,7 +25,7 @@ public:
 	void SetIndexBuffer();
 
 protected:
-	void ResetBuffer(u32 stride) override;
+	void ResetBuffer(u32 stride, u32 count) override;
 
 private:
 	void PrepareDrawBuffers(u32 stride);

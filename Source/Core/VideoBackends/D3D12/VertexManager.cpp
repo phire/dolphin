@@ -173,7 +173,7 @@ void VertexManager::vFlush(bool use_dst_alpha)
 	}
 }
 
-void VertexManager::ResetBuffer(u32 stride)
+void VertexManager::ResetBuffer(u32 stride, u32 count)
 {
 	if (s_cull_all)
 	{

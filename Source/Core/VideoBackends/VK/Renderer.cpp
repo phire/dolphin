@@ -8,6 +8,8 @@
 #include "Common/MsgHandler.h"
 
 #include "VideoBackends/VK/Renderer.h"
+#include "VideoBackends/VK/MemoryAllocator.h"
+#include "VideoBackends/VK/PipelineCache.h"
 
 namespace VK
 {
@@ -38,7 +40,7 @@ void Renderer::CreateDevice(VkPhysicalDevice physicalDevice)
 	info.enabledExtensionCount = 1;
 	const char* extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	info.ppEnabledExtensionNames = extensions;
-	info.enabledLayerCount = 1;
+	info.enabledLayerCount = 0;
 	const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
 	info.ppEnabledLayerNames = layers;
 
@@ -132,6 +134,9 @@ Renderer::Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : m_ph
 	m_swapchain = VK_NULL_HANDLE;
 	CreateDevice(physicalDevice);
 	CreateSwapchain();
+	MemoryAllocator::Initilize(physicalDevice, m_device);
+	g_pipeline_cache = std::make_unique<PipelineCache>(m_device);
+
 	vkGetDeviceQueue(m_device, 0, 0, &m_queue); // FIXME: Hardcoded to the first queue
 
 	// Temporary code to prove that we can display something on the screen (clear the buffer to 'sky blue')
@@ -188,6 +193,7 @@ Renderer::Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : m_ph
 
 Renderer::~Renderer()
 {
+	g_pipeline_cache.reset();
 	if (m_swapchain != VK_NULL_HANDLE)
 		vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 	vkDestroyDevice(m_device, nullptr);

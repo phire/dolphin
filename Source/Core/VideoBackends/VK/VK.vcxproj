@@ -41,7 +41,10 @@
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <ItemGroup>
+    <ClCompile Include="CompileGlsl.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MemoryAllocator.cpp" />
+    <ClCompile Include="PipelineCache.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="VertexManager.cpp" />
   </ItemGroup>
@@ -54,6 +57,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CompileGlsl.h" />
+    <ClInclude Include="MemoryAllocator.h" />
+    <ClInclude Include="PipelineCache.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="TextureCache.h" />
     <ClInclude Include="VertexManager.h" />

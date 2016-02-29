@@ -200,6 +200,9 @@
     <ProjectReference Include="$(ExternalsDir)zlib\zlib.vcxproj">
       <Project>{ff213b23-2c26-4214-9f88-85271e557e87}</Project>
     </ProjectReference>
+    <ProjectReference Include="$(ExternalsDir)glslang\glslang.vcxproj">
+      <Project>{EDFA2E87-8AC1-4853-95D4-D7594FF81947}</Project>
+    </ProjectReference>
     <ProjectReference Include="$(CoreDir)AudioCommon\AudioCommon.vcxproj">
       <Project>{54aa7840-5beb-4a0c-9452-74ba4cc7fd44}</Project>
     </ProjectReference>

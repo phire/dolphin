@@ -116,7 +116,59 @@ ShaderCode GenerateVertexShaderCode(API_TYPE api_type, const vertex_shader_uid_d
 	GenerateVSOutputMembers(out, api_type, uid_data->numTexGens, uid_data->pixel_lighting);
 	out.Write("};\n");
 
-	if (api_type == API_OPENGL)
+	if (api_type == API_OPENGL) // Actually VULKAN
+	{
+		out.Write("layout(location = %d) in float4 rawpos;\n", SHADER_POSITION_ATTRIB);
+		if (uid_data->components & VB_HAS_POSMTXIDX)
+			out.Write("layout(location = %d) in int posmtx;\n", SHADER_POSMTX_ATTRIB);
+		if (uid_data->components & VB_HAS_NRM0)
+			out.Write("layout(location = %d) in float3 rawnorm0;\n", SHADER_NORM0_ATTRIB);
+		if (uid_data->components & VB_HAS_NRM1)
+			out.Write("layout(location = %d) in float3 rawnorm1;\n", SHADER_NORM1_ATTRIB);
+		if (uid_data->components & VB_HAS_NRM2)
+			out.Write("layout(location = %d) in float3 rawnorm2;\n", SHADER_NORM2_ATTRIB);
+
+		if (uid_data->components & VB_HAS_COL0)
+			out.Write("layout(location = %d) in float4 color0;\n", SHADER_COLOR0_ATTRIB);
+		if (uid_data->components & VB_HAS_COL1)
+			out.Write("layout(location = %d) in float4 color1;\n", SHADER_COLOR1_ATTRIB);
+
+		for (int i = 0; i < 8; ++i)
+		{
+			u32 hastexmtx = (uid_data->components & (VB_HAS_TEXMTXIDX0 << i));
+			if ((uid_data->components & (VB_HAS_UV0 << i)) || hastexmtx)
+				out.Write("layout(location = %d) in float%d tex%d;\n", hastexmtx ? 3 : 2, i, SHADER_TEXTURE0_ATTRIB + i);
+		}
+
+		if (g_ActiveConfig.backend_info.bSupportsGeometryShaders)
+		{
+			out.Write("out VertexData {\n");
+			GenerateVSOutputMembers(out, api_type, uid_data->numTexGens, uid_data->pixel_lighting, GetInterpolationQualifier(api_type, uid_data->msaa, uid_data->ssaa, false, true));
+			out.Write("} vs;\n");
+		}
+		else
+		{
+			// Let's set up attributes
+			for (u32 i = 0; i < 8; ++i)
+			{
+				if (i < uid_data->numTexGens)
+				{
+					out.Write("layout (location = %d) %s out float3 uv%u;\n", i + 3, GetInterpolationQualifier(api_type, uid_data->msaa, uid_data->ssaa), i);
+				}
+			}
+			out.Write("layout (location = 0) %s out float4 clipPos;\n", GetInterpolationQualifier(api_type, uid_data->msaa, uid_data->ssaa));
+			if (uid_data->pixel_lighting)
+			{
+				out.Write("layout (location = 11) %s out float3 Normal;\n", GetInterpolationQualifier(api_type, uid_data->msaa, uid_data->ssaa));
+				out.Write("layout (location = 12) %s out float3 WorldPos;\n", GetInterpolationQualifier(api_type, uid_data->msaa, uid_data->ssaa));
+			}
+			out.Write("layout (location = 1) %s out float4 colors_0;\n", GetInterpolationQualifier(api_type, uid_data->msaa, uid_data->ssaa));
+			out.Write("layout (location = 2) %s out float4 colors_1;\n", GetInterpolationQualifier(api_type, uid_data->msaa, uid_data->ssaa));
+		}
+
+		out.Write("void main()\n{\n");
+	}
+	else if (api_type == API_OPENGL)
 	{
 		out.Write("in float4 rawpos; // ATTR%d,\n", SHADER_POSITION_ATTRIB);
 		if (uid_data->components & VB_HAS_POSMTXIDX)

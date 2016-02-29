@@ -7,11 +7,17 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="VertexManager.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="MemoryAllocator.cpp" />
+    <ClCompile Include="PipelineCache.cpp" />
+    <ClCompile Include="CompileGlsl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VideoBackend.h" />
     <ClInclude Include="TextureCache.h" />
     <ClInclude Include="VertexManager.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="MemoryAllocator.h" />
+    <ClInclude Include="PipelineCache.h" />
+    <ClInclude Include="CompileGlsl.h" />
   </ItemGroup>
 </Project>
