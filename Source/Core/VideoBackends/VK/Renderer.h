@@ -13,6 +13,10 @@
 namespace VK
 {
 
+// FIXME: UGLY HACK
+extern VkQueue g_queue;
+extern VkCommandBuffer cmdBuffer; // Currently recording command Buffer
+
 class Renderer : public ::Renderer
 {
 public:
@@ -32,7 +36,8 @@ public:
 
 	TargetRectangle ConvertEFBRectangle(const EFBRectangle& rc) override { return TargetRectangle(); };
 
-	void SwapImpl(u32 xfbAddr, u32 fbWidth, u32 fbStride, u32 fbHeight, const EFBRectangle& rc, float Gamma) override { };
+	void StartFrame();
+	void SwapImpl(u32 xfbAddr, u32 fbWidth, u32 fbStride, u32 fbHeight, const EFBRectangle& rc, float Gamma) override;
 
 	void ClearScreen(const EFBRectangle& rc, bool colorEnable, bool alphaEnable, bool zEnable, u32 color, u32 z) override { };
 
@@ -41,13 +46,21 @@ public:
 	int GetMaxTextureSize() override { return 1; };
 
 private:
-	VkPhysicalDevice m_physical_device;
-	VkDevice m_device;
-	VkSurfaceKHR m_surface;
-	VkSwapchainKHR m_swapchain;
-	VkQueue m_queue;
 	void CreateDevice(VkPhysicalDevice physicalDevice);
 	void CreateSwapchain();
+
+	void TestTriangle();
+
+	VkPhysicalDevice m_physical_device;
+	VkDevice m_device;
+	VkCommandPool m_commandPool;
+	VkSurfaceKHR m_surface;
+	VkSwapchainKHR m_swapchain;
+	std::vector<VkImage> swapchainImages;
+	std::vector<VkImageView> swapchainImageViews;
+	std::vector<VkFramebuffer> swapchainFramebuffers;
+	u32 currentImage;
+	VkExtent2D m_surface_extent;
 };
 
 }

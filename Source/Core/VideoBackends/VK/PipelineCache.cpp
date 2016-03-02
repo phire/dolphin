@@ -37,21 +37,6 @@ std::string s_glsl_header =
 
 "#define SAMPLER_BINDING(x) layout(set = 0, binding = x)\n\n";
 
-std::string vertexShader =
-"layout(location = 0) in float4 rawpos;\n"
-"//layout(location = 5) in float4 color0;\n"
-"//layout(location = 0) out float4 position;\n"
-"//layout(location = 0)  out float4 clipPos;\n"
-"layout(location = 1)  out float4 colors_0;\n"
-"//layout(location = 2)  out float4 colors_1;\n"
-"void main()\n"
-"{\n"
-"	colors_0 = float4(0.0, 0.0, 0.0, 0.0);\n"
-"//	colors_1 = colors_0;\n"
-"	gl_Position = rawpos;\n"
-"//	clipPos = gl_Position;\n"
-"}\n";
-
 VkShaderModule PipelineCache::CompileShader(std::string shader, VkShaderStageFlagBits type) const
 {
 	std::vector<unsigned int> spirv = CompileGlslToSpirv(s_glsl_header + shader, type);
@@ -64,12 +49,7 @@ VkShaderModule PipelineCache::CompileShader(std::string shader, VkShaderStageFla
 	//spv::Disassemble(out, spirv);
 	//out.close();
 
-	//std::string binary;
-	//File::ReadFileToString(filename, binary);
-
 	VkShaderModule module;
-	//"\x03\x02\x23\x07\0\0\0\0\0\0\0\x01"
-	std::string glsl_shader = s_glsl_header + shader;
 
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0 };
 	info.pCode = spirv.data();
@@ -79,20 +59,30 @@ VkShaderModule PipelineCache::CompileShader(std::string shader, VkShaderStageFla
 	return module;
 }
 
-VkPipeline PipelineCache::MakePipeline(VertexShaderUid vertex_uid, GeometryShaderUid geo_uid, PixelShaderUid pixel_uid, PrimitiveType type, std::vector<VkVertexInputAttributeDescription> vertAttrDesc, u32 stride) const
+VkPipeline PipelineCache::MakePipeline(VertexShaderUid vertex_uid, GeometryShaderUid geo_uid, PixelShaderUid pixel_uid, PrimitiveType type, std::vector<VkVertexInputAttributeDescription> vertAttrDesc, u32 stride)
 {
+	if (!m_pipelines_to_destroy.empty())
+	{
+		return m_pipelines_to_destroy[0];
+	}
 	// Generate GLSL shaders and convert them to SPIR-V
 	// TODO: cache these modules too?
 	VkShaderModule pixelModule = CompileShader(GeneratePixelShaderCode(DSTALPHA_NONE, API_OPENGL, pixel_uid.GetUidData()).GetBuffer(), VK_SHADER_STAGE_FRAGMENT_BIT);
-	VkShaderModule vertexModule = CompileShader(vertexShader /*GenerateVertexShaderCode(API_OPENGL, vertex_uid.GetUidData()).GetBuffer()*/, VK_SHADER_STAGE_VERTEX_BIT);
+	VkShaderModule vertexModule = CompileShader(GenerateVertexShaderCode(API_OPENGL, vertex_uid.GetUidData()).GetBuffer(), VK_SHADER_STAGE_VERTEX_BIT);
 
-	VkPipelineShaderStageCreateInfo shaderstage[2] = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr };
-	shaderstage[0].pName = "Shadergen pixel shader";
+	VkPipelineShaderStageCreateInfo shaderstage[2];
+	shaderstage[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderstage[0].pNext = nullptr;
+	shaderstage[0].pName = "main";
 	shaderstage[0].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	shaderstage[0].module = pixelModule;
-	shaderstage[1].pName = "Shadergen vertex shader";
+	shaderstage[0].pSpecializationInfo = nullptr;
+	shaderstage[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderstage[1].pNext = nullptr;
+	shaderstage[1].pName = "main";
 	shaderstage[1].stage = VK_SHADER_STAGE_VERTEX_BIT;
 	shaderstage[1].module = vertexModule;
+	shaderstage[1].pSpecializationInfo = nullptr;
 
 	VkVertexInputBindingDescription inputBinding;
 	inputBinding.binding = 0;
@@ -117,8 +107,8 @@ VkPipeline PipelineCache::MakePipeline(VertexShaderUid vertex_uid, GeometryShade
 		inputAssembly.primitiveRestartEnable = false;
 		break;
 	case PRIMITIVE_TRIANGLES:
-		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-		inputAssembly.primitiveRestartEnable = true;
+		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssembly.primitiveRestartEnable = false;
 	}
 
 	// TODO: HARDCODED
@@ -128,14 +118,14 @@ VkPipeline PipelineCache::MakePipeline(VertexShaderUid vertex_uid, GeometryShade
 	viewport.height = 480;
 	viewport.width = 640;
 	viewport.x = 0;
-	viewport.y = 0;
-	viewport.maxDepth = 2 << 24;
-	viewport.minDepth = 0;
+	viewport.y = 48;
+	viewport.maxDepth = 1.0;
+	viewport.minDepth = 0.0;
 	viewportInfo.pViewports = &viewport;
 	viewportInfo.scissorCount = 1;
 	VkRect2D scissor;
-	scissor.extent = { 640, 480 };
-	scissor.offset = { 0, 0 };
+	scissor.extent = { 640, 528 };
+	scissor.offset = { 0, 48 };
 	viewportInfo.pScissors = &scissor;
 
 	VkPipelineRasterizationStateCreateInfo rasterInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, nullptr, 0 };
@@ -161,9 +151,14 @@ VkPipeline PipelineCache::MakePipeline(VertexShaderUid vertex_uid, GeometryShade
 	depthInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 	depthInfo.depthBoundsTestEnable = false;
 	depthInfo.stencilTestEnable = false;
+	depthInfo.back.failOp = VK_STENCIL_OP_KEEP;
+	depthInfo.back.passOp = VK_STENCIL_OP_KEEP;
+	depthInfo.back.compareOp = VK_COMPARE_OP_ALWAYS;
+	depthInfo.front = depthInfo.back;
 
 	VkPipelineColorBlendAttachmentState attachment;
 	attachment.blendEnable = false;
+	attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 	VkPipelineColorBlendStateCreateInfo blendInfo = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0 };
 	blendInfo.logicOpEnable = false;
@@ -179,40 +174,79 @@ VkPipeline PipelineCache::MakePipeline(VertexShaderUid vertex_uid, GeometryShade
 	};
 	dynamicInfo.pDynamicStates = dynamicStates;
 
-	VkDescriptorSetLayout descSetLayout;
+	VkGraphicsPipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr };
+	pipelineInfo.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderstage;
+	pipelineInfo.pVertexInputState = &vertexInput;
+	pipelineInfo.pInputAssemblyState = &inputAssembly;
+	pipelineInfo.pTessellationState = nullptr;
+	pipelineInfo.pViewportState = &viewportInfo;
+	pipelineInfo.pRasterizationState = &rasterInfo;
+	pipelineInfo.pMultisampleState = &multisampleInfo;
+	pipelineInfo.pDepthStencilState = &depthInfo;
+	pipelineInfo.pColorBlendState = &blendInfo;
+	pipelineInfo.pDynamicState = &dynamicInfo;
+	pipelineInfo.layout = m_shadergen_pipeline_layout;
+	pipelineInfo.renderPass = m_renderPass;
+	pipelineInfo.subpass = 0;
+
+	VkPipeline pipeline;
+	VkResult result = vkCreateGraphicsPipelines(m_device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
+
+	_assert_msg_(VIDEO, result == VK_SUCCESS, "Error %i while creating Graphics Pipeline.", result);
+
+	vkDestroyShaderModule(m_device, pixelModule, nullptr);
+	vkDestroyShaderModule(m_device, vertexModule, nullptr);
+	m_pipelines_to_destroy.push_back(pipeline);
+
+	return pipeline;
+}
+
+VkPipeline PipelineCache::GetPipeline(VertexShaderUid vertex_uid, GeometryShaderUid geo_uid, PixelShaderUid pixel_uid, PrimitiveType type, std::vector<VkVertexInputAttributeDescription> vertAttrDesc, u32 stride)
+{
+	return MakePipeline(vertex_uid, geo_uid, pixel_uid, type, vertAttrDesc, stride); // TODO: actually cache things
+}
+
+PipelineCache::PipelineCache(VkDevice device) : m_device(device)
+{
+	// Generic descriptor set and layout that all shadergen shaders use.
 	VkDescriptorSetLayoutCreateInfo descSetInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0 };
 	descSetInfo.bindingCount = 2;
 	VkDescriptorSetLayoutBinding binding[3];
+	binding[0].binding = 1;
+	binding[0].descriptorCount = 1;
+	binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+	binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	binding[0].pImmutableSamplers = nullptr;
+	binding[1].binding = 2;
+	binding[1].descriptorCount = 1;
+	binding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+	binding[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	binding[1].pImmutableSamplers = nullptr;
 	binding[2].binding = 0;
 	binding[2].descriptorCount = 8;
-	binding[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	binding[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	binding[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	binding[2].pImmutableSamplers = nullptr;
-	binding[1].binding = 1;
-	binding[1].descriptorCount = 1;
-	binding[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	binding[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	binding[1].pImmutableSamplers = nullptr;
-	binding[0].binding = 2;
-	binding[0].descriptorCount = 1;
-	binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	binding[0].pImmutableSamplers = nullptr;
+
 	descSetInfo.pBindings = binding;
 
-	VkResult result = vkCreateDescriptorSetLayout(m_device, &descSetInfo, nullptr, &descSetLayout);
+	VkResult result = vkCreateDescriptorSetLayout(m_device, &descSetInfo, nullptr, &m_shadergen_descriptor_set);
 	_assert_msg_(VIDEO, result == VK_SUCCESS, "Error %i while creating Descriptor Set Layout", result);
 
-	VkPipelineLayout layout;
 	VkPipelineLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0 };
 	layoutInfo.setLayoutCount = 1;
-	layoutInfo.pSetLayouts = &descSetLayout;
+	layoutInfo.pSetLayouts = &m_shadergen_descriptor_set;
 	layoutInfo.pushConstantRangeCount = 0;
-	vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &layout);
+	result = vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &m_shadergen_pipeline_layout);
+	_assert_msg_(VIDEO, result == VK_SUCCESS, "Error %i while creating Pipeline Layout", result);
+
+	// Render Pass
 
 	VkAttachmentDescription rp_attachment;
 	rp_attachment.flags = 0;
-	rp_attachment.format = VK_FORMAT_B8G8R8A8_SRGB;
+	rp_attachment.format = VK_FORMAT_B8G8R8A8_UNORM;
 	rp_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	rp_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	rp_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -232,44 +266,24 @@ VkPipeline PipelineCache::MakePipeline(VertexShaderUid vertex_uid, GeometryShade
 	subpass.pDepthStencilAttachment = nullptr;
 	subpass.preserveAttachmentCount = 0;
 
-
-	VkRenderPass renderPass;
 	VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0 };
 	renderPassInfo.attachmentCount = 1;
 	renderPassInfo.pAttachments = &rp_attachment;
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.dependencyCount = 0;
 
-	vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &renderPass);
-
-	VkGraphicsPipelineCreateInfo pipelineInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr };
-	pipelineInfo.flags = 0;
-	pipelineInfo.stageCount = 2;
-	pipelineInfo.pStages = shaderstage;
-	pipelineInfo.pVertexInputState = &vertexInput;
-	pipelineInfo.pInputAssemblyState = &inputAssembly;
-	pipelineInfo.pTessellationState = nullptr;
-	pipelineInfo.pViewportState = &viewportInfo;
-	pipelineInfo.pRasterizationState = &rasterInfo;
-	pipelineInfo.pMultisampleState = &multisampleInfo;
-	pipelineInfo.pDepthStencilState = &depthInfo;
-	pipelineInfo.pColorBlendState = &blendInfo;
-	pipelineInfo.pDynamicState = &dynamicInfo;
-	pipelineInfo.layout = layout;
-	pipelineInfo.renderPass = renderPass;
-	pipelineInfo.subpass = 0;
-
-	VkPipeline pipeline;
-	result = vkCreateGraphicsPipelines(m_device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
-
-	_assert_msg_(VIDEO, result == VK_SUCCESS, "Error %i while creating Graphics Pipeline.", result);
-
-	return pipeline;
+	vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
 }
 
-VkPipeline PipelineCache::GetPipeline(VertexShaderUid vertex_uid, GeometryShaderUid geo_uid, PixelShaderUid pixel_uid, PrimitiveType type, std::vector<VkVertexInputAttributeDescription> vertAttrDesc, u32 stride)
+PipelineCache::~PipelineCache()
 {
-	return MakePipeline(vertex_uid, geo_uid, pixel_uid, type, vertAttrDesc, stride); // TODO: actually cache things
+	for (VkPipeline pipeline : m_pipelines_to_destroy)
+		vkDestroyPipeline(m_device, pipeline, nullptr);
+
+	vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+	vkDestroyPipelineLayout(m_device, m_shadergen_pipeline_layout, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_shadergen_descriptor_set, nullptr);
 }
 
 }

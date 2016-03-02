@@ -10,9 +10,13 @@
 #include "VideoBackends/VK/Renderer.h"
 #include "VideoBackends/VK/MemoryAllocator.h"
 #include "VideoBackends/VK/PipelineCache.h"
+#include "VideoBackends/VK/VertexManager.h"
 
 namespace VK
 {
+
+VkQueue g_queue;
+VkCommandBuffer cmdBuffer;
 
 // Create a VkDevice for us to use
 void Renderer::CreateDevice(VkPhysicalDevice physicalDevice)
@@ -40,7 +44,7 @@ void Renderer::CreateDevice(VkPhysicalDevice physicalDevice)
 	info.enabledExtensionCount = 1;
 	const char* extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	info.ppEnabledExtensionNames = extensions;
-	info.enabledLayerCount = 0;
+	info.enabledLayerCount = 1;
 	const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
 	info.ppEnabledLayerNames = layers;
 
@@ -48,6 +52,17 @@ void Renderer::CreateDevice(VkPhysicalDevice physicalDevice)
 	_assert_msg_(Video, ret == VK_SUCCESS, "Couldn't create a Vulkan device. Error code %i", ret);
 
 	VulkanLoadDeviceFunctions(m_device);
+}
+
+static void DestroySwapchain(VkDevice device, VkSwapchainKHR oldSwapchain, std::vector<VkImageView> imageViews, std::vector<VkFramebuffer> framebuffers)
+{
+	for (VkFramebuffer fb : framebuffers)
+		vkDestroyFramebuffer(device, fb, nullptr);
+
+	for (VkImageView view : imageViews)
+		vkDestroyImageView(device, view, nullptr);
+
+	vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
 }
 
 // Create a swapchain that matches the current window dimensions.
@@ -76,8 +91,8 @@ void Renderer::CreateSwapchain()
 	VkSurfaceCapabilitiesKHR surfaceCapablities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physical_device, m_surface, &surfaceCapablities);
 	_assert_msg_(VIDEO, surfaceCapablities.minImageCount <= 3 && surfaceCapablities.maxImageCount >= 3,
-		"Vulkan implementation is fussy about number of surface images. Wants between %i and %i",
-		surfaceCapablities.minImageCount, surfaceCapablities.maxImageCount);
+				 "Vulkan implementation is fussy about number of surface images. Wants between %i and %i",
+				 surfaceCapablities.minImageCount, surfaceCapablities.maxImageCount);
 	_assert_(surfaceCapablities.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT); // zero chance of this happening
 
 	// Get supported image formats
@@ -98,9 +113,9 @@ void Renderer::CreateSwapchain()
 	{
 		if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
 			bestPresetMode = mode; // Doesn't vsync or tear, more latency than tearing
-		else if(mode == VK_PRESENT_MODE_IMMEDIATE_KHR && bestPresetMode != VK_PRESENT_MODE_MAILBOX_KHR)
+		else if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR && bestPresetMode != VK_PRESENT_MODE_MAILBOX_KHR)
 			bestPresetMode = mode; // Standard tearing mode.
-		else if(mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR && bestPresetMode == VK_PRESENT_MODE_FIFO_KHR)
+		else if (mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR && bestPresetMode == VK_PRESENT_MODE_FIFO_KHR)
 			bestPresetMode = mode; // Normally vsyncs, but tears if a frame is late.
 	}
 
@@ -110,7 +125,7 @@ void Renderer::CreateSwapchain()
 	// I'm not sure what the best way to go about selecting a color format is. Lets just pick the first one.
 	info.imageFormat = formats[0].format;
 	info.imageColorSpace = formats[0].colorSpace;
-	info.imageExtent = surfaceCapablities.currentExtent; // Match the screen size.
+	info.imageExtent = m_surface_extent = surfaceCapablities.currentExtent; // Match the screen size.
 	info.imageArrayLayers = 1; // No stereoscopy.
 	info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Only attach a color buffer
 	info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -124,78 +139,227 @@ void Renderer::CreateSwapchain()
 
 	_assert_msg_(VIDEO, ret == VK_SUCCESS, "Error %i while creating Swapchain", ret);
 
-	// Destroy the old swapchain
+	// Destroy the old swapchain, swapchain image views and framebuffers
 	if (oldSwapchain != VK_NULL_HANDLE)
-		vkDestroySwapchainKHR(m_device, oldSwapchain, nullptr);
+		DestroySwapchain(m_device, oldSwapchain, swapchainImageViews, swapchainFramebuffers); // Todo, some kind of fence?
+
+	// Create a command buffer so we can convert the images
+	VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr };
+	allocateInfo.commandBufferCount = 1;
+	allocateInfo.commandPool = m_commandPool;
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	vkAllocateCommandBuffers(m_device, &allocateInfo, &cmdBuffer);
+
+	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+
+	// Get the VkImages from the swapchain
+	u32 count = 0;
+	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, nullptr);
+	swapchainImages.resize(count);
+	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, swapchainImages.data());
+
+	// Convert the VkImages to the format we want and pre-create framebuffers
+	VkImageMemoryBarrier convertBarrier = {};
+	convertBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	convertBarrier.pNext = NULL;
+	convertBarrier.srcAccessMask = 0;
+	convertBarrier.dstAccessMask = 0;
+	convertBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	convertBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // Convert to PRESENT_SRC_KHR first, so we can simplify StartFrame() loigc
+	convertBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	convertBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	convertBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+	VkImageViewCreateInfo viewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0 };
+	viewInfo.format = formats[0].format;
+	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.components = {
+		VK_COMPONENT_SWIZZLE_R,
+		VK_COMPONENT_SWIZZLE_G,
+		VK_COMPONENT_SWIZZLE_B,
+		VK_COMPONENT_SWIZZLE_A
+	};
+	viewInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+	VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0 };
+	framebufferInfo.renderPass = g_pipeline_cache->m_renderPass;
+	framebufferInfo.attachmentCount = 1;
+	framebufferInfo.width = m_surface_extent.width;
+	framebufferInfo.height = m_surface_extent.height;
+	framebufferInfo.layers = 1;
+
+	for (VkImage image : swapchainImages) // For each image
+	{
+		VkImageView view;
+		VkFramebuffer framebuffer;
+
+		// Use the image barrier to convert the image format
+		convertBarrier.image = image;
+		vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &convertBarrier);
+
+		// Create a view
+		viewInfo.image = image;
+		vkCreateImageView(m_device, &viewInfo, nullptr, &view);
+		swapchainImageViews.push_back(view); // Stored simply so we can destroy it later.
+
+		// Create an framebuffer
+		framebufferInfo.pAttachments = &view;
+		vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &framebuffer);
+		swapchainFramebuffers.push_back(framebuffer);
+	}
+
+	vkEndCommandBuffer(cmdBuffer);
+	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuffer;
+	submitInfo.signalSemaphoreCount = 0;
+	submitInfo.waitSemaphoreCount = 0;
+	vkQueueSubmit(g_queue, 1, &submitInfo, nullptr);
+
+	vkQueueWaitIdle(g_queue);
+
+	vkResetCommandBuffer(cmdBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 }
+
+void Renderer::StartFrame()
+{
+	u32 nextImage;
+	VkResult result = vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, nullptr, nullptr, &nextImage);
+
+	_assert_msg_(VIDEO, result == VK_SUCCESS, "vkAcquireNextImageKHR failed with error %i", result);
+
+	currentImage = nextImage;
+
+	VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr };
+	allocateInfo.commandBufferCount = 1;
+	allocateInfo.commandPool = m_commandPool;
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	vkAllocateCommandBuffers(m_device, &allocateInfo, &cmdBuffer);
+
+	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+
+	VkImageMemoryBarrier postPresentBarrier = {};
+	postPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	postPresentBarrier.pNext = NULL;
+	postPresentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	postPresentBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	postPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	postPresentBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	postPresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	postPresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	postPresentBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+	postPresentBarrier.image = swapchainImages[currentImage];
+
+	vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &postPresentBarrier);
+
+	VkClearValue clearColor;
+	clearColor.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+	VkRenderPassBeginInfo passInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr };
+	passInfo.renderArea.extent = m_surface_extent;
+	passInfo.renderArea.offset.x = 0;
+	passInfo.renderArea.offset.y = 0;
+	passInfo.clearValueCount = 1;
+	passInfo.pClearValues = &clearColor;
+	passInfo.renderPass = g_pipeline_cache->m_renderPass;
+	passInfo.framebuffer = swapchainFramebuffers[currentImage];
+	vkCmdBeginRenderPass(cmdBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	((VK::VertexManager*) (g_vertex_manager.get()))->StartCommandBuffer();
+}
+
+void Renderer::SwapImpl(u32 xfbAddr, u32 fbWidth, u32 fbStride, u32 fbHeight, const EFBRectangle& rc, float Gamma)
+{
+	// End the command buffer and submit it.
+	vkCmdEndRenderPass(cmdBuffer);
+
+	VkImageMemoryBarrier prePresentBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr };
+	prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	prePresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	prePresentBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+	prePresentBarrier.image = swapchainImages[currentImage];
+
+	vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &prePresentBarrier);
+
+	_assert_(!vkEndCommandBuffer(cmdBuffer));
+
+	VkSemaphore swapSemaphore;
+	VkSemaphoreCreateInfo info = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, nullptr, 0 };
+	vkCreateSemaphore(m_device, &info, nullptr, &swapSemaphore);
+
+	//VkFence itsAfence;
+	//VkFenceCreateInfo fenceInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr };
+	//fenceInfo.flags = 0;
+	//vkCreateFence(m_device, &fenceInfo, nullptr, &itsAfence);
+
+	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuffer;
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &swapSemaphore;
+	submitInfo.waitSemaphoreCount = 0;
+	_assert_(!vkQueueSubmit(g_queue, 1, &submitInfo, nullptr));
+
+	// TODO: reuse command buffers
+	_assert_(!vkQueueWaitIdle(g_queue));
+	vkResetCommandBuffer(cmdBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
+	//vkWaitForFences(m_device, 1, &itsAfence, true, UINT64_MAX);
+
+	// Present the frame to the screen.
+	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &swapSemaphore;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &m_swapchain;
+	presentInfo.pImageIndices = &currentImage;
+	VkResult result = vkQueuePresentKHR(g_queue, &presentInfo);
+
+	_assert_msg_(VIDEO, result == VK_SUCCESS, "vkQueuePresent failed with error %i", result);
+
+	vkDestroySemaphore(m_device, swapSemaphore, nullptr);
+
+	Renderer::StartFrame();
+
+}
+
 
 Renderer::Renderer(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) : m_physical_device(physicalDevice), m_surface(surface)
 {
 	m_swapchain = VK_NULL_HANDLE;
 	CreateDevice(physicalDevice);
-	CreateSwapchain();
 	MemoryAllocator::Initilize(physicalDevice, m_device);
 	g_pipeline_cache = std::make_unique<PipelineCache>(m_device);
+	g_vertex_manager = std::make_unique<VertexManager>(m_device);
 
-	vkGetDeviceQueue(m_device, 0, 0, &m_queue); // FIXME: Hardcoded to the first queue
+	vkGetDeviceQueue(m_device, 0, 0, &g_queue); // FIXME: Hardcoded to the first queue
 
-	// Temporary code to prove that we can display something on the screen (clear the buffer to 'sky blue')
-
-	u32 count = 0;
-	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, nullptr);
-	std::vector<VkImage> swapchainImages(count);
-	vkGetSwapchainImagesKHR(m_device, m_swapchain, &count, swapchainImages.data());
-
-	u32 nextImage;
-	vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, nullptr, nullptr, &nextImage);
-
-	VkCommandPool commandPool;
 	VkCommandPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr };
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	poolInfo.queueFamilyIndex = 0;
-	vkCreateCommandPool(m_device, &poolInfo, nullptr, &commandPool);
+	vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
 
-	VkCommandBuffer cmdBuf;
-	VkCommandBufferAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr };
-	allocateInfo.commandBufferCount = 1;
-	allocateInfo.commandPool = commandPool;
-	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	vkAllocateCommandBuffers(m_device, &allocateInfo, &cmdBuf);
+	CreateSwapchain();
 
-	VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	vkBeginCommandBuffer(cmdBuf, &beginInfo);
-
-	VkClearColorValue clearColor = {1.0f, 0.2f, 0.0f, 1.0f};
-	VkImageSubresourceRange range;
-	range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	range.baseMipLevel = 0;
-	range.layerCount = 1;
-	range.baseArrayLayer = 0;
-	range.levelCount = 1;
-	vkCmdClearColorImage(cmdBuf, swapchainImages[nextImage], VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &range);
-
-	vkEndCommandBuffer(cmdBuf);
-	VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr };
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &cmdBuf;
-	submitInfo.signalSemaphoreCount = 0;
-	submitInfo.waitSemaphoreCount = 0;
-	vkQueueSubmit(m_queue, 1, &submitInfo, nullptr);
-
-	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr };
-	presentInfo.pWaitSemaphores = 0;
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &m_swapchain;
-	presentInfo.pImageIndices = &nextImage;
-	vkQueuePresentKHR(m_queue, &presentInfo);
+	StartFrame(); // We need to start the first frame explicitly
 }
 
 Renderer::~Renderer()
 {
+	vkQueueWaitIdle(g_queue);
+	vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 	g_pipeline_cache.reset();
+	g_vertex_manager.reset();
+	MemoryAllocator::Shutdown();
 	if (m_swapchain != VK_NULL_HANDLE)
-		vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+		DestroySwapchain(m_device, m_swapchain, swapchainImageViews, swapchainFramebuffers);
 	vkDestroyDevice(m_device, nullptr);
 }
 

@@ -12,7 +12,7 @@ namespace VK
 class MappedBuffer
 {
 public:
-	MappedBuffer(VkBuffer buffer) : m_buffer(buffer) {}
+	MappedBuffer(VkBuffer buffer, u32 alignment) : m_buffer(buffer), m_alignment(alignment) {}
 
 	// Get a pointer to a aligned sub-buffer which is at least size bytes big
 	// Might return a null pointer
@@ -37,6 +37,7 @@ public:
 	virtual void SignalFence(VkFence fence) = 0;
 
 	VkBuffer m_buffer;
+	u32 m_alignment;
 };
 
 namespace MemoryAllocator

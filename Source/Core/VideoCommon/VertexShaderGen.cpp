@@ -252,7 +252,6 @@ ShaderCode GenerateVertexShaderCode(API_TYPE api_type, const vertex_shader_uid_d
 	if (uid_data->components & VB_HAS_POSMTXIDX)
 	{
 		out.Write("float4 pos = float4(dot(" I_TRANSFORMMATRICES"[posmtx], rawpos), dot(" I_TRANSFORMMATRICES"[posmtx+1], rawpos), dot(" I_TRANSFORMMATRICES"[posmtx+2], rawpos), 1);\n");
-
 		if (uid_data->components & VB_HAS_NRMALL)
 		{
 			out.Write("int normidx = posmtx & 31;\n");

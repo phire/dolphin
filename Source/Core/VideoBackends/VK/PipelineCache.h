@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "Common/VK/VkLoader.h"
 
 #include "VideoCommon/PixelShaderGen.h"
@@ -16,14 +18,19 @@ namespace VK
 class PipelineCache
 {
 public:
-	PipelineCache(VkDevice device) : m_device(device) {};
+	PipelineCache(VkDevice device);
+	~PipelineCache();
 
 	VkPipeline GetPipeline(VertexShaderUid vertex_uid, GeometryShaderUid geo_uid, PixelShaderUid pixel_uid, PrimitiveType type, std::vector<VkVertexInputAttributeDescription> vertAttrDesc, u32 stride);
 
+	VkDescriptorSetLayout m_shadergen_descriptor_set;
+	VkPipelineLayout m_shadergen_pipeline_layout;
+	VkRenderPass m_renderPass;
 private:
 	VkShaderModule CompileShader(std::string shader, VkShaderStageFlagBits type) const;
-	VkPipeline MakePipeline(VertexShaderUid vertex_uid, GeometryShaderUid geo_uid, PixelShaderUid pixel_uid, PrimitiveType type, std::vector<VkVertexInputAttributeDescription> vertAttrDesc, u32 stride) const;
+	VkPipeline MakePipeline(VertexShaderUid vertex_uid, GeometryShaderUid geo_uid, PixelShaderUid pixel_uid, PrimitiveType type, std::vector<VkVertexInputAttributeDescription> vertAttrDesc, u32 stride);
 
+	std::vector<VkPipeline> m_pipelines_to_destroy;
 	VkDevice m_device;
 };
 

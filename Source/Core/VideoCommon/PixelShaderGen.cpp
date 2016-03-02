@@ -372,7 +372,7 @@ ShaderCode GeneratePixelShaderCode(DSTALPHA_MODE dstAlphaMode, API_TYPE ApiType,
 
 	if (ApiType == API_OPENGL)
 	{
-		//out.Write("SAMPLER_BINDING(0) uniform sampler2DArray samp[8];\n");
+		out.Write("SAMPLER_BINDING(0) uniform sampler2DArray samp[8];\n");
 	}
 	else // D3D
 	{

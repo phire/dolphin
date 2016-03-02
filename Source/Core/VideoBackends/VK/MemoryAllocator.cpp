@@ -77,7 +77,7 @@ static VkDeviceMemory Allocate(VkDeviceSize size, u32 type)
 class StreamBuffer : MappedBuffer
 {
 public:
-	StreamBuffer(VkBuffer buffer, u32 size, VkDeviceMemory memory, void *pointer) : MappedBuffer(buffer)
+	StreamBuffer(VkBuffer buffer, u32 size, VkDeviceMemory memory, void *pointer, u32 alignment) : MappedBuffer(buffer, alignment)
 	{
 		m_size = size;
 		m_memory = memory;
@@ -94,6 +94,9 @@ public:
 	// If we can't reserve enough bytes we will return (null, 0)
 	std::pair<u8 *, u32> Reserve(u32 size, u32 alignment) override
 	{
+		if (SpaceSpaceAtBottom() > AvaliableBytes() && UnfencedBytes() == 0)
+			m_current_offset = 0;
+
 		m_current_offset = ROUND_UP(m_current_offset, alignment);
 
 		// Looks like we can't reserve enough bytes, the caller should call WaitForFence()
@@ -127,8 +130,6 @@ public:
 		_assert_msg_(VIDEO, fence == m_active_fences.front().first, "Fences not cleared in the correct order");
 		m_fenced_bottom = m_active_fences.front().second;
 		m_active_fences.pop_front();
-		if (SpaceSpaceAtBottom() > AvaliableBytes() && UnfencedBytes() == 0)
-			m_current_offset = 0;
 	}
 
 	u32 getOffset() const
@@ -202,7 +203,7 @@ std::unique_ptr<MappedBuffer> MemoryAllocator::CreateStreamBuffer(u32 size, VkBu
 	void *pointer;
 	vkMapMemory(s_device, memory, 0, size, 0, &pointer);
 
-	return std::unique_ptr<MappedBuffer>(new StreamBuffer(buffer, size, memory, pointer));
+	return std::unique_ptr<MappedBuffer>(new StreamBuffer(buffer, size, memory, pointer, (u32)memRequirements.alignment));
 }
 
 

@@ -64,7 +64,7 @@ static bool CreateInstance()
 
 	VkInstanceCreateInfo instanceInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0 };
 	instanceInfo.pApplicationInfo = &appInfo;
-	instanceInfo.enabledLayerCount = 0;
+	instanceInfo.enabledLayerCount = 1;
 	const char* layers[] = { "VK_LAYER_LUNARG_standard_validation" }; // Debug layers
 	instanceInfo.ppEnabledLayerNames = layers;
 	instanceInfo.enabledExtensionCount = 3;
@@ -126,6 +126,7 @@ static void InitBackendInfo()
 	g_Config.backend_info.bSupportsSSAA = false; // not yet
 	g_Config.backend_info.bSupportsPrimitiveRestart = true; // Compulsory for vulkan implementations
 	g_Config.backend_info.bSupportsBindingLayout = true; // Also Compulsorary
+	g_Config.backend_info.bSupportsClipControl = true;
 
 	g_Config.backend_info.Adapters.clear();
 
@@ -199,7 +200,6 @@ void VideoBackend::Video_Prepare()
 	PixelEngine::Init();
 
 	BPInit();
-	g_vertex_manager = std::make_unique<VertexManager>();
 	//g_perf_query = GetPerfQuery();
 	Fifo::Init(); // must be done before OpcodeDecoder::Init()
 	OpcodeDecoder::Init();
