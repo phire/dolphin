@@ -720,8 +720,10 @@ static void WriteStage(T& out, pixel_shader_uid_data* uid_data, int n, API_TYPE 
 				out.Write("\tint2 indtevtrans%d = int2(idot(" I_INDTEXMTX"[%d].xyz, iindtevcrd%d), idot(" I_INDTEXMTX"[%d].xyz, iindtevcrd%d));\n", n, mtxidx, n, mtxidx+1, n);
 
 				// TODO: should use a shader uid branch for this for better performance
+				// TODO: confirm the behyaviour of these shifts on the hardware, especially what happens for left shifts larger than 24.
+				//       Super Mario Bros (Virtual Console) does a shift of 38 and expects the shift to be masked to 5 bits for proper graphics.
 				out.Write("\tif (" I_INDTEXMTX"[%d].w >= -3) indtevtrans%d = indtevtrans%d >> " I_INDTEXMTX"[%d].w + 3;\n", mtxidx, n, n, mtxidx);
-				out.Write("\telse indtevtrans%d = indtevtrans%d << (-" I_INDTEXMTX"[%d].w - 3);\n", n, n, mtxidx);
+				out.Write("\telse indtevtrans%d = indtevtrans%d << ((-" I_INDTEXMTX"[%d].w - 3) & 31);\n", n, n, mtxidx);
 			}
 			else if (bpmem.tevind[n].mid <= 7 && bHasTexCoord)
 			{ // s matrix
@@ -732,7 +734,7 @@ static void WriteStage(T& out, pixel_shader_uid_data* uid_data, int n, API_TYPE 
 				out.Write("\tint2 indtevtrans%d = int2(fixpoint_uv%d * iindtevcrd%d.xx);\n", n, texcoord, n);
 
 				out.Write("\tif (" I_INDTEXMTX"[%d].w >= -8) indtevtrans%d = indtevtrans%d >> " I_INDTEXMTX"[%d].w + 8;\n", mtxidx, n, n, mtxidx);
-				out.Write("\telse indtevtrans%d = indtevtrans%d << (-" I_INDTEXMTX"[%d].w - 8);\n", n, n, mtxidx);
+				out.Write("\telse indtevtrans%d = indtevtrans%d << ((-" I_INDTEXMTX"[%d].w - 8) &31);\n", n, n, mtxidx);
 			}
 			else if (bpmem.tevind[n].mid <= 11 && bHasTexCoord)
 			{ // t matrix
@@ -743,7 +745,7 @@ static void WriteStage(T& out, pixel_shader_uid_data* uid_data, int n, API_TYPE 
 				out.Write("\tint2 indtevtrans%d = int2(fixpoint_uv%d * iindtevcrd%d.yy);\n", n, texcoord, n);
 
 				out.Write("\tif (" I_INDTEXMTX"[%d].w >= -8) indtevtrans%d = indtevtrans%d >> " I_INDTEXMTX"[%d].w + 8;\n", mtxidx, n, n, mtxidx);
-				out.Write("\telse indtevtrans%d = indtevtrans%d << (-" I_INDTEXMTX"[%d].w - 8);\n", n, n, mtxidx);
+				out.Write("\telse indtevtrans%d = indtevtrans%d << ((-" I_INDTEXMTX"[%d].w - 8) & 31);\n", n, n, mtxidx);
 			}
 			else
 			{
