@@ -6,7 +6,7 @@
 
 #include "VideoCommon/GeometryShaderGen.h"
 #include "VideoCommon/NativeVertexFormat.h"
-#include "VideoCommon/PixelShaderGen.h"
+#include "VideoCommon/PixelShaderUid.h"
 #include "VideoCommon/RenderState.h"
 #include "VideoCommon/UberShaderPixel.h"
 #include "VideoCommon/UberShaderVertex.h"
@@ -28,6 +28,7 @@ struct GXPipelineUid
   VertexShaderUid vs_uid;
   GeometryShaderUid gs_uid;
   PixelShaderUid ps_uid;
+  PixelShaderUid opt_ps_uid;
   RasterizationState rasterization_state;
   DepthState depth_state;
   BlendingState blending_state;

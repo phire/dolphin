@@ -549,6 +549,24 @@ void VertexManagerBase::UpdatePipelineConfig()
     m_pipeline_config_changed = true;
   }
 
+  bool force_ps_update = false;
+
+  if (m_blending_state_changed)
+  {
+    m_blending_state_changed = false;
+
+    BlendingState new_bs = {};
+    new_bs.Generate(bpmem);
+    if (new_bs != m_current_pipeline_config.blending_state)
+    {
+      if (new_bs.IsAlphaUsed() != m_current_pipeline_config.blending_state.IsAlphaUsed() || new_bs.IsColorUsed() != m_current_pipeline_config.blending_state.IsAlphaUsed())
+        force_ps_update = true;
+      m_current_pipeline_config.blending_state = new_bs;
+      m_current_uber_pipeline_config.blending_state = new_bs;
+      m_pipeline_config_changed = true;
+    }
+  }
+
   VertexShaderUid vs_uid = GetVertexShaderUid();
   if (vs_uid != m_current_pipeline_config.vs_uid)
   {
@@ -558,11 +576,18 @@ void VertexManagerBase::UpdatePipelineConfig()
   }
 
   PixelShaderUid ps_uid = GetPixelShaderUid();
-  if (ps_uid != m_current_pipeline_config.ps_uid)
+  if (ps_uid != m_current_pipeline_config.ps_uid || force_ps_update)
   {
     m_current_pipeline_config.ps_uid = ps_uid;
-    m_current_uber_pipeline_config.ps_uid = UberShader::GetPixelShaderUid();
-    m_pipeline_config_changed = true;
+
+    PixelShaderUid opt_ps_uid = OptimiseShaderUid(ps_uid, m_current_pipeline_config.blending_state.colorupdate,
+        m_current_pipeline_config.blending_state.IsAlphaUsed());
+
+    if (opt_ps_uid != m_current_pipeline_config.opt_ps_uid) {
+      m_current_pipeline_config.opt_ps_uid = opt_ps_uid;
+      m_current_uber_pipeline_config.ps_uid = UberShader::GetPixelShaderUid();
+      m_pipeline_config_changed = true;
+    }
   }
 
   GeometryShaderUid gs_uid = GetGeometryShaderUid(GetCurrentPrimitiveType());
@@ -601,19 +626,7 @@ void VertexManagerBase::UpdatePipelineConfig()
     }
   }
 
-  if (m_blending_state_changed)
-  {
-    m_blending_state_changed = false;
 
-    BlendingState new_bs = {};
-    new_bs.Generate(bpmem);
-    if (new_bs != m_current_pipeline_config.blending_state)
-    {
-      m_current_pipeline_config.blending_state = new_bs;
-      m_current_uber_pipeline_config.blending_state = new_bs;
-      m_pipeline_config_changed = true;
-    }
-  }
 }
 
 void VertexManagerBase::UpdatePipelineObject()

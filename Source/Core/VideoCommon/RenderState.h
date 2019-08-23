@@ -72,6 +72,13 @@ union BlendingState
   // Will not be bit-correct, and in some cases not even remotely in the same ballpark.
   void ApproximateLogicOpWithBlending();
 
+  bool IsAlphaUsed() {
+    return alphaupdate || (blendenable && srcfactoralpha == BlendMode::BlendFactor::SRCALPHA);
+  }
+  bool IsColorUsed() {
+    return colorupdate;
+  }
+
   BlendingState& operator=(const BlendingState& rhs);
 
   bool operator==(const BlendingState& rhs) const { return hex == rhs.hex; }

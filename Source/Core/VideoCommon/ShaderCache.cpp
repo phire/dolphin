@@ -190,6 +190,14 @@ static void SerializePipelineUid(const UidType& uid, SerializedUidType& serializ
   serialized_uid.blending_state_bits = uid.blending_state.hex;
 }
 
+template <typename UidType>
+static void OptimiseUid(UidType& real_uid) { }
+
+static void OptimiseUid(GXPipelineUid& real_uid) {
+  real_uid.opt_ps_uid = OptimiseShaderUid(real_uid.ps_uid, real_uid.blending_state.IsColorUsed(), real_uid.blending_state.IsAlphaUsed());
+}
+
+
 template <typename UidType, typename SerializedUidType>
 static void UnserializePipelineUid(const SerializedUidType& uid, UidType& real_uid)
 {
@@ -200,6 +208,8 @@ static void UnserializePipelineUid(const SerializedUidType& uid, UidType& real_u
   real_uid.rasterization_state.hex = uid.rasterization_state_bits;
   real_uid.depth_state.hex = uid.depth_state_bits;
   real_uid.blending_state.hex = uid.blending_state_bits;
+
+  OptimiseUid(real_uid);
 }
 
 template <ShaderStage stage, typename K, typename T>
@@ -577,7 +587,7 @@ std::optional<AbstractPipelineConfig> ShaderCache::GetGXPipelineConfig(const GXP
   else
     vs = InsertVertexShader(config.vs_uid, CompileVertexShader(config.vs_uid));
 
-  PixelShaderUid ps_uid = config.ps_uid;
+  PixelShaderUid ps_uid = config.opt_ps_uid;
   ClearUnusedPixelShaderUidBits(m_api_type, m_host_config, &ps_uid);
 
   const AbstractShader* ps;
@@ -943,7 +953,7 @@ void ShaderCache::QueuePipelineCompile(const GXPipelineUid& uid, u32 priority)
       if (vs_it == shader_cache->m_vs_cache.shader_map.end())
         shader_cache->QueueVertexShaderCompile(uid.vs_uid, priority);
 
-      PixelShaderUid ps_uid = uid.ps_uid;
+      PixelShaderUid ps_uid = uid.opt_ps_uid;
       ClearUnusedPixelShaderUidBits(shader_cache->m_api_type, shader_cache->m_host_config, &ps_uid);
 
       auto ps_it = shader_cache->m_ps_cache.shader_map.find(ps_uid);

@@ -305,6 +305,8 @@ struct TevStageCombiner
 {
   union ColorCombiner
   {
+    u32 hex;
+
     // abc=8bit,d=10bit
     BitField<0, 4, u32> d;   // TEVSELCC_X
     BitField<4, 4, u32> c;   // TEVSELCC_X
@@ -318,10 +320,12 @@ struct TevStageCombiner
     BitField<20, 2, u32> shift;
     BitField<22, 2, u32> dest;  // 1,2,3
 
-    u32 hex;
+
   };
   union AlphaCombiner
   {
+    u32 hex;
+
     BitField<0, 2, u32> rswap;
     BitField<2, 2, u32> tswap;
     BitField<4, 3, u32> d;   // TEVSELCA_
@@ -335,8 +339,6 @@ struct TevStageCombiner
 
     BitField<20, 2, u32> shift;
     BitField<22, 2, u32> dest;  // 1,2,3
-
-    u32 hex;
   };
 
   ColorCombiner colorC;
@@ -354,6 +356,12 @@ struct TevStageCombiner
 
 union TevStageIndirect
 {
+  struct
+  {
+    u32 hex : 21;
+    u32 unused : 11;
+  };
+
   BitField<0, 2, u32> bt;    // Indirect tex stage ID
   BitField<2, 2, u32> fmt;   // Format: ITF_X
   BitField<4, 3, u32> bias;  // ITB_X
@@ -366,11 +374,6 @@ union TevStageIndirect
   BitField<20, 1, u32> fb_addprev;  // 1 if the texture coordinate results from the previous TEV
                                     // stage should be added
 
-  struct
-  {
-    u32 hex : 21;
-    u32 unused : 11;
-  };
 
   // If bs and mid are zero, the result of the stage is independent of
   // the texture sample data, so we can skip sampling the texture.
