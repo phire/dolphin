@@ -195,10 +195,22 @@ bool GLContextEGL::Initialize(const WindowSystemInfo& wsi, bool stereo, bool cor
     return false;
   }
 
-  if (!eglChooseConfig(m_egl_display, attribs, &m_config, 1, &num_configs))
+  eglChooseConfig(m_egl_display, attribs, nullptr, 0, &num_configs);
+  std::vector<EGLConfig> potential_configs;
+  potential_configs.resize(num_configs);
+
+  if (!eglChooseConfig(m_egl_display, attribs, potential_configs.data(), num_configs, &num_configs))
   {
     INFO_LOG_FMT(VIDEO, "Error: couldn't get an EGL visual config");
     return false;
+  }
+
+  for (auto config : potential_configs) {
+    // Some backends are very opinionated about which configs they allow.
+    if (ValidateConfig(config)) {
+      m_config = config;
+      break;
+    }
   }
 
   if (m_opengl_mode == Mode::OpenGL)

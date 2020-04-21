@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <functional>
+
 enum class WindowSystemType
 {
   Headless,
@@ -13,6 +15,7 @@ enum class WindowSystemType
   Wayland,
   FBDev,
   Haiku,
+  KMS,
 };
 
 struct WindowSystemInfo
@@ -40,6 +43,8 @@ struct WindowSystemInfo
   // This is kept seperate as input may require a different handle to rendering, and
   // during video backend startup the surface pointer may change (MoltenVK).
   void* render_surface = nullptr;
+
+  std::function<void(int)> swap_function = nullptr;
 
   // Scale of the render surface. For hidpi systems, this will be >1.
   float render_surface_scale = 1.0f;

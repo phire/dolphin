@@ -19,6 +19,7 @@
 #endif
 #if HAVE_EGL
 #include "Common/GL/GLInterface/EGL.h"
+#include "Common/GL/GLInterface/EGLKMS.h"
 #if HAVE_X11
 #include "Common/GL/GLInterface/EGLX11.h"
 #endif
@@ -81,6 +82,8 @@ void* GLContext::GetFuncAddress(const std::string& name)
 std::unique_ptr<GLContext> GLContext::Create(const WindowSystemInfo& wsi, bool stereo, bool core,
                                              bool prefer_egl, bool prefer_gles)
 {
+  printf("Context Create\n");
+
   std::unique_ptr<GLContext> context;
 #if defined(__APPLE__)
   if (wsi.type == WindowSystemType::MacOS || wsi.type == WindowSystemType::Headless)
@@ -114,6 +117,8 @@ std::unique_ptr<GLContext> GLContext::Create(const WindowSystemInfo& wsi, bool s
   }
 #endif
 #if HAVE_EGL
+  if (wsi.type == WindowSystemType::KMS)
+    context = std::make_unique<GLContextEGL_KMS>();
   if (wsi.type == WindowSystemType::Headless || wsi.type == WindowSystemType::FBDev)
     context = std::make_unique<GLContextEGL>();
 #endif

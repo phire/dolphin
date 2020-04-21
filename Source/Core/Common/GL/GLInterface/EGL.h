@@ -30,6 +30,7 @@ public:
   void* GetFuncAddress(const std::string& name) override;
 
 protected:
+  virtual bool ValidateConfig(EGLConfig config) { return true; }
   virtual EGLDisplay OpenEGLDisplay();
   virtual EGLNativeWindowType GetEGLNativeWindow(EGLConfig config);
 

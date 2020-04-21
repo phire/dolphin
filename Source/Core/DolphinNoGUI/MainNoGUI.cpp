@@ -163,6 +163,8 @@ static std::unique_ptr<Platform> GetPlatform(const optparse::Values& options)
 #ifdef __linux__
   if (platform_name == "fbdev" || platform_name.empty())
     return Platform::CreateFBDevPlatform();
+  if (platform_name == "kms" || platform_name.empty())
+    return Platform::CreateKMSPlatform();
 #endif
 
 #ifdef _WIN32
@@ -191,6 +193,8 @@ int main(int argc, char* argv[])
 #ifdef __linux__
             ,
             "fbdev"
+            ,
+            "kms"
 #endif
 #if HAVE_X11
             ,

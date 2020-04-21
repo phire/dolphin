@@ -14,7 +14,14 @@ if(WIN32)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  target_sources(dolphin-nogui PRIVATE PlatformFBDev.cpp)
+  pkg_check_modules(DRM REQUIRED libdrm)
+  target_compile_options(dolphin-nogui PRIVATE ${DRM_CFLAGS})
+
+  pkg_check_modules(GBM REQUIRED gbm)
+
+  target_link_options(dolphin-nogui PRIVATE ${DRM_LDFLAGS} ${GBM_LDFLAGS})
+
+  target_sources(dolphin-nogui PRIVATE PlatformFBDev.cpp PlatformKMS.cpp)
 endif()
 
 set_target_properties(dolphin-nogui PROPERTIES OUTPUT_NAME dolphin-emu-nogui)

@@ -249,6 +249,8 @@ if(ENABLE_EGL AND EGL_FOUND)
   target_sources(common PRIVATE
     GL/GLInterface/EGL.cpp
     GL/GLInterface/EGL.h
+    GL/GLInterface/EGLKMS.cpp
+    GL/GLInterface/EGLKMS.h
   )
   if(ANDROID)
     target_sources(common PRIVATE
