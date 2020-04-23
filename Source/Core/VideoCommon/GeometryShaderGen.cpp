@@ -77,8 +77,6 @@ ShaderCode GenerateGeometryShaderCode(APIType ApiType, const ShaderHostConfig& h
     }
   }
 
-  out.Write("%s", s_lighting_struct);
-
   // uniforms
   if (ApiType == APIType::OpenGL || ApiType == APIType::Vulkan)
     out.Write("UBO_BINDING(std140, 3) uniform GSBlock {\n");

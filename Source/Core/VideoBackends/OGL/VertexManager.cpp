@@ -185,8 +185,8 @@ void VertexManager::CommitBuffer(u32 num_vertices, u32 vertex_stride, u32 num_in
   ADDSTAT(g_stats.this_frame.bytes_index_streamed, index_data_size);
 }
 
-void VertexManager::UploadUniforms()
+void VertexManager::UploadUniforms(VertexShaderActiveUniforms vertex_uniforms)
 {
-  ProgramShaderCache::UploadConstants();
+  ProgramShaderCache::UploadConstants(vertex_uniforms);
 }
 }  // namespace OGL

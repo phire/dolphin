@@ -20,6 +20,7 @@ add_library(videocommon
   BPStructs.h
   CommandProcessor.cpp
   CommandProcessor.h
+  ConstantManager.cpp
   ConstantManager.h
   CPMemory.cpp
   CPMemory.h

@@ -36,14 +36,6 @@ struct LightingUidData
   u32 light_mask : 32;     // 4x8 bits
 };
 
-static const char s_lighting_struct[] = "struct Light {\n"
-                                        "\tint4 color;\n"
-                                        "\tfloat4 cosatt;\n"
-                                        "\tfloat4 distatt;\n"
-                                        "\tfloat4 pos;\n"
-                                        "\tfloat4 dir;\n"
-                                        "};\n";
-
 void GenerateLightingShaderCode(ShaderCode& object, const LightingUidData& uid_data, int components,
                                 const char* inColorName, const char* dest);
 void GetLightingShaderUid(LightingUidData& uid_data);

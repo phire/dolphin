@@ -57,6 +57,7 @@
     <ClCompile Include="BPMemory.cpp" />
     <ClCompile Include="BPStructs.cpp" />
     <ClCompile Include="CommandProcessor.cpp" />
+    <ClCompile Include="ConstantManager.cpp" />
     <ClCompile Include="CPMemory.cpp" />
     <ClCompile Include="DriverDetails.cpp" />
     <ClCompile Include="Fifo.cpp" />
@@ -134,6 +135,7 @@
     <ClInclude Include="BPMemory.h" />
     <ClInclude Include="BPStructs.h" />
     <ClInclude Include="CommandProcessor.h" />
+    <ClInclude Include="ConstantManager.h" />
     <ClInclude Include="CPMemory.h" />
     <ClInclude Include="DataReader.h" />
     <ClInclude Include="DriverDetails.h" />

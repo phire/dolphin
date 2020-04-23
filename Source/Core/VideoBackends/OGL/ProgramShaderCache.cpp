@@ -36,7 +36,6 @@
 
 namespace OGL
 {
-u32 ProgramShaderCache::s_ubo_buffer_size;
 s32 ProgramShaderCache::s_ubo_align;
 GLuint ProgramShaderCache::s_attributeless_VBO = 0;
 GLuint ProgramShaderCache::s_attributeless_VAO = 0;
@@ -215,22 +214,31 @@ u32 ProgramShaderCache::GetUniformBufferAlignment()
   return s_ubo_align;
 }
 
-void ProgramShaderCache::UploadConstants()
+void ProgramShaderCache::UploadConstants(VertexShaderActiveUniforms vertex_uniforms)
 {
   if (PixelShaderManager::dirty || VertexShaderManager::dirty || GeometryShaderManager::dirty)
   {
-    auto buffer = s_buffer->Map(s_ubo_buffer_size, s_ubo_align);
+    size_t vertex_unform_size = VertexShaderConstants::GetActiveSize(vertex_uniforms);
+
+    size_t ubo_buffer_size =
+      static_cast<u32>(Common::AlignUp(sizeof(PixelShaderConstants), s_ubo_align) +
+                       Common::AlignUp(vertex_unform_size, s_ubo_align) +
+                       Common::AlignUp(sizeof(GeometryShaderConstants), s_ubo_align));
+
+    auto buffer = s_buffer->Map(ubo_buffer_size, s_ubo_align);
 
     memcpy(buffer.first, &PixelShaderManager::constants, sizeof(PixelShaderConstants));
 
-    memcpy(buffer.first + Common::AlignUp(sizeof(PixelShaderConstants), s_ubo_align),
-           &VertexShaderManager::constants, sizeof(VertexShaderConstants));
+    //memcpy(buffer.first + Common::AlignUp(sizeof(PixelShaderConstants), s_ubo_align),
+    //       &VertexShaderManager::constants, sizeof(VertexShaderConstants));
+    VertexShaderManager::constants.WriteActive(buffer.first +
+           Common::AlignUp(sizeof(PixelShaderConstants), s_ubo_align), vertex_uniforms);
 
     memcpy(buffer.first + Common::AlignUp(sizeof(PixelShaderConstants), s_ubo_align) +
-               Common::AlignUp(sizeof(VertexShaderConstants), s_ubo_align),
+               Common::AlignUp(vertex_unform_size, s_ubo_align),
            &GeometryShaderManager::constants, sizeof(GeometryShaderConstants));
 
-    s_buffer->Unmap(s_ubo_buffer_size);
+    s_buffer->Unmap(ubo_buffer_size);
     glBindBufferRange(GL_UNIFORM_BUFFER, 1, s_buffer->m_buffer, buffer.second,
                       sizeof(PixelShaderConstants));
     glBindBufferRange(GL_UNIFORM_BUFFER, 2, s_buffer->m_buffer,
@@ -238,14 +246,14 @@ void ProgramShaderCache::UploadConstants()
                       sizeof(VertexShaderConstants));
     glBindBufferRange(GL_UNIFORM_BUFFER, 3, s_buffer->m_buffer,
                       buffer.second + Common::AlignUp(sizeof(PixelShaderConstants), s_ubo_align) +
-                          Common::AlignUp(sizeof(VertexShaderConstants), s_ubo_align),
+                          Common::AlignUp(vertex_unform_size, s_ubo_align),
                       sizeof(GeometryShaderConstants));
 
     PixelShaderManager::dirty = false;
     VertexShaderManager::dirty = false;
     GeometryShaderManager::dirty = false;
 
-    ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, s_ubo_buffer_size);
+    ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, ubo_buffer_size);
   }
 }
 
@@ -432,11 +440,6 @@ void ProgramShaderCache::Init()
   // if we generate a buffer that isn't aligned
   // then the UBO will fail.
   glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &s_ubo_align);
-
-  s_ubo_buffer_size =
-      static_cast<u32>(Common::AlignUp(sizeof(PixelShaderConstants), s_ubo_align) +
-                       Common::AlignUp(sizeof(VertexShaderConstants), s_ubo_align) +
-                       Common::AlignUp(sizeof(GeometryShaderConstants), s_ubo_align));
 
   // We multiply by *4*4 because we need to get down to basic machine units.
   // So multiply by four to get how many floats we have from vec4s

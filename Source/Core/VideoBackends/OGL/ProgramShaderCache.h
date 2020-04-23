@@ -12,6 +12,7 @@
 
 #include "Common/GL/GLUtil.h"
 #include "VideoCommon/AsyncShaderCompiler.h"
+#include "VideoCommon/ConstantManager.h"
 
 namespace OGL
 {
@@ -82,7 +83,7 @@ public:
                                      std::string_view gcode);
   static StreamBuffer* GetUniformBuffer();
   static u32 GetUniformBufferAlignment();
-  static void UploadConstants();
+  static void UploadConstants(VertexShaderActiveUniforms);
   static void UploadConstants(const void* data, u32 data_size);
 
   static void Init();

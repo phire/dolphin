@@ -258,7 +258,7 @@ void VertexManager::CommitBuffer(u32 num_vertices, u32 vertex_stride, u32 num_in
   D3D::stateman->SetIndexBuffer(m_buffers[m_current_buffer].Get());
 }
 
-void VertexManager::UploadUniforms()
+void VertexManager::UploadUniforms(VertexShaderActiveUniforms)
 {
   if (VertexShaderManager::dirty)
   {

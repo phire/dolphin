@@ -53,35 +53,70 @@ struct PixelShaderConstants
   u32 blend_subtract_alpha;
 };
 
+constexpr size_t PixelShaderConstants_size_excluding_ubershaders = offsetof(PixelShaderConstants, genmode);
+
+struct VertexShaderActiveUniforms {
+    u32 posnormalmatrix : 1;
+    u32 materials : 1;
+    u32 directional_lights : 1;
+    u32 num_lights : 4;
+    u32 texmatrices : 1;
+    u32 transformmatrices : 1;
+    u32 normalmatrices : 1;
+    u32 posttransformmatrices : 1;
+    u32 uber : 1;
+
+    constexpr static VertexShaderActiveUniforms Everything() {
+      VertexShaderActiveUniforms ret = {};
+      ret.posnormalmatrix = 1;
+      ret.materials = 1;
+      ret.directional_lights = 1;
+      ret.num_lights = 8;
+      ret.texmatrices = 1;
+      ret.transformmatrices = 1;
+      ret.normalmatrices = 1;
+      ret.posttransformmatrices = 1;
+      ret.uber = 1;
+
+      return ret;
+    }
+};
+
 struct VertexShaderConstants
 {
+  float4 pixelcentercorrection;
+  std::array<float, 2> viewport;  // .xy
+  std::array<float, 2> pad1;      // .zw
+
+  std::array<float4, 4> projection; // always
+
+  std::array<float4, 6> posnormalmatrix; // not !VB_HAS_POSMTXIDX
+  std::array<int4, 4> materials; // light matsource / ambsource
+  struct Light
+  {
+    int4 color; // always
+    float4 pos; // always
+    float4 dir; // LIGHTATTN_SPEC / LIGHTATTN_SPOT
+    float4 cosatt; // LIGHTATTN_SPEC / LIGHTATTN_SPOT
+    float4 distatt; // LIGHTATTN_SPEC / LIGHTATTN_SPOT
+  };
+  std::array<Light, 8> lights;
+  std::array<float4, 24> texmatrices; // (XF_TEXGEN_REGULAR && !VB_HAS_TEXMTXIDX0 < i)
+  std::array<float4, 64> transformmatrices; // VB_HAS_POSMTXIDX || (XF_TEXGEN_REGULAR && VB_HAS_TEXMTXIDX0 < i)
+  std::array<float4, 32> normalmatrices; // VB_HAS_POSMTXIDX && VB_HAS_NRMALL
+  std::array<float4, 64> posttransformmatrices; // uid_data->dualTexTrans_enabled && texinfo.texgentype == XF_TEXGEN_REGULAR
+
+  // Constants from here onwards are only used in ubershaders.
   u32 components;           // .x
   u32 xfmem_dualTexInfo;    // .y
   u32 xfmem_numColorChans;  // .z
-  u32 pad1;                 // .w
-
-  std::array<float4, 6> posnormalmatrix;
-  std::array<float4, 4> projection;
-  std::array<int4, 4> materials;
-  struct Light
-  {
-    int4 color;
-    float4 cosatt;
-    float4 distatt;
-    float4 pos;
-    float4 dir;
-  };
-  std::array<Light, 8> lights;
-  std::array<float4, 24> texmatrices;
-  std::array<float4, 64> transformmatrices;
-  std::array<float4, 32> normalmatrices;
-  std::array<float4, 64> posttransformmatrices;
-  float4 pixelcentercorrection;
-  std::array<float, 2> viewport;  // .xy
-  std::array<float, 2> pad2;      // .zw
-
+  u32 pad2;                 // .w
   // .x - texMtxInfo, .y - postMtxInfo, [0..1].z = color, [0..1].w = alpha
   std::array<uint4, 8> xfmem_pack1;
+
+  // Write just the fields that are actually used by a given vertex shader to *dest
+  size_t WriteActive(u8 *dest, VertexShaderActiveUniforms fmt);
+  static size_t GetActiveSize(VertexShaderActiveUniforms fmt);
 };
 
 struct GeometryShaderConstants
@@ -90,3 +125,7 @@ struct GeometryShaderConstants
   float4 lineptparams;
   int4 texoffset;
 };
+
+
+class vertex_shader_uid_data;
+VertexShaderActiveUniforms GetActiveUniforms(const vertex_shader_uid_data* uid_data);

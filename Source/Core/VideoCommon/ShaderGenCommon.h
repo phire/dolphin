@@ -16,6 +16,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/StringUtil.h"
+#include "VideoCommon/ConstantManager.h"
 #include "VideoCommon/VideoCommon.h"
 #include "VideoCommon/VideoConfig.h"
 
@@ -302,6 +303,22 @@ inline const char* GetInterpolationQualifier(bool msaa, bool ssaa,
   }
 }
 
+inline void GenerateLightingStruct(ShaderCode &out, VertexShaderActiveUniforms has)
+{
+  out.Write("struct Light {\n"
+            "\tint4 color;\n"
+            "\tfloat4 pos;\n");
+
+  if (has.directional_lights)
+    out.Write("\tfloat4 dir;\n"
+              "\tfloat4 cosatt;\n"
+              "\tfloat4 distatt;\n");
+
+  out.Write("};\n");
+}
+
+
+
 // Constant variable names
 #define I_COLORS "color"
 #define I_KCOLORS "k"
@@ -332,21 +349,39 @@ inline const char* GetInterpolationQualifier(bool msaa, bool ssaa,
 #define I_LINEPTPARAMS "clinept"
 #define I_TEXOFFSET "ctexoffset"
 
-static const char s_shader_uniforms[] = "\tuint    components;\n"
-                                        "\tuint    xfmem_dualTexInfo;\n"
-                                        "\tuint    xfmem_numColorChans;\n"
-                                        "\tfloat4 " I_POSNORMALMATRIX "[6];\n"
-                                        "\tfloat4 " I_PROJECTION "[4];\n"
-                                        "\tint4 " I_MATERIALS "[4];\n"
-                                        "\tLight " I_LIGHTS "[8];\n"
-                                        "\tfloat4 " I_TEXMATRICES "[24];\n"
-                                        "\tfloat4 " I_TRANSFORMMATRICES "[64];\n"
-                                        "\tfloat4 " I_NORMALMATRICES "[32];\n"
-                                        "\tfloat4 " I_POSTTRANSFORMMATRICES "[64];\n"
-                                        "\tfloat4 " I_PIXELCENTERCORRECTION ";\n"
-                                        "\tfloat2 " I_VIEWPORT_SIZE ";\n"
-                                        "\tuint4   xfmem_pack1[8];\n"
-                                        "\t#define xfmem_texMtxInfo(i) (xfmem_pack1[(i)].x)\n"
-                                        "\t#define xfmem_postMtxInfo(i) (xfmem_pack1[(i)].y)\n"
-                                        "\t#define xfmem_color(i) (xfmem_pack1[(i)].z)\n"
-                                        "\t#define xfmem_alpha(i) (xfmem_pack1[(i)].w)\n";
+
+inline void GenerateVertexUniforms(ShaderCode &out, VertexShaderActiveUniforms has)
+{
+  out.Write("\tfloat4 " I_PIXELCENTERCORRECTION ";\n"
+            "\tfloat2 " I_VIEWPORT_SIZE ";\n"
+            "\tfloat4 " I_PROJECTION "[4];\n");
+
+  if (has.posnormalmatrix)
+     out.Write("\tfloat4 " I_POSNORMALMATRIX "[6];\n");
+
+  if (has.materials)
+     out.Write("\tint4 " I_MATERIALS "[4];\n");
+
+  if (has.num_lights > 0)
+    out.Write("\tLight " I_LIGHTS "[%i];\n", has.num_lights);
+
+  if (has.texmatrices)
+    out.Write("\tfloat4 " I_TEXMATRICES "[24];\n");
+  if (has.transformmatrices)
+    out.Write("\tfloat4 " I_TRANSFORMMATRICES "[64];\n");
+  if (has.normalmatrices)
+    out.Write("\tfloat4 " I_NORMALMATRICES "[32];\n");
+  if (has.posttransformmatrices)
+    out.Write("\tfloat4 " I_POSTTRANSFORMMATRICES "[64];\n");
+
+  if (has.uber) {
+    out.Write("\tuint    components;\n"
+              "\tuint    xfmem_dualTexInfo;\n"
+              "\tuint    xfmem_numColorChans;\n"
+              "\tuint4   xfmem_pack1[8];\n"
+              "\t#define xfmem_texMtxInfo(i) (xfmem_pack1[(i)].x)\n"
+              "\t#define xfmem_postMtxInfo(i) (xfmem_pack1[(i)].y)\n"
+              "\t#define xfmem_color(i) (xfmem_pack1[(i)].z)\n"
+              "\t#define xfmem_alpha(i) (xfmem_pack1[(i)].w)\n");
+  }
+}

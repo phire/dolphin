@@ -25,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CommandProcessor.cpp" />
+    <ClCompile Include="ConstantManager.cpp" />
     <ClCompile Include="DriverDetails.cpp" />
     <ClCompile Include="PixelEngine.cpp" />
     <ClCompile Include="VideoBackendBase.cpp" />
@@ -212,6 +213,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommandProcessor.h" />
+    <ClInclude Include="ConstantManager.h" />
     <ClInclude Include="DriverDetails.h" />
     <ClInclude Include="NativeVertexFormat.h" />
     <ClInclude Include="PixelEngine.h" />

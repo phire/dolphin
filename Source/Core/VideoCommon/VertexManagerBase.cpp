@@ -272,7 +272,7 @@ void VertexManagerBase::DrawCurrentBatch(u32 base_index, u32 num_indices, u32 ba
   g_renderer->DrawIndexed(base_index, num_indices, base_vertex);
 }
 
-void VertexManagerBase::UploadUniforms()
+void VertexManagerBase::UploadUniforms(VertexShaderActiveUniforms)
 {
 }
 
@@ -472,14 +472,25 @@ void VertexManagerBase::Flush()
     // Same with GPU texture decoding, which uses compute shaders.
     LoadTextures();
 
-    // Now we can upload uniforms, as nothing else will override them.
     GeometryShaderManager::SetConstants();
     PixelShaderManager::SetConstants();
-    UploadUniforms();
 
     // Update the pipeline, or compile one if needed.
     UpdatePipelineConfig();
     UpdatePipelineObject();
+
+    // Calculate active uniforms
+    VertexShaderActiveUniforms active_uniforms;
+
+    if(m_pipeline_is_uber)
+      active_uniforms = VertexShaderActiveUniforms::Everything();
+    else
+      active_uniforms = GetActiveUniforms(m_current_pipeline_config.vs_uid.GetUidData());
+
+
+    // Now we can upload uniforms, as nothing else will override them.
+    UploadUniforms(active_uniforms);
+
     if (m_current_pipeline_object)
     {
       g_renderer->SetPipeline(m_current_pipeline_object);
@@ -678,6 +689,7 @@ void VertexManagerBase::UpdatePipelineObject()
   {
     // Ubershaders disabled? Block and compile the specialized shader.
     m_current_pipeline_object = g_shader_cache->GetPipelineForUid(m_current_pipeline_config);
+    m_pipeline_is_uber = false;
   }
   break;
 
@@ -686,6 +698,7 @@ void VertexManagerBase::UpdatePipelineObject()
     // Exclusive ubershader mode, always use ubershaders.
     m_current_pipeline_object =
         g_shader_cache->GetUberPipelineForUid(m_current_uber_pipeline_config);
+    m_pipeline_is_uber = true;
   }
   break;
 
@@ -698,6 +711,7 @@ void VertexManagerBase::UpdatePipelineObject()
     {
       // Specialized shaders are ready, prefer these.
       m_current_pipeline_object = *res;
+      m_pipeline_is_uber = false;
       return;
     }
 
@@ -706,6 +720,7 @@ void VertexManagerBase::UpdatePipelineObject()
       // Specialized shaders not ready, use the ubershaders.
       m_current_pipeline_object =
           g_shader_cache->GetUberPipelineForUid(m_current_uber_pipeline_config);
+      m_pipeline_is_uber = true;
     }
     else
     {

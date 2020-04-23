@@ -7,6 +7,7 @@
 #include "Common/Assert.h"
 #include "Common/CommonTypes.h"
 #include "VideoCommon/BPMemory.h"
+#include "VideoCommon/ConstantManager.h"
 #include "VideoCommon/LightingShaderGen.h"
 #include "VideoCommon/NativeVertexFormat.h"
 #include "VideoCommon/VertexLoaderManager.h"
@@ -59,7 +60,6 @@ VertexShaderUid GetVertexShaderUid()
       uid_data->texMtxInfo_n_projection |= xfmem.texMtxInfo[i].projection << i;
       break;
     }
-
     uid_data->dualTexTrans_enabled = xfmem.dualTexTrans.enabled;
     // CHECKME: does this only work for regular tex gen types?
     if (uid_data->dualTexTrans_enabled && texinfo.texgentype == XF_TEXGEN_REGULAR)
@@ -83,7 +83,9 @@ ShaderCode GenerateVertexShaderCode(APIType api_type, const ShaderHostConfig& ho
   const bool ssaa = host_config.ssaa;
   const bool vertex_rounding = host_config.vertex_rounding;
 
-  out.Write("%s", s_lighting_struct);
+  auto active_uniforms = GetActiveUniforms(uid_data);
+
+  GenerateLightingStruct(out, active_uniforms);
 
   // uniforms
   if (api_type == APIType::OpenGL || api_type == APIType::Vulkan)
@@ -91,7 +93,8 @@ ShaderCode GenerateVertexShaderCode(APIType api_type, const ShaderHostConfig& ho
   else
     out.Write("cbuffer VSBlock {\n");
 
-  out.Write(s_shader_uniforms);
+  GenerateVertexUniforms(out, active_uniforms);
+
   out.Write("};\n");
 
   out.Write("struct VS_OUTPUT {\n");

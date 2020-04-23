@@ -124,23 +124,24 @@ void VertexManager::CommitBuffer(u32 num_vertices, u32 vertex_stride, u32 num_in
                                           m_index_stream_buffer.GetSize(), DXGI_FORMAT_R16_UINT);
 }
 
-void VertexManager::UploadUniforms()
+void VertexManager::UploadUniforms(VertexShaderActiveUniforms vertex_uniforms)
 {
-  UpdateVertexShaderConstants();
+  UpdateVertexShaderConstants(vertex_uniforms);
   UpdateGeometryShaderConstants();
   UpdatePixelShaderConstants();
 }
 
-void VertexManager::UpdateVertexShaderConstants()
+void VertexManager::UpdateVertexShaderConstants(VertexShaderActiveUniforms vertex_uniforms)
 {
   if (!VertexShaderManager::dirty || !ReserveConstantStorage())
     return;
 
   Renderer::GetInstance()->SetConstantBuffer(1, m_uniform_stream_buffer.GetCurrentGPUPointer());
-  std::memcpy(m_uniform_stream_buffer.GetCurrentHostPointer(), &VertexShaderManager::constants,
-              sizeof(VertexShaderConstants));
-  m_uniform_stream_buffer.CommitMemory(sizeof(VertexShaderConstants));
-  ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, sizeof(VertexShaderConstants));
+  //std::memcpy(m_uniform_stream_buffer.GetCurrentHostPointer(), &VertexShaderManager::constants,
+              //size);
+  size_t size = VertexShaderManager::constants.WriteActive(m_uniform_stream_buffer.GetCurrentHostPointer(), vertex_uniforms);
+  m_uniform_stream_buffer.CommitMemory(size));
+  ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, size);
   VertexShaderManager::dirty = false;
 }
 

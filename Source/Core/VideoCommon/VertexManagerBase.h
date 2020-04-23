@@ -9,6 +9,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/MathUtil.h"
+#include "VideoCommon/ConstantManager.h"
 #include "VideoCommon/IndexGenerator.h"
 #include "VideoCommon/RenderState.h"
 #include "VideoCommon/ShaderCache.h"
@@ -158,7 +159,7 @@ protected:
                             u32* out_base_vertex, u32* out_base_index);
 
   // Uploads uniform buffers for GX draws.
-  virtual void UploadUniforms();
+  virtual void UploadUniforms(VertexShaderActiveUniforms);
 
   // Issues the draw call for the current batch in the backend.
   virtual void DrawCurrentBatch(u32 base_index, u32 num_indices, u32 base_vertex);
@@ -184,6 +185,7 @@ protected:
   const AbstractPipeline* m_current_pipeline_object = nullptr;
   PrimitiveType m_current_primitive_type = PrimitiveType::Points;
   bool m_pipeline_config_changed = true;
+  bool m_pipeline_is_uber = false;
   bool m_rasterization_state_changed = true;
   bool m_depth_state_changed = true;
   bool m_blending_state_changed = true;

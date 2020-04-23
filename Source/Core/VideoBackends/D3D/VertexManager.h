@@ -48,7 +48,7 @@ protected:
   void ResetBuffer(u32 vertex_stride) override;
   void CommitBuffer(u32 num_vertices, u32 vertex_stride, u32 num_indices, u32* out_base_vertex,
                     u32* out_base_index) override;
-  void UploadUniforms() override;
+  void UploadUniforms(VertexShaderActiveUniforms) override;
 
 private:
   static constexpr u32 BUFFER_COUNT = 2;

@@ -192,25 +192,28 @@ void VertexManager::CommitBuffer(u32 num_vertices, u32 vertex_stride, u32 num_in
                                               VK_INDEX_TYPE_UINT16);
 }
 
-void VertexManager::UploadUniforms()
+void VertexManager::UploadUniforms(VertexShaderActiveUniforms vertex_uniforms)
 {
-  UpdateVertexShaderConstants();
+  UpdateVertexShaderConstants(vertex_uniforms);
   UpdateGeometryShaderConstants();
   UpdatePixelShaderConstants();
 }
 
-void VertexManager::UpdateVertexShaderConstants()
+void VertexManager::UpdateVertexShaderConstants(VertexShaderActiveUniforms vertex_uniforms)
 {
   if (!VertexShaderManager::dirty || !ReserveConstantStorage())
     return;
 
+  size_t size = VertexShaderConstants::GetActiveSize(vertex_uniforms);
+
   StateTracker::GetInstance()->SetGXUniformBuffer(
       UBO_DESCRIPTOR_SET_BINDING_VS, m_uniform_stream_buffer->GetBuffer(),
       m_uniform_stream_buffer->GetCurrentOffset(), sizeof(VertexShaderConstants));
-  std::memcpy(m_uniform_stream_buffer->GetCurrentHostPointer(), &VertexShaderManager::constants,
-              sizeof(VertexShaderConstants));
-  m_uniform_stream_buffer->CommitMemory(sizeof(VertexShaderConstants));
-  ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, sizeof(VertexShaderConstants));
+
+  VertexShaderManager::constants.WriteActive(m_uniform_stream_buffer->GetCurrentHostPointer(),
+                                             vertex_uniforms);
+  m_uniform_stream_buffer->CommitMemory(size);
+  ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, size);
   VertexShaderManager::dirty = false;
 }
 
@@ -234,13 +237,15 @@ void VertexManager::UpdatePixelShaderConstants()
   if (!PixelShaderManager::dirty || !ReserveConstantStorage())
     return;
 
+  size_t size = sizeof(PixelShaderConstants); // PixelShaderConstants_size_excluding_ubershaders;
+
   StateTracker::GetInstance()->SetGXUniformBuffer(
       UBO_DESCRIPTOR_SET_BINDING_PS, m_uniform_stream_buffer->GetBuffer(),
       m_uniform_stream_buffer->GetCurrentOffset(), sizeof(PixelShaderConstants));
   std::memcpy(m_uniform_stream_buffer->GetCurrentHostPointer(), &PixelShaderManager::constants,
-              sizeof(PixelShaderConstants));
-  m_uniform_stream_buffer->CommitMemory(sizeof(PixelShaderConstants));
-  ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, sizeof(PixelShaderConstants));
+              size);
+  m_uniform_stream_buffer->CommitMemory(size);
+  ADDSTAT(g_stats.this_frame.bytes_uniform_streamed, size);
   PixelShaderManager::dirty = false;
 }
 

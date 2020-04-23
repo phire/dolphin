@@ -362,7 +362,7 @@ void ClearUnusedPixelShaderUidBits(APIType ApiType, const ShaderHostConfig& host
 }
 
 void WritePixelShaderCommonHeader(ShaderCode& out, APIType ApiType, u32 num_texgens,
-                                  const ShaderHostConfig& host_config, bool bounding_box)
+                                  const ShaderHostConfig& host_config, bool bounding_box, bool is_uber)
 {
   // dot product for integer vectors
   out.Write("int idot(int3 x, int3 y)\n"
@@ -413,44 +413,53 @@ void WritePixelShaderCommonHeader(ShaderCode& out, APIType ApiType, u32 num_texg
             "\tfloat4 " I_FOGF ";\n"
             "\tfloat4 " I_FOGRANGE "[3];\n"
             "\tfloat4 " I_ZSLOPE ";\n"
-            "\tfloat2 " I_EFBSCALE ";\n"
-            "\tuint  bpmem_genmode;\n"
-            "\tuint  bpmem_alphaTest;\n"
-            "\tuint  bpmem_fogParam3;\n"
-            "\tuint  bpmem_fogRangeBase;\n"
-            "\tuint  bpmem_dstalpha;\n"
-            "\tuint  bpmem_ztex_op;\n"
-            "\tbool  bpmem_late_ztest;\n"
-            "\tbool  bpmem_rgba6_format;\n"
-            "\tbool  bpmem_dither;\n"
-            "\tbool  bpmem_bounding_box;\n"
-            "\tuint4 bpmem_pack1[16];\n"  // .xy - combiners, .z - tevind
-            "\tuint4 bpmem_pack2[8];\n"   // .x - tevorder, .y - tevksel
-            "\tint4  konstLookup[32];\n"
-            "\tbool  blend_enable;\n"
-            "\tuint  blend_src_factor;\n"
-            "\tuint  blend_src_factor_alpha;\n"
-            "\tuint  blend_dst_factor;\n"
-            "\tuint  blend_dst_factor_alpha;\n"
-            "\tbool  blend_subtract;\n"
-            "\tbool  blend_subtract_alpha;\n"
-            "};\n\n");
-  out.Write("#define bpmem_combiners(i) (bpmem_pack1[(i)].xy)\n"
-            "#define bpmem_tevind(i) (bpmem_pack1[(i)].z)\n"
-            "#define bpmem_iref(i) (bpmem_pack1[(i)].w)\n"
-            "#define bpmem_tevorder(i) (bpmem_pack2[(i)].x)\n"
-            "#define bpmem_tevksel(i) (bpmem_pack2[(i)].y)\n\n");
+            "\tfloat2 " I_EFBSCALE ";\n");
+  if (is_uber)
+  {
+    // These uniforms are only used by ubershaders
+    out.Write("\tuint  bpmem_genmode;\n"
+              "\tuint  bpmem_alphaTest;\n"
+              "\tuint  bpmem_fogParam3;\n"
+              "\tuint  bpmem_fogRangeBase;\n"
+              "\tuint  bpmem_dstalpha;\n"
+              "\tuint  bpmem_ztex_op;\n"
+              "\tbool  bpmem_late_ztest;\n"
+              "\tbool  bpmem_rgba6_format;\n"
+              "\tbool  bpmem_dither;\n"
+              "\tbool  bpmem_bounding_box;\n"
+              "\tuint4 bpmem_pack1[16];\n"  // .xy - combiners, .z - tevind
+              "\tuint4 bpmem_pack2[8];\n"   // .x - tevorder, .y - tevksel
+              "\tint4  konstLookup[32];\n"
+              "\tbool  blend_enable;\n"
+              "\tuint  blend_src_factor;\n"
+              "\tuint  blend_src_factor_alpha;\n"
+              "\tuint  blend_dst_factor;\n"
+              "\tuint  blend_dst_factor_alpha;\n"
+              "\tbool  blend_subtract;\n"
+              "\tbool  blend_subtract_alpha;\n");
+  }
+  out.Write("};\n\n");
+
+  if (is_uber)
+  {
+      out.Write("#define bpmem_combiners(i) (bpmem_pack1[(i)].xy)\n"
+                "#define bpmem_tevind(i) (bpmem_pack1[(i)].z)\n"
+                "#define bpmem_iref(i) (bpmem_pack1[(i)].w)\n"
+                "#define bpmem_tevorder(i) (bpmem_pack2[(i)].x)\n"
+                "#define bpmem_tevksel(i) (bpmem_pack2[(i)].y)\n\n");
+  }
 
   if (host_config.per_pixel_lighting)
   {
-    out.Write("%s", s_lighting_struct);
+    // FIXME: We need to work around this
+    //out.Write("%s", s_lighting_struct);
 
     if (ApiType == APIType::OpenGL || ApiType == APIType::Vulkan)
       out.Write("UBO_BINDING(std140, 2) uniform VSBlock {\n");
     else
       out.Write("cbuffer VSBlock : register(b1) {\n");
 
-    out.Write(s_shader_uniforms);
+    //out.Write(s_shader_uniforms);
     out.Write("};\n");
   }
 
@@ -547,7 +556,7 @@ ShaderCode GeneratePixelShaderCode(APIType ApiType, const ShaderHostConfig& host
 
   // Stuff that is shared between ubershaders and pixelgen.
   WritePixelShaderCommonHeader(out, ApiType, uid_data->genMode_numtexgens, host_config,
-                               uid_data->bounding_box);
+                               uid_data->bounding_box, false);
 
   if (uid_data->forced_early_z && g_ActiveConfig.backend_info.bSupportsEarlyZ)
   {

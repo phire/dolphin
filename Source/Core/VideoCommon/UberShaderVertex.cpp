@@ -35,14 +35,14 @@ ShaderCode GenVertexShader(APIType ApiType, const ShaderHostConfig& host_config,
   ShaderCode out;
 
   out.Write("// Vertex UberShader\n\n");
-  out.Write("%s", s_lighting_struct);
+  GenerateLightingStruct(out, VertexShaderActiveUniforms::Everything());
 
   // uniforms
   if (ApiType == APIType::OpenGL || ApiType == APIType::Vulkan)
     out.Write("UBO_BINDING(std140, 2) uniform VSBlock {\n");
   else
     out.Write("cbuffer VSBlock {\n");
-  out.Write(s_shader_uniforms);
+  GenerateVertexUniforms(out, VertexShaderActiveUniforms::Everything());
   out.Write("};\n");
 
   out.Write("struct VS_OUTPUT {\n");
