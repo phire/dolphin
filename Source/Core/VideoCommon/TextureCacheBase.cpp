@@ -1156,12 +1156,12 @@ private:
   std::vector<Level> levels;
 };
 
-TextureCacheBase::TCacheEntry* TextureCacheBase::Load(const u32 stage)
+bool TextureCacheBase::Load(const u32 stage)
 {
   // if this stage was not invalidated by changes to texture registers, keep the current texture
   if (IsValidBindPoint(stage) && bound_textures[stage])
   {
-    return bound_textures[stage];
+    return false;
   }
 
   const FourTexUnits& tex = bpmem.tex[stage >> 2];
@@ -1183,16 +1183,17 @@ TextureCacheBase::TCacheEntry* TextureCacheBase::Load(const u32 stage)
                           use_mipmaps, tex_levels, from_tmem, tmem_address_even, tmem_address_odd);
 
   if (!entry)
-    return nullptr;
+    return false;
 
   entry->frameCount = FRAMECOUNT_INVALID;
+  auto current_entry = bound_textures[stage];
   bound_textures[stage] = entry;
 
   // We need to keep track of invalided textures until they have actually been replaced or
   // re-loaded
   valid_bind_points.set(stage);
 
-  return entry;
+  return current_entry != entry;
 }
 
 TextureCacheBase::TCacheEntry*

@@ -17,7 +17,7 @@ public:
   static void Dirty();
   static void DoState(PointerWrap& p);
 
-  static void SetConstants();  // sets pixel shader constants
+  static bool SetConstants();  // sets pixel shader constants
 
   // constant management
   // Some of these functions grab the constant values from global state,

@@ -212,7 +212,7 @@ public:
 
   void Invalidate();
 
-  TCacheEntry* Load(const u32 stage);
+  bool Load(const u32 stage);
   static void InvalidateAllBindPoints() { valid_bind_points.reset(); }
   static bool IsValidBindPoint(u32 i) { return valid_bind_points.test(i); }
   TCacheEntry* GetTexture(u32 address, u32 width, u32 height, const TextureFormat texformat,

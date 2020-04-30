@@ -133,8 +133,9 @@ void VertexShaderManager::Dirty()
 
 // Syncs the shader constant buffers with xfmem
 // TODO: A cleaner way to control the matrices without making a mess in the parameters field
-void VertexShaderManager::SetConstants()
+bool VertexShaderManager::SetConstants()
 {
+  bool wasted = true;
   if (nTransformMatricesChanged[0] >= 0)
   {
     int startn = nTransformMatricesChanged[0] / 4;
@@ -169,6 +170,7 @@ void VertexShaderManager::SetConstants()
 
   if (nLightsChanged[0] >= 0)
   {
+    wasted = false;
     // TODO: Outdated comment
     // lights don't have a 1 to 1 mapping, the color component needs to be converted to 4 floats
     int istart = nLightsChanged[0] / 0x10;
@@ -222,6 +224,7 @@ void VertexShaderManager::SetConstants()
 
   for (int i : nMaterialsChanged)
   {
+    wasted = false;
     u32 data = i >= 2 ? xfmem.matColor[i - 2] : xfmem.ambColor[i];
     constants.materials[i][0] = (data >> 24) & 0xFF;
     constants.materials[i][1] = (data >> 16) & 0xFF;
@@ -282,6 +285,7 @@ void VertexShaderManager::SetConstants()
 
   if (bViewportChanged)
   {
+    wasted = false;
     bViewportChanged = false;
 
     // The console GPU places the pixel center at 7/12 unless antialiasing
@@ -346,6 +350,7 @@ void VertexShaderManager::SetConstants()
 
   if (bProjectionChanged)
   {
+    wasted = false;
     bProjectionChanged = false;
 
     const auto& rawProjection = xfmem.projection.rawProjection;
@@ -422,6 +427,7 @@ void VertexShaderManager::SetConstants()
 
   if (bTexMtxInfoChanged)
   {
+    wasted = false;
     bTexMtxInfoChanged = false;
     constants.xfmem_dualTexInfo = xfmem.dualTexTrans.enabled;
     for (size_t i = 0; i < std::size(xfmem.texMtxInfo); i++)
@@ -434,6 +440,7 @@ void VertexShaderManager::SetConstants()
 
   if (bLightingConfigChanged)
   {
+    wasted = false;
     bLightingConfigChanged = false;
 
     for (size_t i = 0; i < 2; i++)
@@ -445,6 +452,7 @@ void VertexShaderManager::SetConstants()
 
     dirty = true;
   }
+  return wasted;
 }
 
 void VertexShaderManager::InvalidateXFRange(int start, int end)

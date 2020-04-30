@@ -39,7 +39,7 @@ void GeometryShaderManager::Dirty()
   dirty = true;
 }
 
-void GeometryShaderManager::SetConstants()
+bool GeometryShaderManager::SetConstants()
 {
   if (s_projection_changed && g_ActiveConfig.stereo_mode != StereoMode::Off)
   {
@@ -72,6 +72,8 @@ void GeometryShaderManager::SetConstants()
 
     dirty = true;
   }
+
+  return dirty;
 }
 
 void GeometryShaderManager::SetViewportChanged()

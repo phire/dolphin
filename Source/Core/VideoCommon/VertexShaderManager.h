@@ -20,7 +20,7 @@ public:
   static void DoState(PointerWrap& p);
 
   // constant management
-  static void SetConstants();
+  static bool SetConstants();
 
   static void InvalidateXFRange(int start, int end);
   static void SetTexMatrixChangedA(u32 value);

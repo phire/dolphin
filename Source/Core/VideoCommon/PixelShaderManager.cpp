@@ -89,7 +89,7 @@ void PixelShaderManager::Dirty()
   dirty = true;
 }
 
-void PixelShaderManager::SetConstants()
+bool PixelShaderManager::SetConstants()
 {
   if (s_bFogRangeAdjustChanged)
   {
@@ -192,6 +192,7 @@ void PixelShaderManager::SetConstants()
       dirty = true;
     }
   }
+  return dirty;
 }
 
 void PixelShaderManager::SetTevColor(int index, int component, s32 value)

@@ -17,7 +17,7 @@ public:
   static void Dirty();
   static void DoState(PointerWrap& p);
 
-  static void SetConstants();
+  static bool SetConstants();
   static void SetViewportChanged();
   static void SetProjectionChanged();
   static void SetLinePtWidthChanged();

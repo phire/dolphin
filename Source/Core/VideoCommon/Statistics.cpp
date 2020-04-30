@@ -72,6 +72,8 @@ void Statistics::Display() const
   draw_statistic("dlists called", "%d", this_frame.num_dlists_called);
   draw_statistic("Primitive joins", "%d", this_frame.num_primitive_joins);
   draw_statistic("Draw calls", "%d", this_frame.num_draw_calls);
+  draw_statistic("Wasted Draw calls", "%d", this_frame.wasted_draw_calls);
+  draw_statistic("Goal Draw calls", "%d", this_frame.num_draw_calls - this_frame.wasted_draw_calls);
   draw_statistic("Primitives", "%d", this_frame.num_prims);
   draw_statistic("Primitives (DL)", "%d", this_frame.num_dl_prims);
   draw_statistic("XF loads", "%d", this_frame.num_xf_loads);

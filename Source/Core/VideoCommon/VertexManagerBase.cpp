@@ -329,8 +329,10 @@ bool VertexManagerBase::UploadTexelBuffer(const void* data, u32 data_size, Texel
   return false;
 }
 
-void VertexManagerBase::LoadTextures()
+bool VertexManagerBase::LoadTextures()
 {
+  bool dirty = false;
+
   BitSet32 usedtextures;
   for (u32 i = 0; i < bpmem.genMode.numtevstages + 1u; ++i)
     if (bpmem.tevorders[i / 2].getEnable(i & 1))
@@ -342,9 +344,13 @@ void VertexManagerBase::LoadTextures()
         usedtextures[bpmem.tevindref.getTexMap(bpmem.tevind[i].bt)] = true;
 
   for (unsigned int i : usedtextures)
-    g_texture_cache->Load(i);
+  {
+    dirty |= g_texture_cache->Load(i);
+  }
 
   g_texture_cache->BindTextures();
+
+  return dirty;
 }
 
 void VertexManagerBase::Flush()
@@ -444,8 +450,10 @@ void VertexManagerBase::Flush()
     }
   }
 
+  bool wasted_draw;
+
   // Calculate ZSlope for zfreeze
-  VertexShaderManager::SetConstants();
+  wasted_draw = VertexShaderManager::SetConstants();
   if (!bpmem.genMode.zfreeze)
   {
     // Must be done after VertexShaderManager::SetConstants()
@@ -470,11 +478,14 @@ void VertexManagerBase::Flush()
     // Texture loading can cause palettes to be applied (-> uniforms -> draws).
     // Palette application does not use vertices, only a full-screen quad, so this is okay.
     // Same with GPU texture decoding, which uses compute shaders.
-    LoadTextures();
+    if (LoadTextures())
+      wasted_draw = false;
 
     // Now we can upload uniforms, as nothing else will override them.
-    GeometryShaderManager::SetConstants();
-    PixelShaderManager::SetConstants();
+    if(GeometryShaderManager::SetConstants())
+      wasted_draw = false;
+    if(PixelShaderManager::SetConstants())
+      wasted_draw = false;
     UploadUniforms();
 
     // Update the pipeline, or compile one if needed.
@@ -488,6 +499,8 @@ void VertexManagerBase::Flush()
 
       DrawCurrentBatch(base_index, num_indices, base_vertex);
       INCSTAT(g_stats.this_frame.num_draw_calls);
+      if (wasted_draw)
+        INCSTAT(g_stats.this_frame.wasted_draw_calls);
 
       if (PerfQueryBase::ShouldEmulate())
         g_perf_query->DisableQuery(bpmem.zcontrol.early_ztest ? PQG_ZCOMP_ZCOMPLOC : PQG_ZCOMP);
@@ -498,6 +511,8 @@ void VertexManagerBase::Flush()
       g_framebuffer_manager->FlagPeekCacheAsOutOfDate();
     }
   }
+
+
 
   if (xfmem.numTexGen.numTexGens != bpmem.genMode.numtexgens)
   {

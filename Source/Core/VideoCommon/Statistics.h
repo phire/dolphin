@@ -39,6 +39,7 @@ struct Statistics
 
     int num_primitive_joins;
     int num_draw_calls;
+    int wasted_draw_calls;
 
     int num_dlists_called;
 

@@ -167,7 +167,7 @@ protected:
   u32 GetRemainingIndices(int primitive) const;
 
   void CalculateZSlope(NativeVertexFormat* format);
-  void LoadTextures();
+  bool LoadTextures();
 
   u8* m_cur_buffer_pointer = nullptr;
   u8* m_base_buffer_pointer = nullptr;
