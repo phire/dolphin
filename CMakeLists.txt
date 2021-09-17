@@ -65,6 +65,8 @@ option(OPROFILING "Enable profiling" OFF)
 # TODO: Add DSPSpy
 option(DSPTOOL "Build dsptool" OFF)
 
+option(LUA_SCRIPTHOST "Build lua scripthost" ON)
+
 # Enable SDL for default on operating systems that aren't Android, Linux or Windows.
 if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT MSVC)
   option(ENABLE_SDL "Enables SDL as a generic controller backend" ON)
