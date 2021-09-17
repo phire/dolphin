@@ -34,6 +34,8 @@
 #include "DolphinQt/Translation.h"
 #include "DolphinQt/Updater.h"
 
+#include "Plugins/PluginHost.h"
+
 #include "UICommon/CommandLineParse.h"
 #include "UICommon/UICommon.h"
 
@@ -183,6 +185,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
   // queued in the Core first.
   QObject::connect(QAbstractEventDispatcher::instance(), &QAbstractEventDispatcher::aboutToBlock,
                    &app, &Core::HostDispatchJobs);
+
+  Plugins::LoadAllPlugins();
 
   std::optional<std::string> save_state_path;
   if (options.is_set("save_state"))
