@@ -114,6 +114,8 @@ option(FASTLOG "Enable all logs" OFF)
 # TODO: Add DSPSpy
 option(DSPTOOL "Build dsptool" OFF)
 
+option(LUA_SCRIPTHOST "Build lua scripthost" ON)
+
 # RetroAchievements developer tools require Windows hooks
 if(WIN32)
   option(RC_CLIENT_SUPPORTS_RAINTEGRATION "Enables RetroAchievements developer tools" ON)

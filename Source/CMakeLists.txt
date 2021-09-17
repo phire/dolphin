@@ -92,4 +92,8 @@ if (DSPTOOL)
   add_subdirectory(DSPTool)
 endif()
 
+if (LUA_SCRIPTHOST)
+  add_subdirectory(LuaScriptHost)
+endif()
+
 # TODO: Add DSPSpy. Preferably make it option() and cpack component
