@@ -454,6 +454,7 @@ PRIVATE
 target_link_libraries(dolphin-emu
 PRIVATE
   core
+  plugins
   Qt6::Widgets
   uicommon
   imgui

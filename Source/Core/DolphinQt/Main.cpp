@@ -44,6 +44,8 @@
 #include "DolphinQt/Translation.h"
 #include "DolphinQt/Updater.h"
 
+#include "Plugins/PluginHost.h"
+
 #include "UICommon/CommandLineParse.h"
 #include "UICommon/UICommon.h"
 
@@ -192,6 +194,8 @@ int main(int argc, char* argv[])
   // queued in the Core first.
   QObject::connect(QAbstractEventDispatcher::instance(), &QAbstractEventDispatcher::aboutToBlock,
                    &app, [] { Core::HostDispatchJobs(Core::System::GetInstance()); });
+
+  Plugins::LoadAllPlugins();
 
   std::optional<std::string> save_state_path;
   if (options.is_set("save_state"))
