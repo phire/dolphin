@@ -852,6 +852,8 @@ include_directories(Externals/picojson)
 
 add_subdirectory(Externals/rangeset)
 
+add_subdirectory(Externals/Lua)
+
 ########################################
 # Pre-build events: Define configuration variables and write SCM info header
 #
