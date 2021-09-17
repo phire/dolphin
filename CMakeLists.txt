@@ -748,6 +748,8 @@ include_directories(Externals/picojson)
 
 add_subdirectory(Externals/expr)
 
+add_subdirectory(Externals/Lua)
+
 add_subdirectory(Externals/FatFs)
 
 if (USE_RETRO_ACHIEVEMENTS)
