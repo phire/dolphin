@@ -1,8 +1,13 @@
+add_library(plugin_abi INTERFACE)
+target_include_directories(plugin_abi INTERFACE PluginABI/)
+
 add_library(plugins
     PluginHost.cpp
 )
 
-add_library(plugin_abi INTERFACE
-    PluginABI/plugin.h
+target_link_libraries(plugins
+PRIVATE
+    plugin_abi
+    fmt::fmt
 )
-target_include_directories(plugin_abi INTERFACE PluginABI/)
+
