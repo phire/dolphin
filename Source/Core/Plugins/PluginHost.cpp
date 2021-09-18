@@ -8,6 +8,8 @@
 #include <dlfcn.h>
 #include <fmt/format.h>
 
+static uint64_t Module_id = 0;
+
 void Plugins::LoadAllPlugins()
 {
     InitDiscoveryModule();
@@ -28,10 +30,10 @@ void Plugins::LoadAllPlugins()
             continue;
         }
 
-        void (*plugin_init)(void);
+        void (*plugin_init)(uint64_t);
 
         // Locate the plugin_init function
-        plugin_init = reinterpret_cast<void (*)(void)>(dlsym(handle, "plugin_init"));
+        plugin_init = reinterpret_cast<void (*)(uint64_t)>(dlsym(handle, "plugin_init"));
 
         if (!plugin_init)
         {
@@ -40,6 +42,6 @@ void Plugins::LoadAllPlugins()
         }
 
         // Actually call the plugin_init method
-        plugin_init();
+        plugin_init(Module_id++);
     }
 }
