@@ -166,6 +166,8 @@ LogManager::LogManager()
   m_log[VIDEOINTERFACE] = {"VI", "Video Interface"};
   m_log[WIIMOTE] = {"Wiimote", "Wii Remote"};
   m_log[WII_IPC] = {"WII_IPC", "WII IPC"};
+  m_log[SCRIPT] = {"Script", "Script"};
+  m_log[SCRIPT_HOST] = {"Script Host", "Script Host"};
 
   RegisterListener(LogListener::FILE_LISTENER,
                    new FileLogListener(File::GetUserPath(F_MAINLOG_IDX)));
