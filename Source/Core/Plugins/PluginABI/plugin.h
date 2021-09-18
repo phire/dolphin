@@ -3,14 +3,23 @@
 
 #pragma once
 
+
+extern "C" {
+
+#include <stdint.h>
+
 #ifdef _WIN32
 #define EXPORTED __declspec(dllexport)
 #else
 #define EXPORTED __attribute__ ((visibility ("default")))
 #endif
 
-extern "C" {
-    void plugin_init();
+// Some functions require a handle to identify a function
+// call as coming from a given mod
+// Mods should keep it around
+typedef uint64_t mod_handle_t;
 
-    void plugin_destory();
+void plugin_init(mod_handle_t mod_id);
+
+void plugin_destory();
 }
