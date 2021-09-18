@@ -1,6 +1,8 @@
 // Copyright 2021 Dolphin Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include "test_discovery.h"
+
 #include <plugin.h>
 
 #include <stdio.h>
@@ -17,10 +19,11 @@ static void RunLua() {
     lua_close(L);
 }
 
-
 extern "C" {
 
 EXPORTED void plugin_init() {
+    TestDiscovery();
+
     RunLua();
 
     printf("LuaScriptHost initialized\n");
