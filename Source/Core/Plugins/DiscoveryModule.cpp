@@ -15,22 +15,8 @@
 #include <vector>
 #include <map>
 
-struct VersionInfo {
-    uint32_t Version; // The actual version
-    uint32_t MinVersion; // The minimum version that this version is backwards compatable to
-};
-
-struct ModuleInfo
-{
-    String Name;
-    String Description;
-    VersionInfo StableVersion;
-    Array<VersionInfo> OtherVersions = {};
-};
-
-
 extern "C" {
-static Array<ModuleInfo>* ListAllModules();
+EXPORTED Array<ModuleInfo>* ListAllModules();
 }
 
 // TODO: In the future, hope to generate these structures automatically though reflection.
@@ -81,20 +67,15 @@ static Module Discovery = {
     .Classes = { &ModuleInfo_Info }
 };
 
-static Array<ModuleInfo> AllModules;
-static std::vector<ModuleInfo> AllModulesVector;
 
-static Array<ModuleInfo>* ListAllModules() {
-    AllModules.Count = AllModulesVector.size();
-    AllModules.elements = AllModulesVector.data();
-    return &AllModules;
+EXPORTED Array<ModuleInfo>* ListAllModules() {
+    return &GetAllModules();
 }
 
 void InitDiscoveryModule() {
-    AllModulesVector.push_back(ModuleInfo {
+    RegisterModuleDefintion(&Discovery, ModuleInfo {
         String("Discovery"),
         String("This module provide tools to discover other modules"),
         VersionInfo{1, 1}
     });
-    RegisterModuleDefintion("Discovery", 1, &Discovery);
 }
