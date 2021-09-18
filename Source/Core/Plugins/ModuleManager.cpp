@@ -10,13 +10,21 @@
 #include <string>
 #include <utility>
 
+static Array<ModuleInfo> AllModules;
+static std::vector<ModuleInfo> AllModulesVector;
 static std::map<std::pair<std::string, uint32_t>, Module*> ModuleMap;
 
+void RegisterModuleDefintion(Module* ModuleType, ModuleInfo Info) {
 
-void RegisterModuleDefintion(std::string ModuleName, uint32_t Version, Module* ModuleType) {
-    ModuleMap[std::make_pair(ModuleName, Version)] = ModuleType;
+    ModuleMap[std::make_pair(Info.Name.to_string(), Info.StableVersion.Version)] = ModuleType;
+    AllModulesVector.push_back(Info);
+    AllModules.Count = AllModulesVector.size();
+    AllModules.elements = AllModulesVector.data();
 }
 
+Array<ModuleInfo>& GetAllModules() {
+    return AllModules;
+}
 
 extern "C" {
 

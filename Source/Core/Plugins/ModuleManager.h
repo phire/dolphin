@@ -6,8 +6,25 @@
 #include <stdint.h>
 #include <string>
 
+#include "Plugins/BasicTypes.h"
+
+struct VersionInfo {
+    uint32_t Version; // The actual version
+    uint32_t MinVersion; // The minimum version that this version is backwards comparable with
+};
+
+struct ModuleInfo
+{
+    String Name;
+    String Description;
+    VersionInfo StableVersion;
+    Array<VersionInfo> OtherVersions = {};
+};
+
 struct Module;
 
-void RegisterModuleDefintion(std::string ModuleName, uint32_t Version, Module* ModuleType);
+void RegisterModuleDefintion(Module* ModuleType, ModuleInfo Info);
+Array<ModuleInfo>& GetAllModules();
 
 void InitDiscoveryModule();
+void InitLoggingModule();

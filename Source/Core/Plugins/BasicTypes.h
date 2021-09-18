@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string.h>
+#include <string>
 
 template <typename T>
 struct Array {
@@ -21,4 +21,6 @@ struct String {
     const char* Data;
 
     constexpr String(const char c_str[]) : Len(c_strlen(c_str)), Data(c_str) {}
+
+    std::string to_string() { return std::string(Data, Len); }
 };
