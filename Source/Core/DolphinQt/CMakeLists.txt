@@ -354,6 +354,9 @@ PRIVATE
   imgui
 )
 
+# Make sure our scripting ABI functions are exported to DLLs
+set_property(TARGET dolphin-emu PROPERTY ENABLE_EXPORTS 1)
+
 if (WIN32)
   target_link_libraries(dolphin-emu
   PRIVATE
