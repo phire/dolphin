@@ -4,6 +4,7 @@ target_include_directories(plugin_abi INTERFACE PluginABI/)
 add_library(plugins
     DiscoveryModule.cpp
     ModuleManager.cpp
+    LoggingModule.cpp
     PluginHost.cpp
 )
 

@@ -13,6 +13,7 @@ static uint64_t Module_id = 0;
 void Plugins::LoadAllPlugins()
 {
     InitDiscoveryModule();
+    InitLoggingModule();
 
     auto PluginDir = File::GetExeDirectory() + "/Plugins";
 
