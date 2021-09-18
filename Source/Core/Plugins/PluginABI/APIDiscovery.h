@@ -15,7 +15,7 @@ extern "C" {
 struct Argument {
     const char* Name;
     const char* Type;
-    bool Out;
+    bool Out = false;
 };
 
 struct Function {
@@ -42,15 +42,30 @@ struct Class {
     struct Member* Members;
 };
 
+struct Eumerator
+{
+    const char* Name;
+    uint64_t Value;
+};
+
+struct Enum {
+    const char* EnumName;
+    const char* UnderlyingType;
+    uint32_t NumEumerators;
+    Eumerator* Eumerators;
+};
+
 struct Module
 {
     uint32_t Version;
     uint32_t GlobalFunctionsCount;
     uint32_t CallbackCount;
     uint32_t ClassCount;
+    uint32_t EnumCount;
     struct Function* GlobalFunctions;
     struct Function* Callbacks;
     struct Class* Classes;
+    struct Enum* Enums;
 };
 
 __attribute__ ((visibility("default"))) struct Module* GetModuleDefintion(const char* ModuleName, uint32_t Version);
