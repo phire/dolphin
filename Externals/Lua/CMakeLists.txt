@@ -44,6 +44,10 @@ add_library (lua STATIC ${LUA_LIB_SRCS} )
 # But don't use c++ exceptions
 target_compile_definitions(lua PRIVATE LUA_USE_LONGJMP)
 
+if (UNIX)
+    target_compile_definitions(lua PRIVATE LUA_USE_POSIX)
+endif()
+
 target_include_directories(lua PUBLIC "include")
 
 # position independant code so we can link this into a dll/so
