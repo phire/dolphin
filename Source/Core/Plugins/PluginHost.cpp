@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "Plugins/PluginHost.h"
+#include "Plugins/ModuleManager.h"
 #include "Common/FileUtil.h"
-
 
 #include <dlfcn.h>
 #include <fmt/format.h>
 
 void Plugins::LoadAllPlugins()
 {
+    InitDiscoveryModule();
+
     auto PluginDir = File::GetExeDirectory() + "/Plugins";
 
     const auto entries = File::ScanDirectoryTree(PluginDir, false);
