@@ -29,7 +29,7 @@ static Function ListAllModules_Info = {
     .ArgumentCount = 0,
     .Arguments = nullptr,
     .Symbol = SYMBOL(ListAllModules),
-    .FnPtr = reinterpret_cast<void* (*)(void*)>(&ListAllModules)
+    .FnPtr = reinterpret_cast<void* (*)(void)>(&ListAllModules)
 };
 
 static Member ModuleInfo_Members[] = {
