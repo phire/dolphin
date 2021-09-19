@@ -8,7 +8,7 @@
 #include <dlfcn.h>
 #include <fmt/format.h>
 
-static uint64_t Module_id = 0;
+static uint64_t Module_id = 0x1000;
 
 void Plugins::LoadAllPlugins()
 {
