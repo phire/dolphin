@@ -30,26 +30,28 @@ extern "C" {
 // We want log linked with the script/mod that created them.
 // So before they log, scripts/mods are expected to use their mod_id to create
 // one or more log streams that they can log into later.
-EXPORTED uint64_t CreateLogStream(mod_handle_t mod_id, String StreamName) {
+EXPORTED uint64_t CreateLogStream(mod_handle_t mod_id, String *StreamName) {
     // Find a unique stream id
     uint64_t stream_id = mod_id ^ 0xaa55;
     while (LogStreams.find(stream_id) != LogStreams.end())
     {
         stream_id = (stream_id + 555555) ^ 0x5a5a5a5a5a5a5a;
     }
-    LogStreams[stream_id] = { mod_id, StreamName.to_string() };
+    LogStreams[stream_id] = { mod_id, StreamName->to_string() };
+    return stream_id;
 }
 
 // However, we don't currently have anywhere to send the various log streams.
 // They just get merged together with a different function name
-EXPORTED void LogMsg(uint64_t StreamHandle, Common::Log::LOG_LEVELS level, String msg) {
+EXPORTED void LogMsg(uint64_t StreamHandle, Common::Log::LOG_LEVELS level, String* msg) {
     auto it = LogStreams.find(StreamHandle);
     if (it == LogStreams.end()) {
-        ERROR_LOG_FMT(SCRIPT_HOST, "LogMsg to invalid stream ({:x}) - \"{}\"", StreamHandle, msg.to_string());
+        ERROR_LOG_FMT(SCRIPT_HOST, "LogMsg to invalid stream ({:x}) - \"{}\"", StreamHandle, msg->to_string());
         return;
     }
     // This is a bit of a hack. We probably want a dedicated script log window.
-    Common::Log::GenericLog(level, Common::Log::SCRIPT, it->second.streamName.c_str(), 0, "%s", msg.to_string().c_str());
+    std::string padded_file = "                                        " + it->second.streamName;
+    Common::Log::GenericLog(level, Common::Log::SCRIPT, padded_file.c_str(), 0, "%s", msg->to_string().c_str());
 }
 }
 
