@@ -119,7 +119,7 @@ static Function functions[] = {
         .ArgumentCount = 2,
         .Arguments = CreateLogStreamArgs,
         .Symbol = SYMBOL(CreateLogStream),
-        .FnPtr = reinterpret_cast<void* (*)(void*)>(&CreateLogStream)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CreateLogStream)
     },
     {
         .FunctionName = "LogMsg",
@@ -128,7 +128,7 @@ static Function functions[] = {
         .ArgumentCount = 3,
         .Arguments = LogMsgArgs,
         .Symbol = SYMBOL(LogMsg),
-        .FnPtr = reinterpret_cast<void* (*)(void*)>(&LogMsg)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&LogMsg)
     }
 };
 
