@@ -25,7 +25,7 @@ struct Function {
     const uint32_t ArgumentCount;
     struct Argument* Arguments;
     const char* Symbol; // unused for callbacks
-    void* (*FnPtr)(void*); // unused for callbacks
+    void* (*FnPtr)(void); // unused for callbacks
 };
 
 struct Member {
