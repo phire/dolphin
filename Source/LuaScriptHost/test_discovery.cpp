@@ -9,37 +9,9 @@
 #include <stdio.h>
 #include <string.h>
 
-// Just a manual implementation of the required structs.
-// In the future, we should be able to autogenerate these
+#include "discovery.h"
 
-struct VersionInfo {
-    uint32_t Version; // The actual version
-    uint32_t MinVersion; // The minimum version that this version is backwards compatable to
-};
-
-struct VersionInfoArray {
-    uint64_t Count;
-    VersionInfo* elements;
-};
-
-struct String
-{
-    uint32_t Len;
-    const char* c_str;
-};
-
-struct ModuleInfo
-{
-    String Name;
-    String Description;
-    VersionInfo StableVersion;
-    VersionInfoArray OtherVersions = {};
-};
-
-struct ModuleArray {
-    uint64_t Count;
-    ModuleInfo* data;
-};
+ModuleArray* (*ListAllModules)() = nullptr;
 
 void TestDiscovery() {
     // GetModuleDefintion is one of the few functions that is exported.
@@ -52,7 +24,6 @@ void TestDiscovery() {
         return;
     }
 
-    ModuleArray* (*ListAllModules)() = nullptr;
     for (uint32_t i = 0; i < Discovery->GlobalFunctionsCount; i++) {
         Function* fn_info = &Discovery->GlobalFunctions[i];
         if (strcmp("ListAllModules", fn_info->FunctionName) == 0) {
@@ -76,4 +47,11 @@ void TestDiscovery() {
         ModuleInfo* Info = &Modules->data[i];
         printf("\t%s v%i\n", Info->Name.c_str, Info->StableVersion.Version);
     }
+}
+
+ModuleArray* GetModuleList() {
+    if (ListAllModules != nullptr) {
+        return ListAllModules();
+    }
+    return nullptr;
 }
