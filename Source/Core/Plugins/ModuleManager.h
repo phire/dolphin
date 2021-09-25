@@ -28,3 +28,4 @@ Array<ModuleInfo>& GetAllModules();
 
 void InitDiscoveryModule();
 void InitLoggingModule();
+void InitBasicGuiModule();
