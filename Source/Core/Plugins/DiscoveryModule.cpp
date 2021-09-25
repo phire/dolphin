@@ -50,7 +50,7 @@ static Member ModuleInfo_Members[] = {
 static Class ModuleInfo_Info = {
     .ClassName = "ModuleInfo",
     .MethodCount = 0,
-    .MemberCount = 2,
+    .MemberCount = 4,
     .Methods = nullptr,
     .Members = ModuleInfo_Members
 };
