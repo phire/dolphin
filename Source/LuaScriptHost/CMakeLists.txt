@@ -1,6 +1,7 @@
 
 add_library(LuaScriptHost SHARED
     plugin_main.cpp
+    function_adaptor.cpp
     test_discovery.cpp
 )
 
