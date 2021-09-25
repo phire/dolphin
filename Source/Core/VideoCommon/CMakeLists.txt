@@ -38,6 +38,8 @@ add_library(videocommon
   AsyncRequests.h
   AsyncShaderCompiler.cpp
   AsyncShaderCompiler.h
+  BasicGuiAPI.h
+  BasicGuiAPI.cpp
   BoundingBox.cpp
   BoundingBox.h
   BPFunctions.cpp
@@ -241,6 +243,7 @@ PUBLIC
   core
   glslang::glslang
 PRIVATE
+  plugin_cpp
   fmt::fmt
   spng::spng
   xxhash::xxhash

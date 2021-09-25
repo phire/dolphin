@@ -21,6 +21,7 @@
 #include "VideoCommon/AbstractPipeline.h"
 #include "VideoCommon/AbstractShader.h"
 #include "VideoCommon/AbstractStagingTexture.h"
+#include "VideoCommon/BasicGuiAPI.h"
 #include "VideoCommon/FramebufferShaderGen.h"
 #include "VideoCommon/NetPlayChatUI.h"
 #include "VideoCommon/NetPlayGolfUI.h"
@@ -260,6 +261,15 @@ void OnScreenUI::DrawImGui()
       g_gfx->DrawIndexed(base_index, cmd.ElemCount, base_vertex);
       base_index += cmd.ElemCount;
     }
+  }
+
+  if (!BasicGuiAPI::getCallbacks().empty())
+  {
+      auto Handle = BasicGuiAPI::StartDraw();
+      for (auto& callback : BasicGuiAPI::getCallbacks()) {
+        callback(Handle);
+      }
+      BasicGuiAPI::EndDraw();
   }
 
   // Some capture software (such as OBS) hooks SwapBuffers and uses glBlitFramebuffer to copy our
