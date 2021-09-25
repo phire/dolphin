@@ -55,6 +55,7 @@
 #include "VideoCommon/AbstractFramebuffer.h"
 #include "VideoCommon/AbstractStagingTexture.h"
 #include "VideoCommon/AbstractTexture.h"
+#include "VideoCommon/BasicGuiAPI.h"
 #include "VideoCommon/BPFunctions.h"
 #include "VideoCommon/BPMemory.h"
 #include "VideoCommon/CPMemory.h"
@@ -1280,6 +1281,15 @@ void Renderer::Swap(u32 xfb_addr, u32 fb_width, u32 fb_stride, u32 fb_height, u6
       // Render any UI elements to the draw list.
       {
         auto lock = GetImGuiLock();
+
+        if (!BasicGuiAPI::getCallbacks().empty())
+        {
+          auto Handle = BasicGuiAPI::StartDraw();
+          for (auto& callback : BasicGuiAPI::getCallbacks()) {
+            callback(Handle);
+          }
+          BasicGuiAPI::EndDraw();
+        }
 
         DrawDebugText();
         OSD::DrawMessages();

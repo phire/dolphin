@@ -10,6 +10,8 @@ add_library(videocommon
   AsyncRequests.h
   AsyncShaderCompiler.cpp
   AsyncShaderCompiler.h
+  BasicGuiAPI.h
+  BasicGuiAPI.cpp
   BoundingBox.cpp
   BoundingBox.h
   BPFunctions.cpp
@@ -134,6 +136,7 @@ target_link_libraries(videocommon
 PUBLIC
   core
 PRIVATE
+  plugin_cpp
   fmt::fmt
   png
   xxhash
