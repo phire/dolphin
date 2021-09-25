@@ -14,6 +14,7 @@ void Plugins::LoadAllPlugins()
 {
     InitDiscoveryModule();
     InitLoggingModule();
+    InitBasicGuiModule();
 
     auto PluginDir = File::GetExeDirectory() + "/Plugins";
 

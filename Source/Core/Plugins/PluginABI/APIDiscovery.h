@@ -11,6 +11,7 @@ extern "C" {
 #include <plugin.h>
 
 #define SYMBOL(x) #x
+#define ARRAY_LEN(array) (sizeof(array)/sizeof(array[0]))
 
 struct Argument {
     const char* Name;
