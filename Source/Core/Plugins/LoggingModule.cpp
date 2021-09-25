@@ -8,7 +8,7 @@
 
 #include "Common/Logging/Log.h"
 
-#include "Plugins/BasicTypes.h"
+#include "Plugins/PluginCpp/BasicTypes.h"
 #include "Plugins/ModuleManager.h"
 
 #include <map>

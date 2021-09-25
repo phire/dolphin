@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string>
 
-#include "Plugins/BasicTypes.h"
+#include "Plugins/PluginCpp/BasicTypes.h"
 
 struct VersionInfo {
     uint32_t Version; // The actual version
