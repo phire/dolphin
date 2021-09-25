@@ -8,7 +8,7 @@
 
 #include <APIDiscovery.h>
 
-#include "Plugins/BasicTypes.h"
+#include "Plugins/PluginCpp/BasicTypes.h"
 #include "Plugins/ModuleManager.h"
 
 #include <memory>
