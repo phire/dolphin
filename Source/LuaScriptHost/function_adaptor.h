@@ -5,7 +5,15 @@
 
 #include <array>
 #include <cstdint>
+#include <functional>
 
+struct lua_State;
 struct ArgHolder;
 
-extern std::array<void*(*)(void*(*)(void), ArgHolder *), 21> CallWithArgs;
+struct FunctionInfo {
+    std::vector<std::function<void (lua_State *L, int32_t idx, ArgHolder& holder)>> Args;
+    void *(*FnPtr)(void);
+    std::function<void (lua_State *L, void*)> ReturnHandler;
+};
+
+int FunctionWrapper(lua_State *L);

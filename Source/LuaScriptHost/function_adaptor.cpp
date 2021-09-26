@@ -1,10 +1,43 @@
 // Copyright 2021 Dolphin Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-#pragma once
-
 #include "function_adaptor.h"
 #include "type_adaptor.h"
+
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+
+extern const std::array<void*(*)(void*(*)(void), ArgHolder *), 21> CallWithArgs;
+
+// This is a generic function that wraps any c function from the API
+int FunctionWrapper(lua_State *L) {
+    // First, we need to work out what function was actually called
+
+    auto upvalue = lua_upvalueindex(1);
+    if (!lua_isuserdata(L, upvalue)) {
+        luaL_error(L, "Expected userdata");
+        return -1;
+    }
+
+    auto FnInfo = reinterpret_cast<FunctionInfo*>(lua_touserdata(L, upvalue));
+
+    std::array<ArgHolder, 20> args;
+    uint32_t arg_count = 0;
+
+    for (auto& arg_fn : FnInfo->Args) {
+        arg_fn(L, arg_count+1, args[arg_count]);
+        arg_count++;
+    }
+
+    void* result = CallWithArgs[arg_count](FnInfo->FnPtr, args.data());
+
+    if (FnInfo->ReturnHandler) {
+        FnInfo->ReturnHandler(L, result);
+    }
+
+    return 1;
+}
 
 // This is a workaround for the fact that c++ doesn't provide a sane way to call
 // a function ptr with an unknown number of arguments.
@@ -92,7 +125,7 @@ static void* CallFn20(void*(*fn)(void), ArgHolder *args) {
     return fn_args(args[0].val, args[1].val, args[2].val, args[3].val, args[4].val, args[5].val, args[6].val, args[7].val, args[8].val, args[9].val, args[10].val, args[11].val, args[12].val, args[13].val, args[14].val, args[15].val, args[16].val, args[17].val, args[18].val, args[19].val);
 }
 
-std::array<void*(*)(void*(*)(void), ArgHolder *), 21> CallWithArgs = {
+const std::array<void*(*)(void*(*)(void), ArgHolder *), 21> CallWithArgs = {
     CallFn0, CallFn1, CallFn2, CallFn3, CallFn4, CallFn5,
     CallFn6,  CallFn7,  CallFn8,  CallFn9,  CallFn10,
     CallFn11, CallFn12, CallFn13, CallFn14, CallFn15,
