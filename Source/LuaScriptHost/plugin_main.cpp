@@ -5,6 +5,7 @@
 #include "discovery.h"
 #include <APIDiscovery.h>
 #include "function_adaptor.h"
+#include "class_adaptor.h"
 #include "type_adaptor.h"
 
 #include <plugin.h>
@@ -44,6 +45,10 @@ static void RunLua() {
         lua_newtable(L);
 
         //printf("Module: %s\n", Info.Name.c_str);
+
+        for (uint64_t j = 0; j < Mod->ClassCount; j++) {
+            AddClass(L, Mod->Classes[j]);
+        }
 
         // Attach all global functions to it
         for (uint32_t j = 0; j < Mod->GlobalFunctionsCount; j++) {
