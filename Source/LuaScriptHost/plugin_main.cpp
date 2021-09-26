@@ -4,9 +4,10 @@
 #include "test_discovery.h"
 #include "discovery.h"
 #include <APIDiscovery.h>
-#include "function_adaptor.h"
-#include "class_adaptor.h"
 #include "type_adaptor.h"
+#include "function_adaptor.h"
+#include "callback_adaptor.h"
+#include "class_adaptor.h"
 
 #include <plugin.h>
 
@@ -25,13 +26,16 @@
 
 static uint64_t mod_id;
 
-
 static void RunLua() {
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
 
     lua_pushinteger(L, mod_id);
     lua_setglobal(L, "ModID");
+
+    // A table for us to store outstanding callback functions in
+    lua_newtable(L);
+    lua_setfield(L, LUA_REGISTRYINDEX, "active_callbacks");
 
     RegisterHardcodedTypes();
 
@@ -48,6 +52,12 @@ static void RunLua() {
 
         for (uint64_t j = 0; j < Mod->ClassCount; j++) {
             AddClass(L, Mod->Classes[j]);
+        }
+
+        for (uint32_t j = 0; j < Mod->CallbackCount; j++) {
+            Function Callback = Mod->Callbacks[j];
+
+            AddCallback(L, Callback);
         }
 
         // Attach all global functions to it
@@ -70,21 +80,23 @@ static void RunLua() {
             }
             ptr->ReturnHandler = LookupType(Func.ReturnType).AccessHandler;
 
-                lua_pushcclosure(L, &FunctionWrapper, 1);
-                lua_setfield(L, -2, Func.FunctionName);
+            lua_pushcclosure(L, &FunctionWrapper, 1);
+            lua_setfield(L, -2, Func.FunctionName);
         }
 
         lua_setglobal(L, Info.Name.c_str);
     }
 
-    if (luaL_dofile(L, "script.lua") == LUA_OK) {
-        lua_pop(L, lua_gettop(L));
-    } else {
+    if (luaL_dofile(L, "script.lua") != LUA_OK) {
         puts(lua_tostring(L, lua_gettop(L)));
         printf("Error loading/running script.lua\n");
+        lua_close(L);
+        return;
     }
 
-    lua_close(L);
+    // Don't close lua. Dolphin will later call back into
+    // this lua environment via the callback functions the
+    // script exported
 }
 
 extern "C" {

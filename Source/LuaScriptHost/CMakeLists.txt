@@ -5,6 +5,7 @@ add_library(LuaScriptHost SHARED
 
     type_adaptor.cpp
     function_adaptor.cpp
+    callback_adaptor.cpp
     class_adaptor.cpp
 )
 
