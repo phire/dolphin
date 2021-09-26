@@ -5,6 +5,7 @@
 #include "discovery.h"
 #include <APIDiscovery.h>
 #include "function_adaptor.h"
+#include "type_adaptor.h"
 
 #include <plugin.h>
 
@@ -24,7 +25,7 @@
 static uint64_t mod_id;
 
 struct GlobalFunction {
-    std::vector<std::function<void (lua_State *L, uint32_t idx, ArgHolder& holder)>> Args;
+    std::vector<std::function<void (lua_State *L, int32_t idx, ArgHolder& holder)>> Args;
     void *(*FnPtr)(void);
     std::function<void (lua_State *L, void*)> ReturnHandler;
 };
@@ -66,6 +67,8 @@ static void RunLua() {
     lua_pushinteger(L, mod_id);
     lua_setglobal(L, "ModID");
 
+    RegisterHardcodedTypes();
+
     auto modules = GetModuleList();
     for (uint32_t i = 0; i < modules->Count; i++) {
         ModuleInfo& Info = modules->data[i];
@@ -83,70 +86,21 @@ static void RunLua() {
 
             //printf("    %s\n", Func.FunctionName);
 
-            bool valid = true;
-
             auto ptr = GlobalFunctions.emplace_back(std::make_unique<GlobalFunction>()).get();
             ptr->FnPtr = Func.FnPtr;
             for (uint32_t k = 0; k < Func.ArgumentCount; k++) {
                 Argument& Arg = Func.Arguments[k];
-                std::string Type = Arg.Type;
 
                 //printf("        %s %s\n", Arg.Type, Arg.Name);
 
-                // Ignore the proper type system for now, just hardcode the types we need for testing
-
-                if (Type == "uint64_t") {
-                    ptr->Args.emplace_back([] (lua_State *LS, uint32_t idx, ArgHolder& holder) {
-                        uint64_t val = luaL_checkinteger(LS, idx);
-                        holder.val = reinterpret_cast<void*>(val);
-                    });
-                } else if (Type == "String") {
-                    ptr->Args.emplace_back([] (lua_State *LS, uint32_t idx, ArgHolder& holder) {
-                        auto str = reinterpret_cast<String*>(&holder.extra_data_storage[0]);
-                        size_t string_length = 0;
-                        str->c_str = luaL_checklstring(LS, idx, &string_length);
-                        str->Len = string_length;
-                        holder.val = reinterpret_cast<void*>(str);
-                    });
-                } else if (Type == "LogLevel") {
-                    // TODO: figure out the best way to represent enums in lua, probably tables
-                    //       For now I'm using strings
-                    // TODO: Also it shouldn't need to be hardcoded
-                    ptr->Args.emplace_back([] (lua_State *LS, uint32_t idx, ArgHolder& holder) {
-                        std::string enum_val = luaL_checklstring(LS, idx, nullptr);
-                        if (enum_val == "Notice")
-                            holder.val = (void*) 1;
-                        else if (enum_val == "Error")
-                            holder.val = (void*) 2;
-                        else if (enum_val == "Warning")
-                            holder.val = (void*) 3;
-                        else if (enum_val == "Info")
-                            holder.val = (void*) 4;
-                        else if (enum_val == "Debug")
-                            holder.val = (void*) 5;
-                    });
-                } else {
-                    printf("LuaScriptHost: Unhandled argument type %s for function %s; Skipped function\n", Type.c_str(), Func.FunctionName);
-                    valid = false;
-                }
+                auto TypeInfo = LookupType(Arg.Type);
+                ptr->Args.push_back(TypeInfo.ArgHandler);
             }
+            ptr->ReturnHandler = LookupType(Func.ReturnType).AccessHandler;
 
-            std::string ReturnType = Func.ReturnType;
-            if (ReturnType == "uint64_t") {
-                ptr->ReturnHandler = [](lua_State *LS, void* ret) {
-                    uint64_t val = reinterpret_cast<uint64_t>(ret);
-                    lua_pushinteger(LS, val);
-                };
-            } else if (ReturnType != "void") {
-                printf("LuaScriptHost: Unhandled return type %s for function %s; Skipped function\n", ReturnType.c_str(), Func.FunctionName);
-                valid = false;
-            }
-
-            if (valid) {
                 lua_pushlightuserdata(L, ptr);
                 lua_pushcclosure(L, &FunctionWrapper, 1);
                 lua_setfield(L, -2, Func.FunctionName);
-            }
         }
 
         lua_setglobal(L, Info.Name.c_str);
