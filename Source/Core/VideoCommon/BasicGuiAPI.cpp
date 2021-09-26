@@ -81,7 +81,7 @@ EXPORTED u32 BasicGui_DrawText(BasicGuiHandle handle, String* text, u32 posX, u3
   return window_height / ImGui::GetIO().DisplayFramebufferScale.y;
 }
 
-EXPORTED u64 BasicGui_RegisterDrawHook(void (*Callback)(BasicGuiHandle)) {
+EXPORTED u64 BasicGui_RegisterDrawHook(Functor<void, BasicGuiHandle> Callback) {
   // TODO: add some tracking so we can later remove this hook
   Hooks.push_back(Callback);
   return 0;
