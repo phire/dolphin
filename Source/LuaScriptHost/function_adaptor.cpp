@@ -4,6 +4,7 @@
 #pragma once
 
 #include "function_adaptor.h"
+#include "type_adaptor.h"
 
 // This is a workaround for the fact that c++ doesn't provide a sane way to call
 // a function ptr with an unknown number of arguments.
