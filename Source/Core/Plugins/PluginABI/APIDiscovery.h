@@ -69,6 +69,13 @@ struct Module
     struct Enum* Enums;
 };
 
+struct RawFunctor
+{
+    void* (*FnPtr) (RawFunctor*, ...);
+    void* unused; // for now
+    // Implementations should extend this struct with extra fields
+};
+
 __attribute__ ((visibility("default"))) struct Module* GetModuleDefintion(const char* ModuleName, uint32_t Version);
 
 #ifdef __cplusplus

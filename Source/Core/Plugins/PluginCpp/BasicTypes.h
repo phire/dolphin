@@ -41,3 +41,24 @@ struct WrappedDouble {
         return Common::BitCast<double, uint64_t>(Value);
     }
 };
+
+template<typename ReturnType, typename... ArgTypes>
+class Functor {
+    struct FuntorData {
+        ReturnType (*FnPtr) (void*, ArgTypes...);
+        void* Owner; // We will use this for something later
+
+        // The owner of this function is allowed to extend this structure with extra state
+    };
+
+    FuntorData* Data;
+
+    static void _check() {
+        static_assert(sizeof(Functor) == sizeof(void*));
+    }
+
+public:
+    ReturnType operator()(ArgTypes... args) {
+        return Data->FnPtr(reinterpret_cast<void*>(Data), args...);
+    }
+};
