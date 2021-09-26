@@ -1,9 +1,11 @@
 
 add_library(LuaScriptHost SHARED
     plugin_main.cpp
+    test_discovery.cpp
+
     type_adaptor.cpp
     function_adaptor.cpp
-    test_discovery.cpp
+    class_adaptor.cpp
 )
 
 target_link_libraries(LuaScriptHost PRIVATE lua plugin_abi)
