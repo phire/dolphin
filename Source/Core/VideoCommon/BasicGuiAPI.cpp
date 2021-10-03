@@ -1,4 +1,4 @@
-// Copyright 2010 Dolphin Emulator Project
+// Copyright 2021 Dolphin Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // The goal of this API is to meet the basic usecase of "I'm a script and I want to

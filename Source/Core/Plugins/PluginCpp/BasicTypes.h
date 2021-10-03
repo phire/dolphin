@@ -5,6 +5,7 @@
 
 #include <Common/BitUtils.h>
 #include <string>
+#include <type_traits>
 
 template <typename T>
 struct Array {
@@ -29,18 +30,26 @@ struct String {
     std::string to_string() { return std::string(Data, Len); }
 };
 
-struct WrappedDouble {
-    uint64_t Value = 0;
 
-    WrappedDouble() {};
-    WrappedDouble(double d) {
-        Value = Common::BitCast<uint64_t, double>(d);
+// This wrapper is used to force floating point into General Purpose Registers
+template<typename T>
+struct Wrapped {
+    using IntType = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
+
+    IntType Value = IntType{};
+
+    Wrapped() {};
+    Wrapped(T val) {
+        Value = Common::BitCast<IntType, T>(val);
     }
 
-    operator double() {
-        return Common::BitCast<double, uint64_t>(Value);
+    operator T() {
+        return Common::BitCast<T, IntType>(Value);
     }
 };
+
+using WrappedDouble = Wrapped<double>;
+using WrappedFloat = Wrapped<float>;
 
 template<typename ReturnType, typename... ArgTypes>
 class Functor {

@@ -670,6 +670,8 @@ void UpdateDevices()
     }
   }
 
+
+
   // Hinting NetPlay that all controllers will be polled in
   // succession, in order to optimize networking
   NetPlay::SetSIPollBatching(true);
