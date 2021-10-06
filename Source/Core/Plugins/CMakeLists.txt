@@ -6,6 +6,7 @@ target_include_directories(plugin_cpp INTERFACE PluginCpp/)
 
 add_library(plugins
     BasicGuiModule.cpp
+    CpuModule.cpp
     DiscoveryModule.cpp
     ModuleManager.cpp
     LoggingModule.cpp
