@@ -35,6 +35,7 @@
 namespace CoreTiming
 {
 static constexpr int MAX_SLICE_LENGTH = 20000;
+static const std::string s_anonymous_event_name = "<anonymous>";
 
 static void EmptyTimedCallback(Core::System& system, u64 userdata, s64 cyclesLate)
 {
@@ -187,6 +188,9 @@ void CoreTimingManager::DoState(PointerWrap& p)
 
   MoveEvents();
   p.DoEachElement(m_event_queue, [this](PointerWrap& pw, Event& ev) {
+    if (pw.IsWriteMode() && ev.type->anonymous)
+        return;  // Don't save anonymous events
+
     pw.Do(ev.time);
     pw.Do(ev.fifo_order);
 
@@ -225,6 +229,10 @@ void CoreTimingManager::DoState(PointerWrap& p)
     // The exact layout of the heap in memory is implementation defined, therefore it is platform
     // and library version specific.
     std::ranges::make_heap(m_event_queue, std::ranges::greater{});
+
+    // Anonymous events do not persist across a save state
+    if (p.IsReadMode())
+      m_anonymous_event_types.clear();
 
     // The stave state has changed the time, so our previous Throttle targets are invalid.
     // Especially when global_time goes down; So we create a fake throttle update.
@@ -299,10 +307,31 @@ void CoreTimingManager::ScheduleEvent(s64 cycles_into_future, EventType* event_t
   }
 }
 
+void CoreTimingManager::ScheduleAnonymousEvent(s64 cycles_into_future, TimedCallback callback, u64 userdata)
+{
+  ASSERT_MSG(POWERPC, Core::IsCPUThread(), "Anonymous event was scheduled from non-cpu thread");
+
+  s64 timeout = GetTicks() + cycles_into_future;
+
+  // If this event needs to be scheduled before the next advance(), force one early
+  if (!m_is_global_timer_sane)
+    ForceExceptionCheck(cycles_into_future);
+
+  auto& event_type = m_anonymous_event_types.emplace_back(std::make_unique<EventType>(EventType{std::move(callback), &s_anonymous_event_name, true}));
+  m_event_queue.emplace_back(Event{timeout, m_event_fifo_id++, userdata, event_type.get()});
+}
+
 void CoreTimingManager::RemoveEvent(EventType* event_type)
 {
   const size_t erased =
       std::erase_if(m_event_queue, [&](const Event& e) { return e.type == event_type; });
+
+  if (event_type->anonymous)
+  {
+    std::erase_if(m_anonymous_event_types, [&](const std::unique_ptr<EventType>& e) {
+      return e.get() == event_type;
+    });
+  }
 
   // Removing random items breaks the invariant so we have to re-establish it.
   if (erased != 0)
@@ -367,6 +396,12 @@ void CoreTimingManager::Advance()
     std::ranges::pop_heap(m_event_queue, std::ranges::greater{});
     m_event_queue.pop_back();
     evt.type->callback(m_system, evt.userdata, m_globals.global_timer - evt.time);
+    if (evt.type->anonymous)
+    {
+      std::erase_if(m_anonymous_event_types, [&](const std::unique_ptr<EventType>& e) {
+        return e.get() == evt.type;
+      });
+    }
   }
 
   m_is_global_timer_sane = false;

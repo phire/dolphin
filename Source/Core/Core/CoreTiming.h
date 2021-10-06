@@ -55,6 +55,7 @@ struct EventType
 {
   TimedCallback callback;
   const std::string* name;
+  bool anonymous = false;
 };
 
 struct Event
@@ -120,6 +121,10 @@ public:
   void ScheduleEvent(s64 cycles_into_future, EventType* event_type, u64 userdata = 0,
                      FromThread from = FromThread::CPU);
 
+  // Anonymous Events do not get persisted to save states like RegularEvents
+  // userdata can therefore contain pointers
+  void ScheduleAnonymousEvent(s64 cycles_into_future, TimedCallback callback, u64 userdata);
+
   // We only permit one event of each type in the queue at a time.
   void RemoveEvent(EventType* event_type);
   void RemoveAllEvents(EventType* event_type);
@@ -180,6 +185,9 @@ private:
   // unordered_map stores each element separately as a linked list node so pointers to elements
   // remain stable regardless of rehashes/resizing.
   std::unordered_map<std::string, EventType> m_event_types;
+
+  // Anonymous event types can only be triggered once, and are not persisted to savestates
+  std::vector<std::unique_ptr<EventType>> m_anonymous_event_types;
 
   // STATE_TO_SAVE
   // The queue is a min-heap using std::ranges::make_heap/push_heap/pop_heap.
