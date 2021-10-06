@@ -9,6 +9,8 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
+#include <cstring>
+
 static std::map<std::string, TypeInfo> Types;
 
 void RegisterType(std::string TypeName, TypeInfo typeinfo) {
@@ -53,6 +55,36 @@ void RegisterHardcodedTypes() {
         [] (lua_State *L, void* ret) {
             uint32_t val = static_cast<uint32_t>(reinterpret_cast<uint64_t>(ret));
             lua_pushinteger(L, val);
+        }
+    });
+
+    RegisterType("WrappedFloat", TypeInfo {
+        [] (lua_State *L, int32_t idx, ArgHolder& holder) {
+            float val = static_cast<float>(luaL_checknumber(L, idx));
+            uint32_t punned;
+
+            std::memcpy(&punned, &val, sizeof(float));
+            holder.val = reinterpret_cast<void*>(static_cast<uint64_t>(punned));
+        },
+        [] (lua_State *L, void* ret) {
+            float val;
+            std::memcpy(&val, &ret, sizeof(float));
+            lua_pushnumber(L, static_cast<double>(val));
+        }
+    });
+
+    RegisterType("WrappedDouble", TypeInfo {
+        [] (lua_State *L, int32_t idx, ArgHolder& holder) {
+            double val = luaL_checknumber(L, idx);
+            uint64_t punned;
+
+            std::memcpy(&punned, &val, sizeof(double));
+            holder.val = reinterpret_cast<void*>(punned);
+        },
+        [] (lua_State *L, void* ret) {
+            double val;
+            std::memcpy(&val, &ret, sizeof(double));
+            lua_pushnumber(L, val);
         }
     });
 
