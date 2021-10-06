@@ -22,6 +22,7 @@
 #include "Core/HW/CPU.h"
 #include "Core/HW/SystemTimers.h"
 #include "Core/Host.h"
+#include "Core/PowerPC/CPUApi.h"
 #include "Core/PowerPC/CPUCoreBase.h"
 #include "Core/PowerPC/GDBStub.h"
 #include "Core/PowerPC/Interpreter/Interpreter.h"
@@ -279,6 +280,8 @@ void PowerPCManager::Init(CPUCore cpu_core)
   auto& memory = m_system.GetMemory();
   m_ppc_state.iCache.Init(memory);
   m_ppc_state.dCache.Init(memory);
+
+  CpuApi::Init();
 }
 
 void PowerPCManager::Reset()
@@ -313,6 +316,7 @@ void PowerPCManager::ScheduleInvalidateCacheThreadSafe(u32 address)
 
 void PowerPCManager::Shutdown()
 {
+  CpuApi::Shutdown();
   CPUThreadConfigCallback::RemoveConfigChangedCallback(m_registered_config_callback_id);
   InjectExternalCPUCore(nullptr);
   m_system.GetJitInterface().Shutdown();
