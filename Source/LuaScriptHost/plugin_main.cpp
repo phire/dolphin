@@ -51,13 +51,17 @@ static void RunLua() {
         //printf("Module: %s\n", Info.Name.c_str);
 
         for (uint64_t j = 0; j < Mod->ClassCount; j++) {
-            AddClass(L, Mod->Classes[j]);
+            RegisterClass(Mod->Classes[j]);
         }
 
         for (uint32_t j = 0; j < Mod->CallbackCount; j++) {
             Function Callback = Mod->Callbacks[j];
 
             AddCallback(L, Callback);
+        }
+
+        for (uint64_t j = 0; j < Mod->ClassCount; j++) {
+            AddClass(L, Mod->Classes[j]);
         }
 
         // Attach all global functions to it
