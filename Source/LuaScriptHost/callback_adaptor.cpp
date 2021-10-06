@@ -12,6 +12,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <string>
+#include <mutex>
 
 // FIXME: we shouldn't be using global state
 static int64_t CallbackId = 1;
@@ -41,7 +42,11 @@ static int traceback(lua_State *L) {
     return 1;
 }
 
+std::recursive_mutex LuaMutex;
+
 static void* ExecuteCallback(RawFunctor* functor, ...) {
+    std::lock_guard<std::recursive_mutex> lk(LuaMutex);
+
     // Most of the information we need is packed inside the functor
     auto lua_functor = reinterpret_cast<LuaCallbackFunctor*>(functor);
     lua_State* L = lua_functor->L;
