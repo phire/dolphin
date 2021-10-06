@@ -73,13 +73,11 @@ static void createClassMetatable(lua_State *L) {
     HaveClassMetaTable = true;
 }
 
+static void InstanceClass(lua_State *L, size_t NameHash, void* object);
 
-static void NewClass(lua_State *L, ClassTemplate* ClassInfo, void* object);
-
-void AddClass(lua_State *L, Class& ClassDesc) {
-    if (!HaveClassMetaTable)
-        createClassMetatable(L);
-
+// Preregister the Class' name with the typesystem
+void RegisterClass(Class& ClassDesc)
+{
     std::string Name = ClassDesc.ClassName;
     size_t NameHash = std::hash<std::string>{}(Name);
 
@@ -100,12 +98,18 @@ void AddClass(lua_State *L, Class& ClassDesc) {
     };
 
     auto ClassAccessHandler = [NameHash] (lua_State *LL, void* val) {
-        NewClass(LL, NameHash, val);
+        InstanceClass(LL, NameHash, val);
     };
 
     RegisterType(ClassDesc.ClassName, { ClassArgHandler, ClassAccessHandler });
+}
 
-    // We need to do the args after registering the type, so we can access our own type
+// Actually set up the class 
+// We need to do this after preregistring all classes and registering the callbacks
+// so that methods types can reference other classes/callbacks
+void AddClass(lua_State *L, Class& ClassDesc) {
+    if (!HaveClassMetaTable)
+        createClassMetatable(L);
 
     lua_newtable(L);
 
@@ -133,10 +137,11 @@ void AddClass(lua_State *L, Class& ClassDesc) {
 
     // TODO: members
 
+    size_t NameHash = std::hash<std::string>{}(ClassDesc.ClassName);
     lua_seti(L, LUA_REGISTRYINDEX, NameHash);
 }
 
-static void NewClass(lua_State *L, size_t NameHash, void* object) {
+static void InstanceClass(lua_State *L, size_t NameHash, void* object) {
     auto userdata = reinterpret_cast<ObjectUserData*>(lua_newuserdatauv(L, sizeof(ObjectUserData), 1));
     userdata->Ptr = reinterpret_cast<uint8_t*>(object);
     userdata->NameHash = NameHash;
