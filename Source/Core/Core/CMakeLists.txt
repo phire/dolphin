@@ -522,6 +522,8 @@ add_library(core
   PowerPC/CachedInterpreter/CachedInterpreterEmitter.h
   PowerPC/ConditionRegister.cpp
   PowerPC/ConditionRegister.h
+  PowerPC/CPUApi.cpp
+  PowerPC/CPUApi.h
   PowerPC/Expression.cpp
   PowerPC/Expression.h
   PowerPC/Interpreter/ExceptionUtils.h
@@ -685,6 +687,7 @@ PUBLIC
 
 PRIVATE
   FatFs
+  plugin_cpp
   fmt::fmt
   LZO::LZO
   LZ4::LZ4
