@@ -147,6 +147,9 @@ static void InstanceClass(lua_State *L, size_t NameHash, void* object) {
     userdata->NameHash = NameHash;
 
     lua_geti(L, LUA_REGISTRYINDEX, NameHash);
+    if (!lua_istable(L, -1)) {
+        luaL_error(L, "Trying to Instance unknown class %i", NameHash);
+    }
     lua_setiuservalue(L, -2, 1);
 
     lua_getfield(L, LUA_REGISTRYINDEX, "class_metatable");
