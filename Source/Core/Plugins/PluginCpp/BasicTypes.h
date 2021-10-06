@@ -4,6 +4,7 @@
 #pragma once
 
 #include <Common/BitUtils.h>
+#include <functional>
 #include <string>
 
 template <typename T>
@@ -42,11 +43,21 @@ struct WrappedDouble {
     }
 };
 
+
+struct FunctorOwner {
+    std::function<void* (size_t)> malloc;
+    std::function<void (void*)> free;
+    std::string name;
+};
+
+template<typename S>
+class Functor;
+ 
 template<typename ReturnType, typename... ArgTypes>
-class Functor {
+class Functor<ReturnType(ArgTypes...)> {    
     struct FuntorData {
         ReturnType (*FnPtr) (void*, ArgTypes...);
-        void* Owner; // We will use this for something later
+        FunctorOwner* Owner; // Contains ownership info
 
         // The owner of this function is allowed to extend this structure with extra state
     };
@@ -58,7 +69,11 @@ class Functor {
     }
 
 public:
-    ReturnType operator()(ArgTypes... args) {
+    ReturnType operator()(ArgTypes... args) const {
         return Data->FnPtr(reinterpret_cast<void*>(Data), args...);
+    }
+
+    FunctorOwner* GetOwner() const {
+        return Data->Owner.Name;
     }
 };
