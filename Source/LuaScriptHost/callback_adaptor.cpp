@@ -77,6 +77,7 @@ static void* ExecuteCallback(RawFunctor* functor, ...) {
     if (lua_pcall(L, arg_count, result_count, errorfn) != LUA_OK) {
         puts(lua_tostring(L, lua_gettop(L)));
 
+        lua_pop(L, 3);
         return nullptr;
     }
 
@@ -86,6 +87,7 @@ static void* ExecuteCallback(RawFunctor* functor, ...) {
         lua_functor->Info.ReturnHandler(L, -1, result);
     }
 
+    lua_pop(L, 3);
     return result.val;
 }
 
