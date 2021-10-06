@@ -10,10 +10,9 @@
 
 typedef u64 BasicGuiHandle;
 
-extern "C" {
 EXPORTED u32 BasicGui_DrawText(u64 handle, String* text, u32 posX, u32 posY, u32 color);
 EXPORTED u64 BasicGui_RegisterDrawHook(void (*Fn)(BasicGuiHandle));
-}
+
 
 // TODO: In the future, hope to generate these structures automatically though reflection.
 //       but until we get a good idea why they should look like, they are hand-written

@@ -23,9 +23,6 @@ struct LogStreamInfo {
 
 static std::map<uint64_t, LogStreamInfo> LogStreams;
 
-
-extern "C" {
-
 // We don't want scripts/mods just randomly shouting into the log stream
 // We want log linked with the script/mod that created them.
 // So before they log, scripts/mods are expected to use their mod_id to create
@@ -52,7 +49,6 @@ EXPORTED void LogMsg(uint64_t StreamHandle, Common::Log::LogLevel level, String*
     // This is a bit of a hack. We probably want a dedicated script log window.
     std::string padded_file = "                                        " + it->second.streamName;
     Common::Log::GenericLogFmt<1>(level, Common::Log::LogType::SCRIPT, padded_file.c_str(), 0, FMT_STRING("{}"), msg->to_string());
-}
 }
 
 static Eumerator LogLevelsEumerators[] {
