@@ -15,9 +15,7 @@
 #include <vector>
 #include <map>
 
-extern "C" {
 EXPORTED Array<ModuleInfo>* ListAllModules();
-}
 
 // TODO: In the future, hope to generate these structures automatically though reflection.
 //       but until we get a good idea why they should look like, they are hand-written

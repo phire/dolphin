@@ -1,4 +1,4 @@
-// Copyright 2010 Dolphin Emulator Project
+// Copyright 2021 Dolphin Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // The goal of this API is to meet the basic usecase of "I'm a script and I want to
@@ -46,8 +46,6 @@ void EndDraw() {
   CurrentHandle = 0;
 }
 
-extern "C" {
-
 EXPORTED u32 BasicGui_DrawText(BasicGuiHandle handle, String* text, u32 posX, u32 posY, u32 color)
 {
   if (handle != CurrentHandle) {
@@ -81,12 +79,10 @@ EXPORTED u32 BasicGui_DrawText(BasicGuiHandle handle, String* text, u32 posX, u3
   return window_height / ImGui::GetIO().DisplayFramebufferScale.y;
 }
 
-EXPORTED u64 BasicGui_RegisterDrawHook(Functor<void, BasicGuiHandle> Callback) {
+EXPORTED u64 BasicGui_RegisterDrawHook(Functor<void (BasicGuiHandle)> Callback) {
   // TODO: add some tracking so we can later remove this hook
   Hooks.push_back(Callback);
   return 0;
-}
-
 }
 
 } // BasicGuiAPI

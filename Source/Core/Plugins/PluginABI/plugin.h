@@ -9,9 +9,9 @@ extern "C" {
 #include <stdint.h>
 
 #ifdef _WIN32
-#define EXPORTED __declspec(dllexport)
+#define EXPORTED extern "C" __declspec(dllexport)
 #else
-#define EXPORTED __attribute__ ((visibility ("default")))
+#define EXPORTED extern "C" __attribute__ ((visibility ("default")))
 #endif
 
 // Some functions require a handle to identify a function
