@@ -31,10 +31,23 @@ struct LuaCallbackFunctor : public RawFunctor
     CallbackInfo Info;
 };
 
+static int traceback(lua_State *L) {
+    lua_getglobal(L, "debug");
+    lua_getfield(L, -1, "traceback");
+    lua_pushvalue(L, 1);
+    lua_pushinteger(L, 2);
+    lua_call(L, 2, 1);
+    printf("%s\n", lua_tostring(L, -1));
+    return 1;
+}
+
 static void* ExecuteCallback(RawFunctor* functor, ...) {
     // Most of the information we need is packed inside the functor
     auto lua_functor = reinterpret_cast<LuaCallbackFunctor*>(functor);
     lua_State* L = lua_functor->L;
+
+    lua_pushcfunction(L, traceback);
+    int errorfn = lua_gettop(L);
 
     // Except for the actual lua function, which we must extract from the Lua state
     // It's kept there for garbage collector reasons
@@ -61,8 +74,7 @@ static void* ExecuteCallback(RawFunctor* functor, ...) {
         result_count++;
 
     // call into lua
-    if (lua_pcall(L, arg_count, result_count, 0) != LUA_OK) {
-        printf("Error executing callback\n");
+    if (lua_pcall(L, arg_count, result_count, errorfn) != LUA_OK) {
         puts(lua_tostring(L, lua_gettop(L)));
 
         return nullptr;
