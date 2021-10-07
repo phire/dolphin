@@ -66,7 +66,7 @@ inline WrappedFloat ReadFloat(CpuMemoryHandle handle, u32 address)
 }
 
 EXPORTED u32 CpuMemory_ReadFloat(CpuMemoryHandle handle, u32 address) {
-  return ReadFloat(handle, address);
+  return ReadFloat(handle, address).Wrap32();
 }
 
 inline WrappedDouble ReadDouble(CpuMemoryHandle handle, u32 address)
@@ -79,7 +79,7 @@ inline WrappedDouble ReadDouble(CpuMemoryHandle handle, u32 address)
 }
 
 EXPORTED u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address) {
-  return ReadDouble(handle, address);
+  return ReadDouble(handle, address).Wrap64();
 }
 
 static void BreakOnCycleEvent(u64 userdata, s64 cyclesLate) {

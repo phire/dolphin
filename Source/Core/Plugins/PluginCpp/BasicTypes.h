@@ -48,9 +48,14 @@ struct Wrapped {
         return std::bit_cast<T, IntType>(Value);
     }
 
-    operator IntType() {
-        static_assert(std::is_integral<IntType>::value, "Not integral");
-        return Value;
+    uint32_t Wrap32() {
+        static_assert(sizeof(T) == sizeof(uint32_t));
+        return std::bit_cast<uint32_t>(Value);
+    }
+
+    uint64_t Wrap64() {
+        static_assert(sizeof(T) == sizeof(uint64_t));
+        return std::bit_cast<uint64_t, IntType>(Value);
     }
 };
 

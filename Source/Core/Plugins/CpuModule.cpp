@@ -79,7 +79,7 @@ static Function CpuMemory_Methods[] = {
     },
     {
         .FunctionName = "ReadFloat",
-        .ReturnType = "WrappedDouble",
+        .ReturnType = "WrappedFloat",
         .ReturnOwnership = true,
         .ArgumentCount = ARRAY_LEN(Read_Args),
         .Arguments = Read_Args,
