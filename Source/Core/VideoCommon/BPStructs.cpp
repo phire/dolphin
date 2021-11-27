@@ -50,7 +50,7 @@ void BPInit()
   bpmem.bpMask = 0xFFFFFF;
 }
 
-static void BPWritten(const BPCmd& bp, int cycles_into_future)
+static u32 BPWritten(const BPCmd& bp, int cycles_into_future)
 {
   /*
   ----------------------------------------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
           bp.address == BPMEM_TEXINVALIDATE || bp.address == BPMEM_PRELOAD_MODE ||
           bp.address == BPMEM_CLEAR_PIXEL_PERF))
     {
-      return;
+      return 0;
     }
   }
 
@@ -104,7 +104,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
     // Only call SetGenerationMode when cull mode changes.
     if (bp.changes & 0xC000)
       SetGenerationMode();
-    return;
+    return 0;
   case BPMEM_IND_MTXA:  // Index Matrix Changed
   case BPMEM_IND_MTXB:
   case BPMEM_IND_MTXC:
@@ -116,15 +116,15 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   case BPMEM_IND_MTXC + 6:
     if (bp.changes)
       PixelShaderManager::SetIndMatrixChanged((bp.address - BPMEM_IND_MTXA) / 3);
-    return;
+    return 0;
   case BPMEM_RAS1_SS0:  // Index Texture Coordinate Scale 0
     if (bp.changes)
       PixelShaderManager::SetIndTexScaleChanged(false);
-    return;
+    return 0;
   case BPMEM_RAS1_SS1:  // Index Texture Coordinate Scale 1
     if (bp.changes)
       PixelShaderManager::SetIndTexScaleChanged(true);
-    return;
+    return 0;
   // ----------------
   // Scissor Control
   // ----------------
@@ -135,16 +135,16 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
     SetViewport();
     VertexShaderManager::SetViewportChanged();
     GeometryShaderManager::SetViewportChanged();
-    return;
+    return 0;
   case BPMEM_LINEPTWIDTH:  // Line Width
     GeometryShaderManager::SetLinePtWidthChanged();
-    return;
+    return 0;
   case BPMEM_ZMODE:  // Depth Control
     PRIM_LOG("zmode: test={}, func={}, upd={}", bpmem.zmode.testenable, bpmem.zmode.func,
              bpmem.zmode.updateenable);
     SetDepthMode();
     PixelShaderManager::SetZModeControl();
-    return;
+    return 0;
   case BPMEM_BLENDMODE:  // Blending Control
     if (bp.changes & 0xFFFF)
     {
@@ -157,7 +157,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
 
       PixelShaderManager::SetBlendModeChanged();
     }
-    return;
+    return 0;
   case BPMEM_CONSTANTALPHA:  // Set Destination Alpha
     PRIM_LOG("constalpha: alp={}, en={}", bpmem.dstalpha.alpha, bpmem.dstalpha.enable);
     if (bp.changes)
@@ -167,7 +167,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
     }
     if (bp.changes & 0x100)
       SetBlendMode();
-    return;
+    return 0;
 
   // This is called when the game is done drawing the new frame (eg: like in DX: Begin(); Draw();
   // End();)
@@ -182,27 +182,27 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
       if (!Fifo::UseDeterministicGPUThread())
         PixelEngine::SetFinish(cycles_into_future);  // may generate interrupt
       DEBUG_LOG_FMT(VIDEO, "GXSetDrawDone SetPEFinish (value: {:#04X})", bp.newvalue & 0xFFFF);
-      return;
+      return 0;
 
     default:
       WARN_LOG_FMT(VIDEO, "GXSetDrawDone ??? (value {:#04X})", bp.newvalue & 0xFFFF);
-      return;
+      return 0;
     }
-    return;
+    return 0;
   case BPMEM_PE_TOKEN_ID:  // Pixel Engine Token ID
     g_texture_cache->FlushEFBCopies();
     g_framebuffer_manager->InvalidatePeekCache(false);
     if (!Fifo::UseDeterministicGPUThread())
       PixelEngine::SetToken(static_cast<u16>(bp.newvalue & 0xFFFF), false, cycles_into_future);
     DEBUG_LOG_FMT(VIDEO, "SetPEToken {:#06X}", bp.newvalue & 0xFFFF);
-    return;
+    return 0;
   case BPMEM_PE_TOKEN_INT_ID:  // Pixel Engine Interrupt Token ID
     g_texture_cache->FlushEFBCopies();
     g_framebuffer_manager->InvalidatePeekCache(false);
     if (!Fifo::UseDeterministicGPUThread())
       PixelEngine::SetToken(static_cast<u16>(bp.newvalue & 0xFFFF), true, cycles_into_future);
     DEBUG_LOG_FMT(VIDEO, "SetPEToken + INT {:#06X}", bp.newvalue & 0xFFFF);
-    return;
+    return 0;
 
   // ------------------------
   // EFB copy command. This copies a rectangle from the EFB to either RAM in a texture format or to
@@ -259,7 +259,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
           g_renderer->BBoxDisable();
         }
 
-        return;
+        return 0;
       }
 
       // Clamp the copy region to fit within EFB. So that we don't end up with a stretched image.
@@ -334,10 +334,10 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
       ClearScreen(srcRect);
     }
 
-    return;
+    return copy_width * copy_height / 8;
   }
   case BPMEM_LOADTLUT0:  // This one updates bpmem.tlutXferSrc, no need to do anything here.
-    return;
+    return 0;
   case BPMEM_LOADTLUT1:  // Load a Texture Look Up Table
   {
     u32 tlutTMemAddr = (bp.newvalue & 0x3FF) << 9;
@@ -355,7 +355,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
 
     TMEM::InvalidateAll();
 
-    return;
+    return 0;
   }
   case BPMEM_FOGRANGE:  // Fog Settings Control
   case BPMEM_FOGRANGE + 1:
@@ -365,18 +365,18 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   case BPMEM_FOGRANGE + 5:
     if (bp.changes)
       PixelShaderManager::SetFogRangeAdjustChanged();
-    return;
+    return 0;
   case BPMEM_FOGPARAM0:
   case BPMEM_FOGBMAGNITUDE:
   case BPMEM_FOGBEXPONENT:
   case BPMEM_FOGPARAM3:
     if (bp.changes)
       PixelShaderManager::SetFogParamChanged();
-    return;
+    return 0;
   case BPMEM_FOGCOLOR:  // Fog Color
     if (bp.changes)
       PixelShaderManager::SetFogColorChanged();
-    return;
+    return 0;
   case BPMEM_ALPHACOMPARE:  // Compare Alpha Values
     PRIM_LOG("alphacmp: ref0={}, ref1={}, comp0={}, comp1={}, logic={}", bpmem.alpha_test.ref0,
              bpmem.alpha_test.ref1, bpmem.alpha_test.comp0, bpmem.alpha_test.comp1,
@@ -388,12 +388,12 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
       PixelShaderManager::SetAlphaTestChanged();
       SetBlendMode();
     }
-    return;
+    return 0;
   case BPMEM_BIAS:  // BIAS
     PRIM_LOG("ztex bias={:#x}", bpmem.ztex1.bias);
     if (bp.changes)
       PixelShaderManager::SetZTextureBias();
-    return;
+    return 0;
   case BPMEM_ZTEX2:  // Z Texture type
   {
     if (bp.changes & 3)
@@ -402,7 +402,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
       PixelShaderManager::SetZTextureOpChanged();
     PRIM_LOG("ztex op={}, type={}", bpmem.ztex2.op, bpmem.ztex2.type);
   }
-    return;
+    return 0;
   // ----------------------------------
   // Display Copy Filtering Control - GX_SetCopyFilter(u8 aa,u8 sample_pattern[12][2],u8 vf,u8
   // vfilter[7])
@@ -414,14 +414,14 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   case BPMEM_DISPLAYCOPYFILTER + 3:  // if (aa) { use sample_pattern } else { use 666666 }
   case BPMEM_COPYFILTER0:            // if (vf) { use vfilter } else { use 595000 }
   case BPMEM_COPYFILTER1:            // if (vf) { use vfilter } else { use 000015 }
-    return;
+    return 0;
   // -----------------------------------
   // Interlacing Control
   // -----------------------------------
   case BPMEM_FIELDMASK:  // GX_SetFieldMask(u8 even_mask,u8 odd_mask)
   case BPMEM_FIELDMODE:  // GX_SetFieldMode(u8 field_mode,u8 half_aspect_ratio)
     // TODO
-    return;
+    return 0;
   // ----------------------------------------
   // Unimportant regs (Clock, Perf, ...)
   // ----------------------------------------
@@ -430,21 +430,21 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   case BPMEM_PERF0_TRI:   // Perf: Triangles
   case BPMEM_PERF0_QUAD:  // Perf: Quads
   case BPMEM_PERF1:       // Perf: Some Clock, Texels, TX, TC
-    return;
+    return 0;
   // ----------------
   // EFB Copy config
   // ----------------
   case BPMEM_EFB_TL:    // EFB Source Rect. Top, Left
   case BPMEM_EFB_WH:    // EFB Source Rect. Width, Height - 1
   case BPMEM_EFB_ADDR:  // EFB Target Address
-    return;
+    return 0;
   // --------------
   // Clear Config
   // --------------
   case BPMEM_CLEAR_AR:  // Alpha and Red Components
   case BPMEM_CLEAR_GB:  // Green and Blue Components
   case BPMEM_CLEAR_Z:   // Z Components (24-bit Zbuffer)
-    return;
+    return 0;
   // -------------------------
   // Bounding Box Control
   // -------------------------
@@ -457,17 +457,17 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
     g_renderer->BBoxWrite(offset, bp.newvalue & 0x3ff);
     g_renderer->BBoxWrite(offset + 1, bp.newvalue >> 10);
   }
-    return;
+    return 0;
   case BPMEM_TEXINVALIDATE:
     TMEM::Invalidate(bp.newvalue);
-    return;
+    return 0;
 
   case BPMEM_ZCOMPARE:  // Set the Z-Compare and EFB pixel format
     OnPixelFormatChange();
     if (bp.changes & 7)
       SetBlendMode();  // dual source could be activated by changing to PIXELFMT_RGBA6_Z24
     PixelShaderManager::SetZModeControl();
-    return;
+    return 0;
 
   case BPMEM_MIPMAP_STRIDE:  // MipMap Stride Channel
   case BPMEM_COPYYSCALE:     // Display Copy Y Scale
@@ -485,7 +485,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   {
     if (bp.changes)
       PixelShaderManager::SetTevIndirectChanged();
-    return;
+    return 0;
   }
 
   case BPMEM_TEV_KSEL:      // Texture Environment Swap Mode Table 0
@@ -497,7 +497,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   case BPMEM_TEV_KSEL + 6:  // Texture Environment Swap Mode Table 6
   case BPMEM_TEV_KSEL + 7:  // Texture Environment Swap Mode Table 7
     PixelShaderManager::SetTevKSel(bp.address - BPMEM_TEV_KSEL, bp.newvalue);
-    return;
+    return 0;
 
   /* This Register can be used to limit to which bits of BP registers is
    * actually written to. The mask is only valid for the next BP write,
@@ -507,19 +507,19 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
 
   case BPMEM_IND_IMASK:  // Index Mask ?
   case BPMEM_REVBITS:    // Always set to 0x0F when GX_InitRevBits() is called.
-    return;
+    return 0;
 
   case BPMEM_CLEAR_PIXEL_PERF:
     // GXClearPixMetric writes 0xAAA here, Sunshine alternates this register between values 0x000
     // and 0xAAA
     if (PerfQueryBase::ShouldEmulate())
       g_perf_query->ResetQuery();
-    return;
+    return 0;
 
   case BPMEM_PRELOAD_ADDR:
   case BPMEM_PRELOAD_TMEMEVEN:
   case BPMEM_PRELOAD_TMEMODD:  // Used when PRELOAD_MODE is set
-    return;
+    return 0;
 
   case BPMEM_PRELOAD_MODE:  // Set to 0 when GX_TexModeSync() is called.
     // if this is different from 0, manual TMEM management is used (GX_PreloadEntireTexture).
@@ -569,7 +569,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
 
       TMEM::InvalidateAll();
     }
-    return;
+    return 0;
 
   // ---------------------------------------------------
   // Set the TEV Color
@@ -597,7 +597,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
       PixelShaderManager::SetTevColor(num, 0, bpmem.tevregs[num].ra.red);
       PixelShaderManager::SetTevColor(num, 3, bpmem.tevregs[num].ra.alpha);
     }
-    return;
+    return 0;
   }
 
   case BPMEM_TEV_COLOR_BG:
@@ -616,7 +616,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
       PixelShaderManager::SetTevColor(num, 1, bpmem.tevregs[num].bg.green);
       PixelShaderManager::SetTevColor(num, 2, bpmem.tevregs[num].bg.blue);
     }
-    return;
+    return 0;
   }
 
   default:
@@ -631,7 +631,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   case BPMEM_TREF:
   case BPMEM_TREF + 4:
     PixelShaderManager::SetTevOrder(bp.address - BPMEM_TREF, bp.newvalue);
-    return;
+    return 0;
   // ----------------------
   // Set wrap size
   // ----------------------
@@ -644,7 +644,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
       PixelShaderManager::SetTexCoordChanged((bp.address - BPMEM_SU_SSIZE) >> 1);
       GeometryShaderManager::SetTexCoordChanged((bp.address - BPMEM_SU_SSIZE) >> 1);
     }
-    return;
+    return 0;
   }
 
   if ((bp.address & 0xc0) == 0x80)
@@ -661,7 +661,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
     case TexUnitAddress::Register::SETMODE0:
     case TexUnitAddress::Register::SETMODE1:
       TMEM::ConfigurationChanged(tex_address, bp.newvalue);
-      return;
+      return 0;
 
     // --------------------------------------------
     // BPMEM_TX_SETIMAGE0 - Texture width, height, format
@@ -675,7 +675,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
     case TexUnitAddress::Register::SETIMAGE2:
     case TexUnitAddress::Register::SETIMAGE3:
       TMEM::ConfigurationChanged(tex_address, bp.newvalue);
-      return;
+      return 0;
 
     // -------------------------------
     // Set a TLUT
@@ -683,7 +683,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
     // -------------------------------
     case TexUnitAddress::Register::SETTLUT:
       TMEM::ConfigurationChanged(tex_address, bp.newvalue);
-      return;
+      return 0;
     case TexUnitAddress::Register::UNKNOWN:
       break;  // Not handled
     }
@@ -696,7 +696,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   // --------------
   case BPMEM_IND_CMD:
     PixelShaderManager::SetTevIndirectChanged();
-    return;
+    return 0;
   // --------------------------------------------------
   // Set Color/Alpha of a Tev
   // BPMEM_TEV_COLOR_ENV - Dest, Shift, Clamp, Sub, Bias, Sel A, Sel B, Sel C, Sel D
@@ -706,7 +706,7 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   case BPMEM_TEV_COLOR_ENV + 16:
     PixelShaderManager::SetTevCombiner((bp.address - BPMEM_TEV_COLOR_ENV) >> 1,
                                        (bp.address - BPMEM_TEV_COLOR_ENV) & 1, bp.newvalue);
-    return;
+    return 0;
   default:
     break;
   }
@@ -714,10 +714,12 @@ static void BPWritten(const BPCmd& bp, int cycles_into_future)
   DolphinAnalytics::Instance().ReportGameQuirk(GameQuirk::USES_UNKNOWN_BP_COMMAND);
   WARN_LOG_FMT(VIDEO, "Unknown BP opcode: address = {:#010x} value = {:#010x}", bp.address,
                bp.newvalue);
+
+  return 0;
 }
 
 // Call browser: OpcodeDecoding.cpp ExecuteDisplayList > Decode() > LoadBPReg()
-void LoadBPReg(u32 value0, int cycles_into_future)
+u32 LoadBPReg(u32 value0, int cycles_into_future)
 {
   int regNum = value0 >> 24;
   int oldval = ((u32*)&bpmem)[regNum];
@@ -730,7 +732,7 @@ void LoadBPReg(u32 value0, int cycles_into_future)
   if (regNum != BPMEM_BP_MASK)
     bpmem.bpMask = 0xFFFFFF;
 
-  BPWritten(bp, cycles_into_future);
+  return BPWritten(bp, cycles_into_future);
 }
 
 void LoadBPRegPreprocess(u32 value0, int cycles_into_future)
