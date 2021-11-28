@@ -124,12 +124,13 @@ struct SamplerState
   u32 mipOffsets[maxMips + 1];
   TextureFormat texfmt;
   TLUTFormat tlutfmt;
-  bool manually_managed;
-  WrapMode wrap_s;
-  WrapMode wrap_t;
+  void (*SampleMipFn)(s32, s32, u32, bool, struct SamplerState&, u8*);
 };
 
 static SamplerState Units[8];
+
+template <bool manually_managed, WrapMode wrap_s, WrapMode wrap_t>
+static void SampleMip(s32 s, s32 t, u32 mip, bool linear, struct SamplerState& state, u8* sample);
 
 void SetupSampler(u8 texmap)
 {
@@ -190,14 +191,142 @@ void SetupSampler(u8 texmap)
     memset(state.mipOffsets, 0, sizeof(state.mipOffsets));
   }
 
-  state.manually_managed = texUnit.texImage1.cache_manually_managed;
-  state.wrap_s = tm0.wrap_s;
-  state.wrap_t = tm0.wrap_t;
-}
-void SampleMip(s32 s, s32 t, u32 mip, bool linear, u8 texmap, u8* sample)
-{
-  auto& state = Units[texmap];
+  bool manually_managed = texUnit.texImage1.cache_manually_managed;
+  WrapMode wrap_s = tm0.wrap_s;
+  WrapMode wrap_t = tm0.wrap_t;
 
+  switch ((manually_managed << 4) | u32(wrap_s) << 2 | u32(wrap_t))
+  {
+  case 0x00:
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  case 0x01:
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Repeat>;
+    break;
+  case 0x02:
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Mirror>;
+    break;
+  case 0x03:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  case 0x04:
+    state.SampleMipFn = SampleMip<false, WrapMode::Repeat, WrapMode::Clamp>;
+    break;
+  case 0x05:
+    state.SampleMipFn = SampleMip<false, WrapMode::Repeat, WrapMode::Repeat>;
+    break;
+  case 0x06:
+    state.SampleMipFn = SampleMip<false, WrapMode::Repeat, WrapMode::Mirror>;
+    break;
+  case 0x07:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<false, WrapMode::Repeat, WrapMode::Clamp>;
+    break;
+  case 0x08:
+    state.SampleMipFn = SampleMip<false, WrapMode::Mirror, WrapMode::Clamp>;
+    break;
+  case 0x09:
+    state.SampleMipFn = SampleMip<false, WrapMode::Mirror, WrapMode::Repeat>;
+    break;
+  case 0x0A:
+    state.SampleMipFn = SampleMip<false, WrapMode::Mirror, WrapMode::Mirror>;
+    break;
+  case 0x0B:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<false, WrapMode::Mirror, WrapMode::Clamp>;
+    break;
+  case 0x0C:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s mode: 3");
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  case 0x0D:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s mode: 3");
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Repeat>;
+    break;
+  case 0x0E:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s mode: 3");
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Mirror>;
+    break;
+  case 0x0F:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s and wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<false, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  case 0x10:
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  case 0x11:
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Repeat>;
+    break;
+  case 0x12:
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Mirror>;
+    break;
+  case 0x13:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  case 0x14:
+    state.SampleMipFn = SampleMip<true, WrapMode::Repeat, WrapMode::Clamp>;
+    break;
+  case 0x15:
+    state.SampleMipFn = SampleMip<true, WrapMode::Repeat, WrapMode::Repeat>;
+    break;
+  case 0x16:
+    state.SampleMipFn = SampleMip<true, WrapMode::Repeat, WrapMode::Mirror>;
+    break;
+  case 0x17:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<true, WrapMode::Repeat, WrapMode::Clamp>;
+    break;
+  case 0x18:
+    state.SampleMipFn = SampleMip<true, WrapMode::Mirror, WrapMode::Clamp>;
+    break;
+  case 0x19:
+    state.SampleMipFn = SampleMip<true, WrapMode::Mirror, WrapMode::Repeat>;
+    break;
+  case 0x1A:
+    state.SampleMipFn = SampleMip<true, WrapMode::Mirror, WrapMode::Mirror>;
+    break;
+  case 0x1B:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<true, WrapMode::Mirror, WrapMode::Clamp>;
+    break;
+  case 0x1C:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s mode: 3");
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  case 0x1D:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s mode: 3");
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Repeat>;
+    break;
+  case 0x1E:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s mode: 3");
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Mirror>;
+    break;
+  case 0x1F:
+    // Hardware testing indicates that wrap_mode set to 3 behaves the same as clamp.
+    PanicAlertFmt("Invalid wrap_s and wrap_t mode: 3");
+    state.SampleMipFn = SampleMip<true, WrapMode::Clamp, WrapMode::Clamp>;
+    break;
+  }
+}
+
+template <bool manually_managed, WrapMode wrap_s, WrapMode wrap_t>
+static void SampleMip(s32 s, s32 t, u32 mip, bool linear, SamplerState& state, u8* sample)
+{
   int image_width_minus_1 = state.width - 1;
   int image_height_minus_1 = state.height - 1;
 
@@ -236,12 +365,12 @@ void SampleMip(s32 s, s32 t, u32 mip, bool linear, u8 texmap, u8* sample)
     u8 sampledTex[4];
     u32 texel[4];
 
-    WrapCoord(&imageS, state.wrap_s, image_width_minus_1 + 1);
-    WrapCoord(&imageT, state.wrap_t, image_height_minus_1 + 1);
-    WrapCoord(&imageSPlus1, state.wrap_s, image_width_minus_1 + 1);
-    WrapCoord(&imageTPlus1, state.wrap_t, image_height_minus_1 + 1);
+    WrapCoord(&imageS, wrap_s, image_width_minus_1 + 1);
+    WrapCoord(&imageT, wrap_t, image_height_minus_1 + 1);
+    WrapCoord(&imageSPlus1, wrap_s, image_width_minus_1 + 1);
+    WrapCoord(&imageTPlus1, wrap_t, image_height_minus_1 + 1);
 
-    if (!(state.texfmt == TextureFormat::RGBA8 && state.manually_managed))
+    if (!(state.texfmt == TextureFormat::RGBA8 && manually_managed))
     {
       TexDecoder_DecodeTexel(sampledTex, imageSrc, imageS, imageT, image_width_minus_1,
                              state.texfmt, state.pointer_tlut, state.tlutfmt);
@@ -290,16 +419,23 @@ void SampleMip(s32 s, s32 t, u32 mip, bool linear, u8 texmap, u8* sample)
     int imageT = t >> 7;
 
     // nearest neighbor sampling
-    WrapCoord(&imageS, state.wrap_s, image_width_minus_1 + 1);
-    WrapCoord(&imageT, state.wrap_t, image_height_minus_1 + 1);
+    WrapCoord(&imageS, wrap_s, image_width_minus_1 + 1);
+    WrapCoord(&imageT, wrap_t, image_height_minus_1 + 1);
 
-    if (!(state.texfmt == TextureFormat::RGBA8 && state.manually_managed))
+    if (!(state.texfmt == TextureFormat::RGBA8 && manually_managed))
       TexDecoder_DecodeTexel(sample, imageSrc, imageS, imageT, image_width_minus_1, state.texfmt,
                              state.pointer_tlut, state.tlutfmt);
     else
       TexDecoder_DecodeTexelRGBA8FromTmem(sample, imageSrc, imageSrcOdd, imageS, imageT,
                                           image_width_minus_1);
   }
+}
+
+void SampleMip(s32 s, s32 t, u32 mip, bool linear, u8 texmap, u8* sample)
+{
+  auto& state = Units[texmap];
+
+  state.SampleMipFn(s, t, mip, linear, state, sample);
 }
 
 }  // namespace TextureSampler
