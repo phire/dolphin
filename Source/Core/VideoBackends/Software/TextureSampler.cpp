@@ -362,7 +362,7 @@ static void SampleMip(s32 s, s32 t, u32 mip, bool linear, SamplerState& state, u
     int imageTPlus1 = imageT + 1;
     const int fractT = t & 0x7f;
 
-    u8 sampledTex[4];
+    u8 sampledTex[16];
     u32 texel[4];
 
     WrapCoord(&imageS, wrap_s, image_width_minus_1 + 1);
@@ -372,21 +372,13 @@ static void SampleMip(s32 s, s32 t, u32 mip, bool linear, SamplerState& state, u
 
     if (!(state.texfmt == TextureFormat::RGBA8 && manually_managed))
     {
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageS, imageT, image_width_minus_1,
-                             state.texfmt, state.pointer_tlut, state.tlutfmt);
+      TexDecoder_DecodeTexelQuad(sampledTex, imageSrc, imageS, imageT, imageSPlus1, imageTPlus1,
+                                 image_width_minus_1, state.texfmt, state.pointer_tlut,
+                                 state.tlutfmt);
       SetTexel(sampledTex, texel, (128 - fractS) * (128 - fractT));
-
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageSPlus1, imageT, image_width_minus_1,
-                             state.texfmt, state.pointer_tlut, state.tlutfmt);
-      AddTexel(sampledTex, texel, (fractS) * (128 - fractT));
-
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageS, imageTPlus1, image_width_minus_1,
-                             state.texfmt, state.pointer_tlut, state.tlutfmt);
-      AddTexel(sampledTex, texel, (128 - fractS) * (fractT));
-
-      TexDecoder_DecodeTexel(sampledTex, imageSrc, imageSPlus1, imageTPlus1, image_width_minus_1,
-                             state.texfmt, state.pointer_tlut, state.tlutfmt);
-      AddTexel(sampledTex, texel, (fractS) * (fractT));
+      AddTexel(sampledTex + 4, texel, (fractS) * (128 - fractT));
+      AddTexel(sampledTex + 8, texel, (128 - fractS) * (fractT));
+      AddTexel(sampledTex + 12, texel, (fractS) * (fractT));
     }
     else
     {
