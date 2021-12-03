@@ -617,8 +617,16 @@ void Tev::Draw()
 
       if (bpmem.genMode.numtexgens > 0)
       {
-        TextureSampler::Sample(TexCoord.s, TexCoord.t, TextureLod[stageNum],
-                               TextureLinear[stageNum], texmap, texel);
+        bool alpha_combiner_uses_texture = ac.a.Value() == TevAlphaArg::TexAlpha ||
+                                           ac.b.Value() == TevAlphaArg::TexAlpha ||
+                                           ac.c.Value() == TevAlphaArg::TexAlpha ||
+                                           ac.d.Value() == TevAlphaArg::TexAlpha;
+
+        if (!g_ActiveConfig.bDepthOnly || alpha_combiner_uses_texture)
+        {
+          TextureSampler::Sample(TexCoord.s, TexCoord.t, TextureLod[stageNum],
+                                 TextureLinear[stageNum], texmap, texel);
+        }
       }
       else
       {
@@ -654,35 +662,45 @@ void Tev::Draw()
 
     // combine inputs
     InputRegType inputs[4];
-    for (int i = 0; i < 3; i++)
+
+    // We want to run the color stage if it might be used in alpha compare
+    // FIXME: This isn't perfect, the color value might come from a previous color stage we didn't
+    //        run. We need to analyze the tev configuration and work out in advance what color
+    //        we need.
+    if (!g_ActiveConfig.bDepthOnly || ac.bias == TevBias::Compare)
     {
-      inputs[BLU_C + i].a = *m_ColorInputLUT[u32(cc.a.Value())][i];
-      inputs[BLU_C + i].b = *m_ColorInputLUT[u32(cc.b.Value())][i];
-      inputs[BLU_C + i].c = *m_ColorInputLUT[u32(cc.c.Value())][i];
-      inputs[BLU_C + i].d = *m_ColorInputLUT[u32(cc.d.Value())][i];
+      for (int i = 0; i < 3; i++)
+      {
+        inputs[BLU_C + i].a = *m_ColorInputLUT[u32(cc.a.Value())][i];
+        inputs[BLU_C + i].b = *m_ColorInputLUT[u32(cc.b.Value())][i];
+        inputs[BLU_C + i].c = *m_ColorInputLUT[u32(cc.c.Value())][i];
+        inputs[BLU_C + i].d = *m_ColorInputLUT[u32(cc.d.Value())][i];
+      }
+
+      if (cc.bias != TevBias::Compare)
+        DrawColorRegular(cc, inputs);
+      else
+        DrawColorCompare(cc, inputs);
+
+      if (cc.clamp)
+      {
+        Reg[u32(cc.dest.Value())][RED_C] = Clamp255(Reg[u32(cc.dest.Value())][RED_C]);
+        Reg[u32(cc.dest.Value())][GRN_C] = Clamp255(Reg[u32(cc.dest.Value())][GRN_C]);
+        Reg[u32(cc.dest.Value())][BLU_C] = Clamp255(Reg[u32(cc.dest.Value())][BLU_C]);
+      }
+      else
+      {
+        Reg[u32(cc.dest.Value())][RED_C] = Clamp1024(Reg[u32(cc.dest.Value())][RED_C]);
+        Reg[u32(cc.dest.Value())][GRN_C] = Clamp1024(Reg[u32(cc.dest.Value())][GRN_C]);
+        Reg[u32(cc.dest.Value())][BLU_C] = Clamp1024(Reg[u32(cc.dest.Value())][BLU_C]);
+      }
     }
+
+
     inputs[ALP_C].a = *m_AlphaInputLUT[u32(ac.a.Value())];
     inputs[ALP_C].b = *m_AlphaInputLUT[u32(ac.b.Value())];
     inputs[ALP_C].c = *m_AlphaInputLUT[u32(ac.c.Value())];
     inputs[ALP_C].d = *m_AlphaInputLUT[u32(ac.d.Value())];
-
-    if (cc.bias != TevBias::Compare)
-      DrawColorRegular(cc, inputs);
-    else
-      DrawColorCompare(cc, inputs);
-
-    if (cc.clamp)
-    {
-      Reg[u32(cc.dest.Value())][RED_C] = Clamp255(Reg[u32(cc.dest.Value())][RED_C]);
-      Reg[u32(cc.dest.Value())][GRN_C] = Clamp255(Reg[u32(cc.dest.Value())][GRN_C]);
-      Reg[u32(cc.dest.Value())][BLU_C] = Clamp255(Reg[u32(cc.dest.Value())][BLU_C]);
-    }
-    else
-    {
-      Reg[u32(cc.dest.Value())][RED_C] = Clamp1024(Reg[u32(cc.dest.Value())][RED_C]);
-      Reg[u32(cc.dest.Value())][GRN_C] = Clamp1024(Reg[u32(cc.dest.Value())][GRN_C]);
-      Reg[u32(cc.dest.Value())][BLU_C] = Clamp1024(Reg[u32(cc.dest.Value())][BLU_C]);
-    }
 
     if (ac.bias != TevBias::Compare)
       DrawAlphaRegular(ac, inputs);
@@ -740,7 +758,7 @@ void Tev::Draw()
   }
 
   // fog
-  if (bpmem.fog.c_proj_fsel.fsel != FogType::Off)
+  if (!g_ActiveConfig.bDepthOnly && bpmem.fog.c_proj_fsel.fsel != FogType::Off)
   {
     float ze;
 
@@ -837,12 +855,16 @@ void Tev::Draw()
       return;
 
     EfbInterface::IncPerfCounterPixelCount(PQ_ZCOMP_OUTPUT);
+
   }
 
   // The GC/Wii GPU rasterizes in 2x2 pixel groups, so bounding box values will be rounded to the
   // extents of these groups, rather than the exact pixel.
   BBoxManager::Update(static_cast<u16>(Position[0] & ~1), static_cast<u16>(Position[0] | 1),
                       static_cast<u16>(Position[1] & ~1), static_cast<u16>(Position[1] | 1));
+
+  if (g_ActiveConfig.bDepthOnly)
+    return;
 
 #if ALLOW_TEV_DUMPS
   if (g_ActiveConfig.bDumpTevStages)

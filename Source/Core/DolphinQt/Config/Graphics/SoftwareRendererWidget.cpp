@@ -74,8 +74,11 @@ void SoftwareRendererWidget::CreateWidgets()
   auto* hacks_layout = new QGridLayout();
   m_no_rast_timings =
       new GraphicsBool(tr("Disable Rasterizer Timings"), Config::GFX_SW_NO_RAST_TIMINGS);
+  m_depth_only = new GraphicsBool(tr("Depth Only"), Config::GFX_SW_DEPTH_ONLY);
   hacks_box->setLayout(hacks_layout);
+
   hacks_layout->addWidget(m_no_rast_timings, 1, 1);
+  hacks_layout->addWidget(m_depth_only, 1, 2);
 
   auto* debug_box = new QGroupBox(tr("Debug Only"));
   auto* debug_layout = new QGridLayout();

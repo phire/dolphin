@@ -103,6 +103,7 @@ void VideoConfig::Refresh()
   bDumpTevTextureFetches = Config::Get(Config::GFX_SW_DUMP_TEV_TEX_FETCHES);
   drawStart = Config::Get(Config::GFX_SW_DRAW_START);
   drawEnd = Config::Get(Config::GFX_SW_DRAW_END);
+  bDepthOnly = Config::Get(Config::GFX_SW_DEPTH_ONLY);
   if (g_video_backend->GetName() == "Software Renderer")
     bRastTimings = !Config::Get(Config::GFX_SW_NO_RAST_TIMINGS);
   else

@@ -80,6 +80,7 @@ extern const Info<bool> GFX_SW_DUMP_TEV_TEX_FETCHES;
 extern const Info<int> GFX_SW_DRAW_START;
 extern const Info<int> GFX_SW_DRAW_END;
 extern const Info<bool> GFX_SW_NO_RAST_TIMINGS;
+extern const Info<bool> GFX_SW_DEPTH_ONLY;
 
 extern const Info<bool> GFX_PREFER_GLES;
 

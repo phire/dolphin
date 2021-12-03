@@ -490,11 +490,22 @@ u32 DrawTriangleFrontFace(const OutputVertexData* v0, const OutputVertexData* v1
         EfbInterface::IncPerfCounterPixelCount(PQ_ZCOMP_INPUT_ZCOMPLOC);
         if (!DepthTestBlock(x, y))
         {
-          continue;
           early_depth_blocks++;
+          continue;
         }
 
         EfbInterface::IncPerfCounterPixelCount(PQ_ZCOMP_OUTPUT_ZCOMPLOC);
+        if (g_ActiveConfig.bDepthOnly) {
+          shadded_blocks++;
+          continue;
+        }
+      }
+      else if (g_ActiveConfig.bDepthOnly && !bpmem.zmode.updateenable)
+      {
+        // If there are no depth writes, then there is no reason to calculate anything more about this
+        // quad
+        shadded_blocks++;
+        continue;
       }
 
       shadded_blocks++;
