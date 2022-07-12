@@ -6,6 +6,7 @@
 #include "Core/PowerPC/CPUApi.h"
 #include "Core/CoreTiming.h"
 
+#include <climits>
 #include <fmt/format.h>
 
 #include <BasicTypes.h>
@@ -78,9 +79,41 @@ inline WrappedDouble ReadDouble(CpuMemoryHandle handle, u32 address)
   return PowerPC::HostRead_F64(address);
 }
 
-EXPORTED u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address) {
+EXPORTED u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address) 
+{
   return ReadDouble(handle, address).Wrap64();
 }
+
+EXPORTED void CpuMemory_WriteU8(CpuMemoryHandle handle, u32 address, u8 value) {
+
+  PowerPC::HostWrite_U8(value, address);
+}
+
+EXPORTED void CpuMemory_WriteU16(CpuMemoryHandle handle, u32 address, u16 value) 
+{
+  PowerPC::HostWrite_U16(value, address);
+}
+
+EXPORTED void CpuMemory_WriteU32(CpuMemoryHandle handle, u32 address, u32 value) 
+{
+  PowerPC::HostWrite_U32(value, address);
+}
+
+EXPORTED void CpuMemory_WriteU64(CpuMemoryHandle handle, u32 address, u64 value) 
+{
+  PowerPC::HostWrite_U64(value, address);
+}
+
+EXPORTED void CpuMemory_WriteFloat(CpuMemoryHandle handle, u32 address, float value) 
+{
+  PowerPC::HostWrite_F32(value, address);
+}
+
+EXPORTED void CpuMemory_WriteDouble(CpuMemoryHandle handle, u32 address, double value)
+{
+  PowerPC::HostWrite_F64(value, address);
+}
+
 
 static void BreakOnCycleEvent(u64 userdata, s64 cyclesLate) {
   CurrentHandle += 1;
