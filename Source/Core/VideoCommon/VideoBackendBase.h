@@ -44,6 +44,8 @@ public:
   virtual void InitBackendInfo() = 0;
   virtual std::optional<std::string> GetWarningMessage() const { return {}; }
 
+  bool IsInitialized() const { return m_initialized; }
+
   // Prepares a native window for rendering. This is called on the main thread, or the
   // thread which owns the window.
   virtual void PrepareWindow(WindowSystemInfo& wsi) {}
