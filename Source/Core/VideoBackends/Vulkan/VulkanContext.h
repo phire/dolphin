@@ -10,8 +10,9 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/WindowSystemInfo.h"
-#include "VideoBackends/Vulkan/Constants.h"
 #include "VideoCommon/VideoConfig.h"
+
+#include "VideoBackends/Vulkan/VulkanHeaders.h"
 
 namespace Vulkan
 {

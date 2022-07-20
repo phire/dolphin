@@ -609,6 +609,7 @@
     <ClInclude Include="VideoBackends\Vulkan\VKVertexFormat.h" />
     <ClInclude Include="VideoBackends\Vulkan\VKVertexManager.h" />
     <ClInclude Include="VideoBackends\Vulkan\VulkanContext.h" />
+    <ClInclude Include="VideoBackends\Vulkan\VulkanHeaders.h" />
     <ClInclude Include="VideoBackends\Vulkan\VulkanLoader.h" />
     <ClInclude Include="VideoCommon\AbstractFramebuffer.h" />
     <ClInclude Include="VideoCommon\AbstractPipeline.h" />

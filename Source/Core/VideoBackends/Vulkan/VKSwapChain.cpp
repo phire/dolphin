@@ -15,6 +15,7 @@
 #include "VideoBackends/Vulkan/ObjectCache.h"
 #include "VideoBackends/Vulkan/VKTexture.h"
 #include "VideoBackends/Vulkan/VulkanContext.h"
+#include "VideoBackends/Vulkan/VulkanLoader.h"
 #include "VideoCommon/RenderBase.h"
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR)

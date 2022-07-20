@@ -16,6 +16,9 @@
 #include "VideoCommon/DriverDetails.h"
 #include "VideoCommon/VideoCommon.h"
 
+#include "VideoBackends/Vulkan/Constants.h"
+#include "VideoBackends/Vulkan/VulkanLoader.h"
+
 namespace Vulkan
 {
 std::unique_ptr<VulkanContext> g_vulkan_context;
@@ -217,6 +220,14 @@ bool VulkanContext::SelectInstanceExtensions(std::vector<const char*>* extension
     return false;
   }
 #endif
+
+  if (wstype == WindowSystemType::Qt)
+  {
+    AddExtension("VK_KHR_surface", true);
+    AddExtension("VK_KHR_xcb_surface", true);
+
+    return true;
+  }
 
   // VK_EXT_debug_report
   if (enable_debug_report && !AddExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, false))

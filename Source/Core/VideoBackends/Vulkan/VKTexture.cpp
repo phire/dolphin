@@ -20,6 +20,7 @@
 #include "VideoBackends/Vulkan/VKRenderer.h"
 #include "VideoBackends/Vulkan/VKStreamBuffer.h"
 #include "VideoBackends/Vulkan/VulkanContext.h"
+#include "VideoBackends/Vulkan/VulkanLoader.h"
 
 #include "VideoCommon/VideoConfig.h"
 

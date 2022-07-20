@@ -11,6 +11,7 @@
 #include "Common/Thread.h"
 
 #include "VideoBackends/Vulkan/VulkanContext.h"
+#include "VideoBackends/Vulkan/VulkanLoader.h"
 
 namespace Vulkan
 {

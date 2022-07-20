@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-#include "VideoBackends/Vulkan/VulkanLoader.h"
+#include "VideoBackends/Vulkan/VulkanHeaders.h"
 #include "VideoCommon/AbstractFramebuffer.h"
 #include "VideoCommon/AbstractStagingTexture.h"
 #include "VideoCommon/AbstractTexture.h"

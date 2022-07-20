@@ -18,6 +18,7 @@
 #include "Core/Core.h"
 
 #include "VideoBackends/Vulkan/CommandBufferManager.h"
+#include "VideoBackends/Vulkan/Constants.h"
 #include "VideoBackends/Vulkan/ObjectCache.h"
 #include "VideoBackends/Vulkan/StagingBuffer.h"
 #include "VideoBackends/Vulkan/StateTracker.h"

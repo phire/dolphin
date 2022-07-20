@@ -7,7 +7,7 @@
 
 #include "Common/BitField.h"
 #include "Common/CommonTypes.h"
-#include "VideoBackends/Vulkan/VulkanLoader.h"
+#include "VideoBackends/Vulkan/VulkanHeaders.h"
 
 namespace Vulkan
 {

@@ -33,6 +33,7 @@ add_library(videovulkan
   VKVertexManager.h
   VulkanContext.cpp
   VulkanContext.h
+  VulkanHeaders.h
   VulkanLoader.cpp
   VulkanLoader.h
 )
