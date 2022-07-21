@@ -202,7 +202,13 @@ bool VulkanContext::SelectInstanceExtensions(std::vector<const char*>* extension
   }
 #endif
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-  if (wstype == WindowSystemType::X11 && !AddExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, true))
+  if (wstype == WindowSystemType::Xlib && !AddExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, true))
+  {
+    return false;
+  }
+#endif
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+  if (wstype == WindowSystemType::Xcb && !AddExtension(VK_KHR_XCB_SURFACE_EXTENSION_NAME, true))
   {
     return false;
   }

@@ -63,7 +63,7 @@ VkSurfaceKHR SwapChain::CreateVulkanSurface(VkInstance instance, const WindowSys
 #endif
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-  if (wsi.type == WindowSystemType::X11)
+  if (wsi.type == WindowSystemType::Xlib)
   {
     VkXlibSurfaceCreateInfoKHR surface_create_info = {
         VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,  // VkStructureType               sType
@@ -78,6 +78,30 @@ VkSurfaceKHR SwapChain::CreateVulkanSurface(VkInstance instance, const WindowSys
     if (res != VK_SUCCESS)
     {
       LOG_VULKAN_ERROR(res, "vkCreateXlibSurfaceKHR failed: ");
+      return VK_NULL_HANDLE;
+    }
+
+    return surface;
+  }
+#endif
+
+#if defined(VK_USE_PLATFORM_XCB_KHR)
+  if (wsi.type == WindowSystemType::Xcb)
+  {
+    uint64_t window = reinterpret_cast<uint64_t>(wsi.render_window);
+    VkXcbSurfaceCreateInfoKHR surface_create_info = {
+        VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,           // VkStructureType               sType
+        nullptr,                                                 // const void*                   pNext
+        0,                                                       // VkXlibSurfaceCreateFlagsKHR   flags
+        static_cast<xcb_connection_t*>(wsi.display_connection),  // Display*                      dpy
+        static_cast<xcb_window_t>(window)                        // Window                        window
+    };
+
+    VkSurfaceKHR surface;
+    VkResult res = vkCreateXcbSurfaceKHR(instance, &surface_create_info, nullptr, &surface);
+    if (res != VK_SUCCESS)
+    {
+      LOG_VULKAN_ERROR(res, "vkCreateXcbSurfaceKHR failed: ");
       return VK_NULL_HANDLE;
     }
 

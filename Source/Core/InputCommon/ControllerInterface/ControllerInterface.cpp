@@ -168,7 +168,7 @@ void ControllerInterface::RefreshDevices(RefreshReason reason)
   ciface::Win32::PopulateDevices(m_wsi.render_window);
 #endif
 #ifdef CIFACE_USE_XLIB
-  if (m_wsi.type == WindowSystemType::X11)
+  if (m_wsi.type == WindowSystemType::Xlib || m_wsi.type == WindowSystemType::Xcb)
     ciface::XInput2::PopulateDevices(m_wsi.render_window);
 #endif
 #ifdef CIFACE_USE_OSX

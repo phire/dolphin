@@ -11,6 +11,7 @@
 
 #if defined(HAVE_X11)
 #define VK_USE_PLATFORM_XLIB_KHR
+#define VK_USE_PLATFORM_XCB_KHR
 #endif
 
 #if defined(ANDROID)

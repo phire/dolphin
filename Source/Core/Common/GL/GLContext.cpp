@@ -99,7 +99,7 @@ std::unique_ptr<GLContext> GLContext::Create(const WindowSystemInfo& wsi, bool s
     context = std::make_unique<GLContextBGL>();
 #endif
 #if HAVE_X11
-  if (wsi.type == WindowSystemType::X11)
+  if (wsi.type == WindowSystemType::Xlib || wsi.type == WindowSystemType::Xcb)
   {
 #if defined(HAVE_EGL)
     // GLES 3 is not supported via GLX.

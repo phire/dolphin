@@ -158,7 +158,7 @@ static WindowSystemType GetWindowSystemType()
   else if (platform_name == QStringLiteral("cocoa"))
     return WindowSystemType::MacOS;
   else if (platform_name == QStringLiteral("xcb"))
-    return WindowSystemType::X11;
+    return WindowSystemType::Xcb;
   else if (platform_name == QStringLiteral("wayland"))
     return WindowSystemType::Wayland;
   else if (platform_name == QStringLiteral("haiku"))
@@ -181,11 +181,18 @@ static WindowSystemInfo GetWindowSystemInfo(QWindow* window)
   wsi.render_surface = wsi.render_window;
 #else
   QPlatformNativeInterface* pni = QGuiApplication::platformNativeInterface();
-  wsi.display_connection = pni->nativeResourceForWindow("display", window);
+
+  if (wsi.type == WindowSystemType::Wayland)
+    wsi.display_connection = pni->nativeResourceForWindow("display", window);
+
+  if (wsi.type == WindowSystemType::Xcb)
+    wsi.display_connection = pni->nativeResourceForWindow("connection", window);
+
   if (wsi.type == WindowSystemType::Wayland)
     wsi.render_window = window ? pni->nativeResourceForWindow("surface", window) : nullptr;
   else
     wsi.render_window = window ? reinterpret_cast<void*>(window->winId()) : nullptr;
+
   wsi.render_surface = wsi.render_window;
 #endif
   wsi.render_surface_scale = window ? static_cast<float>(window->devicePixelRatio()) : 1.0f;
@@ -1244,7 +1251,7 @@ void MainWindow::ShowGraphicsWindow()
   if (!m_graphics_window)
   {
 #ifdef HAVE_XRANDR
-    if (GetWindowSystemType() == WindowSystemType::X11)
+    if (GetWindowSystemType() == WindowSystemType::Xcb)
     {
       m_xrr_config = std::make_unique<X11Utils::XRRConfiguration>(
           static_cast<Display*>(QGuiApplication::platformNativeInterface()->nativeResourceForWindow(
@@ -1536,7 +1543,7 @@ void MainWindow::UpdateScreenSaverInhibition()
   m_is_screensaver_inhibited = inhibit;
 
 #ifdef HAVE_X11
-  if (GetWindowSystemType() == WindowSystemType::X11)
+  if (GetWindowSystemType() == WindowSystemType::Xcb)
     UICommon::InhibitScreenSaver(winId(), inhibit);
 #else
   UICommon::InhibitScreenSaver(inhibit);

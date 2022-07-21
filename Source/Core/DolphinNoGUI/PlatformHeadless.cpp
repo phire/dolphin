@@ -36,6 +36,7 @@ WindowSystemInfo PlatformHeadless::GetWindowSystemInfo() const
 {
   WindowSystemInfo wsi;
   wsi.type = WindowSystemType::Headless;
+  wsi.enable_surface = false;
   wsi.display_connection = nullptr;
   wsi.render_window = nullptr;
   wsi.render_surface = nullptr;
