@@ -26,7 +26,7 @@ class VKTexture;
 class Renderer : public ::Renderer
 {
 public:
-  Renderer(std::unique_ptr<SwapChain> swap_chain, float backbuffer_scale);
+  Renderer(SwapChain* swap_chain, float backbuffer_scale);
   ~Renderer() override;
 
   static Renderer* GetInstance() { return static_cast<Renderer*>(g_renderer.get()); }
@@ -54,7 +54,7 @@ public:
                                                    const void* cache_data = nullptr,
                                                    size_t cache_data_length = 0) override;
 
-  SwapChain* GetSwapChain() const { return m_swap_chain.get(); }
+  SwapChain* GetSwapChain() const { return m_swap_chain; }
 
   void Flush() override;
   void WaitForGPUIdle() override;
@@ -100,7 +100,7 @@ private:
   void OnSwapChainResized();
   void BindFramebuffer(VKFramebuffer* fb);
 
-  std::unique_ptr<SwapChain> m_swap_chain;
+  SwapChain* m_swap_chain;
 
   // Keep a copy of sampler states to avoid cache lookups every draw
   std::array<SamplerState, NUM_PIXEL_SHADER_SAMPLERS> m_sampler_states = {};

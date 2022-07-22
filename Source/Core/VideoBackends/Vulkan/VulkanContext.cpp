@@ -88,10 +88,10 @@ bool VulkanContext::CheckValidationLayerAvailablility()
           }) != layer_list.end());
 }
 
-VkInstance VulkanContext::CreateVulkanInstance(const WindowSystemInfo& wsi, bool enable_debug_report,
+VkInstance VulkanContext::CreateVulkanInstance(const WindowSystemInfo& wsi,
+                                               bool enable_debug_report,
                                                bool enable_validation_layer)
 {
-
   auto enabled_extensions = SelectInstanceExtensions(wsi, enable_debug_report);
 
   if (enabled_extensions.empty())
@@ -153,7 +153,8 @@ VkInstance VulkanContext::CreateVulkanInstance(const WindowSystemInfo& wsi, bool
   return instance;
 }
 
-std::vector<std::string> VulkanContext::SelectInstanceExtensions(const WindowSystemInfo& wsi, bool enable_debug_report)
+std::vector<std::string> VulkanContext::SelectInstanceExtensions(const WindowSystemInfo& wsi,
+                                                                 bool enable_debug_report)
 {
   u32 extension_count = 0;
   VkResult res = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
@@ -232,31 +233,32 @@ std::vector<std::string> VulkanContext::SelectInstanceExtensions(const WindowSys
   }
 #endif
 #if defined(VK_USE_PLATFORM_METAL_EXT)
-  if (wsi.type == WindowSystemType::MacOS && !AddExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME, true))
+  if (wsi.type == WindowSystemType::MacOS &&
+      !AddExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME, true))
   {
     return {};
   }
 }
 #endif
 
-  if (wsi.vk_get_instance_extensions) {
-    for (const auto& extension : wsi.vk_get_instance_extensions()) {
-      AddExtension(extension, false);
-    }
-  }
-
-  // VK_EXT_debug_report
-  if (enable_debug_report && !AddExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, false))
-    WARN_LOG_FMT(VIDEO, "Vulkan: Debug report requested, but extension is not available.");
-
-  AddExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, false);
-
-  if (AddExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, false))
+if (wsi.vk_get_instance_extensions)
+{
+  for (const auto& extension : wsi.vk_get_instance_extensions())
   {
-    g_Config.backend_info.bSupportsSettingObjectNames = true;
+    AddExtension(extension, false);
   }
+}
 
-  return extention_list;
+// VK_EXT_debug_report
+if (enable_debug_report && !AddExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, false))
+  WARN_LOG_FMT(VIDEO, "Vulkan: Debug report requested, but extension is not available.");
+
+if (AddExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, false))
+{
+  g_Config.backend_info.bSupportsSettingObjectNames = true;
+}
+
+return extention_list;
 }
 
 VulkanContext::GPUList VulkanContext::EnumerateGPUs(VkInstance instance)

@@ -39,12 +39,23 @@ public:
   virtual bool Initialize(const WindowSystemInfo& wsi) = 0;
   virtual void Shutdown() = 0;
 
+  // Forces the backend to initialise a context if it hasn't already
+  // Keeps it initialized until ReleaseContext is called
+  virtual bool AcquireContext(const WindowSystemInfo& wsi)
+  {
+    m_context_semaphore++;
+    return true;
+  }
+
+  // Allows the backend to shutdown the context, if nothing else needs it
+  virtual void ReleaseContext() { m_context_semaphore--; }
+
   virtual std::string GetName() const = 0;
   virtual std::string GetDisplayName() const { return GetName(); }
   virtual void InitBackendInfo() = 0;
   virtual std::optional<std::string> GetWarningMessage() const { return {}; }
 
-  bool IsInitialized() const { return m_initialized; }
+  bool IsActive() const { return m_initialized || m_context_semaphore; }
 
   // Prepares a native window for rendering. This is called on the main thread, or the
   // thread which owns the window.
@@ -66,8 +77,6 @@ public:
 
   // Fills the backend_info fields with the capabilities of the selected backend/device.
   static void PopulateBackendInfo();
-  // Called by the UI thread when the graphics config is opened.
-  static void PopulateBackendInfoFromUI();
 
   // Wrapper function which pushes the event to the GPU thread.
   void DoState(PointerWrap& p);
@@ -76,6 +85,7 @@ protected:
   void InitializeShared();
   void ShutdownShared();
 
+  int m_context_semaphore = 0;
   bool m_initialized = false;
 };
 

@@ -250,6 +250,17 @@ const std::vector<std::unique_ptr<VideoBackendBase>>& VideoBackendBase::GetAvail
 
 void VideoBackendBase::ActivateBackend(const std::string& name)
 {
+  // Don't squash the backend if it's already running
+  if (g_video_backend && g_video_backend->IsActive())
+  {
+    if (g_video_backend->GetName() != name)
+    {
+      ERROR_LOG_FMT(VIDEO, "Trying to activate {} Backend, but {} Backend already active", name,
+                    g_video_backend->GetName());
+    }
+    return;
+  }
+
   // If empty, set it to the default backend (expected behavior)
   if (name.empty())
     g_video_backend = GetDefaultVideoBackend();
@@ -267,6 +278,11 @@ void VideoBackendBase::ActivateBackend(const std::string& name)
 
 void VideoBackendBase::PopulateBackendInfo()
 {
+  // If the backend is active, the backend info will have been populated already.
+  // Trying to populated it again will cause issues
+  if (g_video_backend && g_video_backend->IsActive())
+    return;
+
   g_Config.Refresh();
   // Reset backend_info so if the backend forgets to initialize something it doesn't end up using
   // a value from the previously used renderer
@@ -276,14 +292,6 @@ void VideoBackendBase::PopulateBackendInfo()
   // We validate the config after initializing the backend info, as system-specific settings
   // such as anti-aliasing, or the selected adapter may be invalid, and should be checked.
   g_Config.VerifyValidity();
-}
-
-void VideoBackendBase::PopulateBackendInfoFromUI()
-{
-  // If the core is running, the backend info will have been populated already.
-  // If we did it here, the UI thread can race with the with the GPU thread.
-  if (!Core::IsRunning())
-    PopulateBackendInfo();
 }
 
 void VideoBackendBase::DoState(PointerWrap& p)

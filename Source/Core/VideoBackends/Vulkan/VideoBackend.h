@@ -6,13 +6,19 @@
 #include "Common/Common.h"
 #include "VideoCommon/VideoBackendBase.h"
 
+#include "VideoBackends/Vulkan/VKSwapChain.h"
+
 namespace Vulkan
 {
+
 class VideoBackend : public VideoBackendBase
 {
 public:
   bool Initialize(const WindowSystemInfo& wsi) override;
   void Shutdown() override;
+
+  bool AcquireContext(const WindowSystemInfo& wsi) override;
+  void ReleaseContext() override;
 
   std::string GetName() const override { return NAME; }
   std::string GetDisplayName() const override { return _trans("Vulkan"); }
@@ -20,5 +26,8 @@ public:
   void PrepareWindow(WindowSystemInfo& wsi) override;
 
   static constexpr const char* NAME = "Vulkan";
+
+private:
+  std::unique_ptr<SwapChain> m_swap_chain;
 };
 }  // namespace Vulkan

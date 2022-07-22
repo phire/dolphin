@@ -239,13 +239,9 @@ bool Init(std::unique_ptr<BootParameters> boot, const WindowSystemInfo& wsi)
 
   Host_UpdateMainFrame();  // Disable any menus or buttons at boot
 
-  // the video backend might have already been initialized by big picture mode
+  // Manually reactivate the video backend in case a GameINI overrides the video backend setting.
   // TODO: How to handle GameINI overrides for big picture mode?
-  if (!g_video_backend || !g_video_backend->IsInitialized())
-  {
-    // Manually reactivate the video backend in case a GameINI overrides the video backend setting.
-    VideoBackendBase::PopulateBackendInfo();
-  }
+  VideoBackendBase::PopulateBackendInfo();
 
   // Issue any API calls which must occur on the main thread for the graphics backend.
   WindowSystemInfo prepared_wsi(wsi);
@@ -537,31 +533,20 @@ static void EmuThread(std::unique_ptr<BootParameters> boot, WindowSystemInfo wsi
     HLE::Clear();
     PowerPC::debug_interface.Clear();
   }};
+  VideoBackendBase::PopulateBackendInfo();
 
-  bool shutdown_backend = false;
-
-  if (!g_video_backend || !g_video_backend->IsInitialized())
+  if (!g_video_backend->Initialize(wsi))
   {
-    VideoBackendBase::PopulateBackendInfo();
-
-    if (!g_video_backend->Initialize(wsi))
-    {
-      PanicAlertFmt("Failed to initialize video backend!");
-      return;
-    }
-
-    // Render a single frame without anything on it to clear the screen.
-    // This avoids the game list being displayed while the core is finishing initializing.
-    g_renderer->BeginUIFrame();
-    g_renderer->EndUIFrame();
-
-    shutdown_backend = true;
+    PanicAlertFmt("Failed to initialize video backend!");
+    return;
   }
 
-  Common::ScopeGuard video_guard{[=] {
-    if (shutdown_backend)
-      g_video_backend->Shutdown();
-  }};
+  // Render a single frame without anything on it to clear the screen.
+  // This avoids the game list being displayed while the core is finishing initializing.
+  g_renderer->BeginUIFrame();
+  g_renderer->EndUIFrame();
+
+  Common::ScopeGuard video_guard{[=] { g_video_backend->Shutdown(); }};
 
   if (cpu_info.HTT)
     Config::SetBaseOrCurrent(Config::MAIN_DSP_THREAD, cpu_info.num_cores > 4);

@@ -28,7 +28,8 @@ public:
   static VkSurfaceKHR CreateVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi);
 
   // Destroys the surface, if we need to clean up before transferring ownsership to SwapChain
-  static void DestroyVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi, VkSurfaceKHR surface);
+  static void DestroyVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi,
+                                   VkSurfaceKHR surface);
 
   // Create a new swap chain from a pre-existing surface.
   static std::unique_ptr<SwapChain> Create(const WindowSystemInfo& wsi, VkSurfaceKHR surface,

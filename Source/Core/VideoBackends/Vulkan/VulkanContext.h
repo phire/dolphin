@@ -121,7 +121,8 @@ public:
 #endif
 
 private:
-  static std::vector<std::string> SelectInstanceExtensions(const WindowSystemInfo& wsi, bool enable_debug_report);
+  static std::vector<std::string> SelectInstanceExtensions(const WindowSystemInfo& wsi,
+                                                           bool enable_debug_report);
   bool SelectDeviceExtensions(bool enable_surface);
   bool SelectDeviceFeatures();
   bool CreateDevice(VkSurfaceKHR surface, bool enable_validation_layer);

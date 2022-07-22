@@ -41,7 +41,8 @@ SwapChain::~SwapChain()
 
 VkSurfaceKHR SwapChain::CreateVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi)
 {
-  if (wsi.vk_get_surface) {
+  if (wsi.vk_get_surface)
+  {
     return wsi.vk_get_surface();
   }
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -95,11 +96,11 @@ VkSurfaceKHR SwapChain::CreateVulkanSurface(VkInstance instance, const WindowSys
   {
     uint64_t window = reinterpret_cast<uint64_t>(wsi.render_window);
     VkXcbSurfaceCreateInfoKHR surface_create_info = {
-        VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,           // VkStructureType               sType
-        nullptr,                                                 // const void*                   pNext
-        0,                                                       // VkXlibSurfaceCreateFlagsKHR   flags
-        static_cast<xcb_connection_t*>(wsi.display_connection),  // Display*                      dpy
-        static_cast<xcb_window_t>(window)                        // Window                        window
+        VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,  // VkStructureType               sType
+        nullptr,                                        // const void*                   pNext
+        0,                                              // VkXlibSurfaceCreateFlagsKHR   flags
+        static_cast<xcb_connection_t*>(wsi.display_connection),  // Display* dpy
+        static_cast<xcb_window_t>(window)  // Window                        window
     };
 
     VkSurfaceKHR surface;
@@ -613,7 +614,8 @@ void SwapChain::DestroySurface()
   m_surface = VK_NULL_HANDLE;
 }
 
-void SwapChain::DestroyVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi, VkSurfaceKHR surface)
+void SwapChain::DestroyVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi,
+                                     VkSurfaceKHR surface)
 {
   if (wsi.vk_get_surface)
   {

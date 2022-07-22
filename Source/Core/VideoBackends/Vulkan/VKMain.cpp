@@ -36,49 +36,9 @@ void VideoBackend::InitBackendInfo()
   temp_wsi.type = WindowSystemType::Headless;
   temp_wsi.enable_surface = false;
 
-  VulkanContext::PopulateBackendInfo(&g_Config);
-
-  if (LoadVulkanLibrary())
-  {
-    VkInstance temp_instance =
-        VulkanContext::CreateVulkanInstance(temp_wsi, false, false);
-    if (temp_instance)
-    {
-      if (LoadVulkanInstanceFunctions(temp_instance))
-      {
-        VulkanContext::GPUList gpu_list = VulkanContext::EnumerateGPUs(temp_instance);
-        VulkanContext::PopulateBackendInfoAdapters(&g_Config, gpu_list);
-
-        if (!gpu_list.empty())
-        {
-          // Use the selected adapter, or the first to fill features.
-          size_t device_index = static_cast<size_t>(g_Config.iAdapter);
-          if (device_index >= gpu_list.size())
-            device_index = 0;
-
-          VkPhysicalDevice gpu = gpu_list[device_index];
-          VkPhysicalDeviceProperties properties;
-          vkGetPhysicalDeviceProperties(gpu, &properties);
-          VkPhysicalDeviceFeatures features;
-          vkGetPhysicalDeviceFeatures(gpu, &features);
-          VulkanContext::PopulateBackendInfoFeatures(&g_Config, gpu, properties, features);
-          VulkanContext::PopulateBackendInfoMultisampleModes(&g_Config, gpu, properties);
-        }
-      }
-
-      vkDestroyInstance(temp_instance, nullptr);
-    }
-    else
-    {
-      PanicAlertFmt("Failed to create Vulkan instance.");
-    }
-
-    UnloadVulkanLibrary();
-  }
-  else
-  {
-    PanicAlertFmt("Failed to load Vulkan library.");
-  }
+  // Temporally acquire context to ensure backend infomation has been populated.
+  AcquireContext(temp_wsi);
+  ReleaseContext();
 }
 
 // Helper method to check whether the Host GPU logging category is enabled.
@@ -99,8 +59,13 @@ static bool ShouldEnableDebugReports(bool enable_validation_layers)
   return enable_validation_layers || IsHostGPULoggingEnabled();
 }
 
-bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
+bool VideoBackend::AcquireContext(const WindowSystemInfo& wsi)
 {
+  if (m_context_semaphore++)
+    return true;
+
+  Common::ScopeGuard context_guard([=] { ReleaseContext(); });
+
   if (!LoadVulkanLibrary())
   {
     PanicAlertFmt("Failed to load Vulkan library.");
@@ -124,7 +89,7 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   if (instance == VK_NULL_HANDLE)
   {
     PanicAlertFmt("Failed to create Vulkan instance.");
-    UnloadVulkanLibrary();
+    ReleaseContext();
     return false;
   }
 
@@ -132,8 +97,7 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   if (!LoadVulkanInstanceFunctions(instance))
   {
     PanicAlertFmt("Failed to load Vulkan instance functions.");
-    vkDestroyInstance(instance, nullptr);
-    UnloadVulkanLibrary();
+    ReleaseContext();
     return false;
   }
 
@@ -143,13 +107,13 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   if (gpu_list.empty())
   {
     PanicAlertFmt("No Vulkan physical devices available.");
-    vkDestroyInstance(instance, nullptr);
-    UnloadVulkanLibrary();
+    ReleaseContext();
     return false;
   }
 
   // Tell the window system about our vulkan instance
-  if (wsi.vk_set_instance) {
+  if (wsi.vk_set_instance)
+  {
     wsi.vk_set_instance(instance);
   }
 
@@ -165,13 +129,11 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
     if (surface == VK_NULL_HANDLE)
     {
       PanicAlertFmt("Failed to create Vulkan surface.");
-      vkDestroyInstance(instance, nullptr);
-      UnloadVulkanLibrary();
       return false;
     }
   }
 
-  Common::ScopeGuard surface_guard ([&, surface] {
+  Common::ScopeGuard surface_guard([&, surface] {
     if (surface != VK_NULL_HANDLE)
       SwapChain::DestroyVulkanSurface(instance, wsi, surface);
   });
@@ -185,7 +147,7 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
     selected_adapter_index = 0;
   }
 
-  // Now we can create the Vulkan device. VulkanContext takes ownership of the instance and surface.
+  // Now we can create the Vulkan device. VulkanContext takes ownership of the instance
   g_vulkan_context = VulkanContext::Create(instance, gpu_list[selected_adapter_index], surface,
                                            enable_debug_reports, enable_validation_layer);
   if (!g_vulkan_context)
@@ -194,8 +156,10 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
     return false;
   }
 
-  if (wsi.vk_set_device) {
-    wsi.vk_set_device(g_vulkan_context->GetPhysicalDevice(), g_vulkan_context->GetDevice(), g_vulkan_context->GetGraphicsQueueFamilyIndex(), 0);
+  if (wsi.vk_set_device)
+  {
+    wsi.vk_set_device(g_vulkan_context->GetPhysicalDevice(), g_vulkan_context->GetDevice(),
+                      g_vulkan_context->GetGraphicsQueueFamilyIndex(), 0);
   }
 
   // Since VulkanContext maintains a copy of the device features and properties, we can use this
@@ -208,15 +172,14 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   g_Config.backend_info.bSupportsExclusiveFullscreen =
       enable_surface && g_vulkan_context->SupportsExclusiveFullscreen(wsi, surface);
 
-  // With the backend information populated, we can now initialize videocommon.
-  InitializeShared();
+  // Activate the config, some of the following classes depend on it
+  UpdateActiveConfig();
 
   // Create command buffers. We do this separately because the other classes depend on it.
   g_command_buffer_mgr = std::make_unique<CommandBufferManager>(g_Config.bBackendMultithreading);
   if (!g_command_buffer_mgr->Initialize())
   {
     PanicAlertFmt("Failed to create Vulkan command buffers");
-    Shutdown();
     return false;
   }
 
@@ -225,19 +188,16 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   if (!g_object_cache->Initialize())
   {
     PanicAlertFmt("Failed to initialize Vulkan object cache.");
-    Shutdown();
     return false;
   }
 
   // Create swap chain. This has to be done early so that the target size is correct for auto-scale.
-  std::unique_ptr<SwapChain> swap_chain;
   if (surface != VK_NULL_HANDLE)
   {
-    swap_chain = SwapChain::Create(wsi, surface, g_ActiveConfig.bVSyncActive);
-    if (!swap_chain)
+    m_swap_chain = SwapChain::Create(wsi, surface, g_ActiveConfig.bVSyncActive);
+    if (!m_swap_chain)
     {
       PanicAlertFmt("Failed to create Vulkan swap chain.");
-      Shutdown();
       return false;
     }
 
@@ -248,12 +208,35 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   if (!StateTracker::CreateInstance())
   {
     PanicAlertFmt("Failed to create state tracker");
-    Shutdown();
     return false;
   }
 
+  context_guard.Dismiss();
+  return true;
+}
+
+bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
+{
+  bool already_active = IsActive();
+
+  // Acquire context, which Initializes it if necessary.
+  if (!AcquireContext(wsi))
+    return false;
+
+  // With the backend information populated, we can now initialize videocommon.
+  InitializeShared();
+
+  if (already_active)
+  {
+    // Make sure these objects have the latest config
+    // TODO: make these listen to config changes even when Renderer isn't initialized
+    if (m_swap_chain)
+      m_swap_chain->RecreateSwapChain();
+    g_object_cache->ReloadPipelineCache();
+  }
+
   // Create main wrapper instances.
-  g_renderer = std::make_unique<Renderer>(std::move(swap_chain), wsi.render_surface_scale);
+  g_renderer = std::make_unique<Renderer>(m_swap_chain.get(), wsi.render_surface_scale);
   g_vertex_manager = std::make_unique<VertexManager>();
   g_shader_cache = std::make_unique<VideoCommon::ShaderCache>();
   g_framebuffer_manager = std::make_unique<FramebufferManager>();
@@ -273,6 +256,22 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   return true;
 }
 
+void VideoBackend::ReleaseContext()
+{
+  if (--m_context_semaphore)
+    return;
+
+  if (g_object_cache)
+    g_object_cache->Shutdown();
+
+  StateTracker::DestroyInstance();
+  m_swap_chain.reset();
+  g_object_cache.reset();
+  g_command_buffer_mgr.reset();
+  g_vulkan_context.reset();
+  UnloadVulkanLibrary();
+}
+
 void VideoBackend::Shutdown()
 {
   if (g_vulkan_context)
@@ -281,8 +280,12 @@ void VideoBackend::Shutdown()
   if (g_shader_cache)
     g_shader_cache->Shutdown();
 
-  if (g_object_cache)
-    g_object_cache->Shutdown();
+  if (g_object_cache && m_context_semaphore > 1)
+  {
+    // something else is holding the context, so it won't shutdown now.
+    // But we want to make sure our pipeline cache has been saved
+    g_object_cache->SavePipelineCache();
+  }
 
   if (g_renderer)
     g_renderer->Shutdown();
@@ -293,12 +296,8 @@ void VideoBackend::Shutdown()
   g_shader_cache.reset();
   g_vertex_manager.reset();
   g_renderer.reset();
-  g_object_cache.reset();
-  StateTracker::DestroyInstance();
-  g_command_buffer_mgr.reset();
-  g_vulkan_context.reset();
   ShutdownShared();
-  UnloadVulkanLibrary();
+  ReleaseContext();
 }
 
 void VideoBackend::PrepareWindow(WindowSystemInfo& wsi)
