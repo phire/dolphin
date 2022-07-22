@@ -82,24 +82,27 @@ std::unique_ptr<GLContext> GLContext::Create(const WindowSystemInfo& wsi, bool s
                                              bool prefer_egl, bool prefer_gles)
 {
   std::unique_ptr<GLContext> context;
+
+  if (wsi.gl_context_factory)
+    context = wsi.gl_context_factory(prefer_egl);
 #if defined(__APPLE__)
-  if (wsi.type == WindowSystemType::MacOS || wsi.type == WindowSystemType::Headless)
+  else if (wsi.type == WindowSystemType::MacOS || wsi.type == WindowSystemType::Headless)
     context = std::make_unique<GLContextAGL>();
 #endif
 #if defined(_WIN32)
-  if (wsi.type == WindowSystemType::Windows)
+  else if (wsi.type == WindowSystemType::Windows)
     context = std::make_unique<GLContextWGL>();
 #endif
 #if defined(ANDROID)
-  if (wsi.type == WindowSystemType::Android)
+  else if (wsi.type == WindowSystemType::Android)
     context = std::make_unique<GLContextEGLAndroid>();
 #endif
 #if defined(__HAIKU__)
-  if (wsi.type == WindowSystemType::Haiku)
+  else if (wsi.type == WindowSystemType::Haiku)
     context = std::make_unique<GLContextBGL>();
 #endif
 #if HAVE_X11
-  if (wsi.type == WindowSystemType::Xlib || wsi.type == WindowSystemType::Xcb)
+  else if (wsi.type == WindowSystemType::Xlib || wsi.type == WindowSystemType::Xcb)
   {
 #if defined(HAVE_EGL)
     // GLES 3 is not supported via GLX.
@@ -114,7 +117,7 @@ std::unique_ptr<GLContext> GLContext::Create(const WindowSystemInfo& wsi, bool s
   }
 #endif
 #if HAVE_EGL
-  if (wsi.type == WindowSystemType::Headless || wsi.type == WindowSystemType::FBDev)
+  else if (wsi.type == WindowSystemType::Headless || wsi.type == WindowSystemType::FBDev)
     context = std::make_unique<GLContextEGL>();
 #endif
 

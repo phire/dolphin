@@ -26,7 +26,7 @@ public:
   static bool CheckValidationLayerAvailablility();
 
   // Helper method to create a Vulkan instance.
-  static VkInstance CreateVulkanInstance(WindowSystemType wstype, bool enable_debug_report,
+  static VkInstance CreateVulkanInstance(const WindowSystemInfo& wsi, bool enable_debug_report,
                                          bool enable_validation_layer);
 
   // Returns a list of Vulkan-compatible GPUs.
@@ -121,8 +121,7 @@ public:
 #endif
 
 private:
-  static bool SelectInstanceExtensions(std::vector<const char*>* extension_list,
-                                       WindowSystemType wstype, bool enable_debug_report);
+  static std::vector<std::string> SelectInstanceExtensions(const WindowSystemInfo& wsi, bool enable_debug_report);
   bool SelectDeviceExtensions(bool enable_surface);
   bool SelectDeviceFeatures();
   bool CreateDevice(VkSurfaceKHR surface, bool enable_validation_layer);

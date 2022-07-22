@@ -88,11 +88,13 @@ bool VulkanContext::CheckValidationLayerAvailablility()
           }) != layer_list.end());
 }
 
-VkInstance VulkanContext::CreateVulkanInstance(WindowSystemType wstype, bool enable_debug_report,
+VkInstance VulkanContext::CreateVulkanInstance(const WindowSystemInfo& wsi, bool enable_debug_report,
                                                bool enable_validation_layer)
 {
-  std::vector<const char*> enabled_extensions;
-  if (!SelectInstanceExtensions(&enabled_extensions, wstype, enable_debug_report))
+
+  auto enabled_extensions = SelectInstanceExtensions(wsi, enable_debug_report);
+
+  if (enabled_extensions.empty())
     return VK_NULL_HANDLE;
 
   VkApplicationInfo app_info = {};
@@ -117,13 +119,18 @@ VkInstance VulkanContext::CreateVulkanInstance(WindowSystemType wstype, bool ena
     }
   }
 
+  // convert std::string list to a char pointer list which we can feed in
+  std::vector<const char*> extension_name_pointers;
+  for (const std::string& name : enabled_extensions)
+    extension_name_pointers.push_back(name.c_str());
+
   VkInstanceCreateInfo instance_create_info = {};
   instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   instance_create_info.pNext = nullptr;
   instance_create_info.flags = 0;
   instance_create_info.pApplicationInfo = &app_info;
   instance_create_info.enabledExtensionCount = static_cast<uint32_t>(enabled_extensions.size());
-  instance_create_info.ppEnabledExtensionNames = enabled_extensions.data();
+  instance_create_info.ppEnabledExtensionNames = extension_name_pointers.data();
   instance_create_info.enabledLayerCount = 0;
   instance_create_info.ppEnabledLayerNames = nullptr;
 
@@ -146,21 +153,20 @@ VkInstance VulkanContext::CreateVulkanInstance(WindowSystemType wstype, bool ena
   return instance;
 }
 
-bool VulkanContext::SelectInstanceExtensions(std::vector<const char*>* extension_list,
-                                             WindowSystemType wstype, bool enable_debug_report)
+std::vector<std::string> VulkanContext::SelectInstanceExtensions(const WindowSystemInfo& wsi, bool enable_debug_report)
 {
   u32 extension_count = 0;
   VkResult res = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
   if (res != VK_SUCCESS)
   {
     LOG_VULKAN_ERROR(res, "vkEnumerateInstanceExtensionProperties failed: ");
-    return false;
+    return {};
   }
 
   if (extension_count == 0)
   {
     ERROR_LOG_FMT(VIDEO, "Vulkan: No extensions supported by instance.");
-    return false;
+    return {};
   }
 
   std::vector<VkExtensionProperties> available_extension_list(extension_count);
@@ -171,14 +177,16 @@ bool VulkanContext::SelectInstanceExtensions(std::vector<const char*>* extension
   for (const auto& extension_properties : available_extension_list)
     INFO_LOG_FMT(VIDEO, "Available extension: {}", extension_properties.extensionName);
 
-  auto AddExtension = [&](const char* name, bool required) {
+  std::vector<std::string> extention_list;
+
+  auto AddExtension = [&](std::string name, bool required) {
     if (std::find_if(available_extension_list.begin(), available_extension_list.end(),
                      [&](const VkExtensionProperties& properties) {
-                       return !strcmp(name, properties.extensionName);
+                       return !strcmp(name.c_str(), properties.extensionName);
                      }) != available_extension_list.end())
     {
       INFO_LOG_FMT(VIDEO, "Enabling extension: {}", name);
-      extension_list->push_back(name);
+      extention_list.push_back(name);
       return true;
     }
 
@@ -189,50 +197,52 @@ bool VulkanContext::SelectInstanceExtensions(std::vector<const char*>* extension
   };
 
   // Common extensions
-  if (wstype != WindowSystemType::Headless && !AddExtension(VK_KHR_SURFACE_EXTENSION_NAME, true))
+  if (wsi.type != WindowSystemType::Headless)
   {
-    return false;
+    if (!AddExtension(VK_KHR_SURFACE_EXTENSION_NAME, true))
+      return {};
+
+    AddExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME, false);
   }
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-  if (wstype == WindowSystemType::Windows &&
+  if (wsi.type == WindowSystemType::Windows &&
       !AddExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, true))
   {
-    return false;
+    return {};
   }
 #endif
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
-  if (wstype == WindowSystemType::Xlib && !AddExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, true))
+  if (wsi.type == WindowSystemType::Xlib && !AddExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, true))
   {
-    return false;
+    return {};
   }
 #endif
 #if defined(VK_USE_PLATFORM_XCB_KHR)
-  if (wstype == WindowSystemType::Xcb && !AddExtension(VK_KHR_XCB_SURFACE_EXTENSION_NAME, true))
+  if (wsi.type == WindowSystemType::Xcb && !AddExtension(VK_KHR_XCB_SURFACE_EXTENSION_NAME, true))
   {
-    return false;
+    return {};
   }
 #endif
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
-  if (wstype == WindowSystemType::Android &&
+  if (wsi.type == WindowSystemType::Android &&
       !AddExtension(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME, true))
   {
-    return false;
+    return {};
   }
 #endif
 #if defined(VK_USE_PLATFORM_METAL_EXT)
-  if (wstype == WindowSystemType::MacOS && !AddExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME, true))
+  if (wsi.type == WindowSystemType::MacOS && !AddExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME, true))
   {
-    return false;
+    return {};
   }
+}
 #endif
 
-  if (wstype == WindowSystemType::Qt)
-  {
-    AddExtension("VK_KHR_surface", true);
-    AddExtension("VK_KHR_xcb_surface", true);
-
-    return true;
+  if (wsi.vk_get_instance_extensions) {
+    for (const auto& extension : wsi.vk_get_instance_extensions()) {
+      AddExtension(extension, false);
+    }
   }
 
   // VK_EXT_debug_report
@@ -240,14 +250,13 @@ bool VulkanContext::SelectInstanceExtensions(std::vector<const char*>* extension
     WARN_LOG_FMT(VIDEO, "Vulkan: Debug report requested, but extension is not available.");
 
   AddExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, false);
-  AddExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME, false);
 
   if (AddExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, false))
   {
     g_Config.backend_info.bSupportsSettingObjectNames = true;
   }
 
-  return true;
+  return extention_list;
 }
 
 VulkanContext::GPUList VulkanContext::EnumerateGPUs(VkInstance instance)
@@ -460,10 +469,6 @@ std::unique_ptr<VulkanContext> VulkanContext::Create(VkInstance instance, VkPhys
   // Attempt to create the device.
   if (!context->CreateDevice(surface, enable_validation_layer))
   {
-    // Since we are destroying the instance, we're also responsible for destroying the surface.
-    if (surface != VK_NULL_HANDLE)
-      vkDestroySurfaceKHR(instance, surface, nullptr);
-
     return nullptr;
   }
 

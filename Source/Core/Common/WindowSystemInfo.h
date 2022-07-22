@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <functional>
+#include <memory>
+
 enum class WindowSystemType
 {
   Headless,
@@ -15,6 +18,12 @@ enum class WindowSystemType
   FBDev,
   Haiku,
 };
+
+class GLContext;
+typedef struct VkInstance_T* VkInstance;
+typedef struct VkSurfaceKHR_T* VkSurfaceKHR;
+typedef struct VkPhysicalDevice_T* VkPhysicalDevice;
+typedef struct VkDevice_T* VkDevice;
 
 struct WindowSystemInfo
 {
@@ -44,4 +53,27 @@ struct WindowSystemInfo
 
   // Scale of the render surface. For hidpi systems, this will be >1.
   float render_surface_scale = 1.0f;
+
+  // Should dolphin render to surface/swapchain?
+  bool enable_surface = true;
+
+  // This allows core to use a Qt opengl context without depending on Qt.
+  std::function<std::unique_ptr<GLContext>(bool)> gl_context_factory;
+
+  // Query vulkan instance/device extentions required by the WindowSystem
+  std::function<std::vector<std::string>()> vk_get_instance_extensions;
+  std::function<std::vector<std::string>()> vk_get_device_extensions;
+
+  // Tell window system about the created vulkan instance
+  std::function<void(VkInstance)> vk_set_instance;
+
+  // Get a pre-created surface from the window system.
+  // Must have called vk_set_instance first
+  std::function<VkSurfaceKHR()> vk_get_surface;
+
+  // Tell the window system we are finished with it's surface
+  std::function<void()> vk_surface_done;
+
+  // Tell window system about selected device
+  std::function<void(VkPhysicalDevice, VkDevice, int, int)> vk_set_device;
 };

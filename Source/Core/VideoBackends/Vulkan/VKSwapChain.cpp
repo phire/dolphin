@@ -35,10 +35,15 @@ SwapChain::~SwapChain()
   DestroySwapChainImages();
   DestroySwapChain();
   DestroySurface();
+  if (m_wsi.vk_surface_done)
+    m_wsi.vk_surface_done();
 }
 
 VkSurfaceKHR SwapChain::CreateVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi)
 {
+  if (wsi.vk_get_surface) {
+    return wsi.vk_get_surface();
+  }
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
   if (wsi.type == WindowSystemType::Windows)
   {
@@ -601,7 +606,22 @@ bool SwapChain::RecreateSurface(void* native_handle)
 
 void SwapChain::DestroySurface()
 {
-  vkDestroySurfaceKHR(g_vulkan_context->GetVulkanInstance(), m_surface, nullptr);
+  if (!m_wsi.vk_get_surface)
+  {
+    vkDestroySurfaceKHR(g_vulkan_context->GetVulkanInstance(), m_surface, nullptr);
+  }
   m_surface = VK_NULL_HANDLE;
 }
+
+void SwapChain::DestroyVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi, VkSurfaceKHR surface)
+{
+  if (wsi.vk_get_surface)
+  {
+    // We didn't creat this surface, we shouldn't destroy it
+    return;
+  }
+
+  vkDestroySurfaceKHR(instance, surface, nullptr);
+}
+
 }  // namespace Vulkan

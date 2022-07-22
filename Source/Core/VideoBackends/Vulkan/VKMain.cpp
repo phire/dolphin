@@ -7,6 +7,7 @@
 
 #include "Common/Logging/LogManager.h"
 #include "Common/MsgHandler.h"
+#include "Common/ScopeGuard.h"
 
 #include "VideoBackends/Vulkan/CommandBufferManager.h"
 #include "VideoBackends/Vulkan/Constants.h"
@@ -31,12 +32,16 @@ namespace Vulkan
 {
 void VideoBackend::InitBackendInfo()
 {
+  WindowSystemInfo temp_wsi;
+  temp_wsi.type = WindowSystemType::Headless;
+  temp_wsi.enable_surface = false;
+
   VulkanContext::PopulateBackendInfo(&g_Config);
 
   if (LoadVulkanLibrary())
   {
     VkInstance temp_instance =
-        VulkanContext::CreateVulkanInstance(WindowSystemType::Headless, false, false);
+        VulkanContext::CreateVulkanInstance(temp_wsi, false, false);
     if (temp_instance)
     {
       if (LoadVulkanInstanceFunctions(temp_instance))
@@ -112,10 +117,10 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
 
   // Create Vulkan instance, needed before we can create a surface, or enumerate devices.
   // We use this instance to fill in backend info, then re-use it for the actual device.
-  bool enable_surface = wsi.type != WindowSystemType::Headless;
+  bool enable_surface = wsi.enable_surface;
   bool enable_debug_reports = ShouldEnableDebugReports(enable_validation_layer);
   VkInstance instance =
-      VulkanContext::CreateVulkanInstance(wsi.type, enable_debug_reports, enable_validation_layer);
+      VulkanContext::CreateVulkanInstance(wsi, enable_debug_reports, enable_validation_layer);
   if (instance == VK_NULL_HANDLE)
   {
     PanicAlertFmt("Failed to create Vulkan instance.");
@@ -143,6 +148,11 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
     return false;
   }
 
+  // Tell the window system about our vulkan instance
+  if (wsi.vk_set_instance) {
+    wsi.vk_set_instance(instance);
+  }
+
   // Populate BackendInfo with as much information as we can at this point.
   VulkanContext::PopulateBackendInfo(&g_Config);
   VulkanContext::PopulateBackendInfoAdapters(&g_Config, gpu_list);
@@ -161,6 +171,11 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
     }
   }
 
+  Common::ScopeGuard surface_guard ([&, surface] {
+    if (surface != VK_NULL_HANDLE)
+      SwapChain::DestroyVulkanSurface(instance, wsi, surface);
+  });
+
   // Since we haven't called InitializeShared yet, iAdapter may be out of range,
   // so we have to check it ourselves.
   size_t selected_adapter_index = static_cast<size_t>(g_Config.iAdapter);
@@ -176,8 +191,11 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   if (!g_vulkan_context)
   {
     PanicAlertFmt("Failed to create Vulkan device");
-    UnloadVulkanLibrary();
     return false;
+  }
+
+  if (wsi.vk_set_device) {
+    wsi.vk_set_device(g_vulkan_context->GetPhysicalDevice(), g_vulkan_context->GetDevice(), g_vulkan_context->GetGraphicsQueueFamilyIndex(), 0);
   }
 
   // Since VulkanContext maintains a copy of the device features and properties, we can use this
@@ -222,6 +240,9 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
       Shutdown();
       return false;
     }
+
+    // SwapChain now has ownership of the surface.
+    surface_guard.Dismiss();
   }
 
   if (!StateTracker::CreateInstance())
