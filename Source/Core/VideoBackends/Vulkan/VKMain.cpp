@@ -264,8 +264,11 @@ void VideoBackend::ReleaseContext()
   if (g_object_cache)
     g_object_cache->Shutdown();
 
-  StateTracker::DestroyInstance();
+  // Swapchain holds textures, which reference StateTracker and Command buffer manager, so it needs
+  // to be destroyed before them.
   m_swap_chain.reset();
+
+  StateTracker::DestroyInstance();
   g_object_cache.reset();
   g_command_buffer_mgr.reset();
   g_vulkan_context.reset();
@@ -277,9 +280,6 @@ void VideoBackend::Shutdown()
   if (g_vulkan_context)
     vkDeviceWaitIdle(g_vulkan_context->GetDevice());
 
-  if (g_shader_cache)
-    g_shader_cache->Shutdown();
-
   if (g_object_cache && m_context_semaphore > 1)
   {
     // something else is holding the context, so it won't shutdown now.
@@ -287,15 +287,6 @@ void VideoBackend::Shutdown()
     g_object_cache->SavePipelineCache();
   }
 
-  if (g_renderer)
-    g_renderer->Shutdown();
-
-  g_perf_query.reset();
-  g_texture_cache.reset();
-  g_framebuffer_manager.reset();
-  g_shader_cache.reset();
-  g_vertex_manager.reset();
-  g_renderer.reset();
   ShutdownShared();
   ReleaseContext();
 }
