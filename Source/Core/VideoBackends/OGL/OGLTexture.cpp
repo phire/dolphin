@@ -162,6 +162,8 @@ OGLTexture::~OGLTexture()
 {
   Renderer::GetInstance()->UnbindTexture(this);
   glDeleteTextures(1, &m_texId);
+  if (m_fence)
+    glDeleteSync(m_fence);
 }
 
 void OGLTexture::CopyRectangleFromTexture(const AbstractTexture* src,
@@ -218,6 +220,7 @@ void OGLTexture::ResolveFromTexture(const AbstractTexture* src,
   DEBUG_ASSERT(rect.left + rect.GetWidth() <= static_cast<int>(srcentry->m_config.width) &&
                rect.top + rect.GetHeight() <= static_cast<int>(srcentry->m_config.height));
   BlitFramebuffer(const_cast<OGLTexture*>(srcentry), rect, layer, level, rect, layer, level);
+  SetFence();
 }
 
 void OGLTexture::Load(u32 level, u32 width, u32 height, u32 row_length, const u8* buffer,
@@ -270,6 +273,8 @@ void OGLTexture::Load(u32 level, u32 width, u32 height, u32 row_length, const u8
     }
   }
 
+  SetFence();
+
   if (row_length != width)
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 }
@@ -277,6 +282,41 @@ void OGLTexture::Load(u32 level, u32 width, u32 height, u32 row_length, const u8
 GLenum OGLTexture::GetGLFormatForImageTexture() const
 {
   return GetGLInternalFormatForTextureFormat(m_config.format, true);
+}
+
+void OGLTexture::Sync()
+{
+  if (m_fence != 0)
+  {
+    glWaitSync(m_fence, 0, GL_TIMEOUT_IGNORED);
+  }
+}
+
+void OGLTexture::Finish()
+{
+  // This is a fallback, only used if the driver doesn't support GLSync
+  if (m_finish_fence_count > 0)
+  {
+    Renderer::GetInstance()->WaitFinishFence(m_finish_fence_count);
+  }
+}
+
+void OGLTexture::SetFence()
+{
+  if (g_ogl_config.bSupportsGLSync)
+  {
+    if (m_fence != 0)
+      glDeleteSync(m_fence);
+    m_fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  }
+  else
+  {
+    m_finish_fence_count = Renderer::GetInstance()->FinishFence();
+  }
+}
+void OGLTexture::FinishedRendering()
+{
+  SetFence();
 }
 
 OGLStagingTexture::OGLStagingTexture(StagingTextureType type, const TextureConfig& config,

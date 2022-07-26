@@ -162,6 +162,12 @@ public:
   // Restores FBO binding after it's been changed.
   void RestoreFramebufferBinding();
 
+  // Emulate fences with glFinish; Fallback for when glFenceSync is not available.
+  uint64_t FinishFence() { return ++m_fence_counter; }
+
+  // Emulate fences with glFinish; Only calls glFinish when needed
+  void WaitFinishFence(uint64_t fence_count);
+
 protected:
   std::unique_ptr<BoundingBox> CreateBoundingBox() const override;
 
@@ -182,5 +188,7 @@ private:
   BlendingState m_current_blend_state;
   GLuint m_shared_read_framebuffer = 0;
   GLuint m_shared_draw_framebuffer = 0;
+  uint64_t m_fence_counter = 0;
+  uint64_t m_last_finish = 0;
 };
 }  // namespace OGL

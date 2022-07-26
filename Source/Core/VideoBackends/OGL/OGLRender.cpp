@@ -1060,6 +1060,18 @@ void Renderer::OnConfigChanged(u32 bits)
     g_sampler_cache->Clear();
 }
 
+void Renderer::WaitFinishFence(uint64_t fence_count)
+{
+  if (fence_count == 0)  // No fence to wait for.
+    return;
+
+  if (fence_count < m_last_finish)
+  {
+    glFinish();
+    m_last_finish = m_fence_counter;
+  }
+}
+
 void Renderer::Flush()
 {
   // ensure all commands are sent to the GPU.
@@ -1070,6 +1082,7 @@ void Renderer::Flush()
 void Renderer::WaitForGPUIdle()
 {
   glFinish();
+  m_last_finish = m_fence_counter;
 }
 
 void Renderer::CheckForSurfaceChange()

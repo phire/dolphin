@@ -37,14 +37,21 @@ public:
     return IsMultisampled() ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY;
   }
   GLenum GetGLFormatForImageTexture() const;
+  void FinishedRendering() override;
+  void Sync();
+  void Finish();
 
 private:
   void BlitFramebuffer(OGLTexture* srcentry, const MathUtil::Rectangle<int>& src_rect,
                        u32 src_layer, u32 src_level, const MathUtil::Rectangle<int>& dst_rect,
                        u32 dst_layer, u32 dst_level);
 
+  void SetFence();
+
   GLuint m_texId;
   std::string m_name;
+  GLsync m_fence = 0;
+  uint64_t m_finish_fence_count = false;
 };
 
 class OGLStagingTexture final : public AbstractStagingTexture
