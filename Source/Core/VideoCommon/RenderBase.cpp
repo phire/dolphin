@@ -1128,8 +1128,11 @@ bool Renderer::RecompileImGuiPipeline()
 
 void Renderer::ShutdownImGui()
 {
-  ImGui::EndFrame();
-  ImGui::DestroyContext();
+  if (ImGui::GetCurrentContext())
+  {
+    ImGui::EndFrame();
+    ImGui::DestroyContext();
+  }
   m_imgui_pipeline.reset();
   m_imgui_vertex_format.reset();
   m_imgui_textures.clear();
