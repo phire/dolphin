@@ -46,8 +46,9 @@ public:
   // Creates a Vulkan device context.
   // This assumes that PopulateBackendInfo and PopulateBackendInfoAdapters has already
   // been called for the specified VideoConfig.
-  static std::unique_ptr<VulkanContext> Create(VkInstance instance, VkPhysicalDevice gpu,
-                                               VkSurfaceKHR surface, bool enable_debug_reports,
+  static std::unique_ptr<VulkanContext> Create(VkInstance instance, const WindowSystemInfo& wsi,
+                                               VkPhysicalDevice gpu, VkSurfaceKHR surface,
+                                               bool enable_debug_reports,
                                                bool enable_validation_layer);
 
   // Enable/disable debug message runtime.
@@ -123,9 +124,10 @@ public:
 private:
   static std::vector<std::string> SelectInstanceExtensions(const WindowSystemInfo& wsi,
                                                            bool enable_debug_report);
-  bool SelectDeviceExtensions(bool enable_surface);
+  bool SelectDeviceExtensions(const WindowSystemInfo& wsi, bool enable_surface);
   bool SelectDeviceFeatures();
-  bool CreateDevice(VkSurfaceKHR surface, bool enable_validation_layer);
+  bool CreateDevice(const WindowSystemInfo& wsi, VkSurfaceKHR surface,
+                    bool enable_validation_layer);
   void InitDriverDetails();
   void PopulateShaderSubgroupSupport();
 

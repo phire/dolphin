@@ -148,7 +148,7 @@ bool VideoBackend::AcquireContext(const WindowSystemInfo& wsi)
   }
 
   // Now we can create the Vulkan device. VulkanContext takes ownership of the instance
-  g_vulkan_context = VulkanContext::Create(instance, gpu_list[selected_adapter_index], surface,
+  g_vulkan_context = VulkanContext::Create(instance, wsi, gpu_list[selected_adapter_index], surface,
                                            enable_debug_reports, enable_validation_layer);
   if (!g_vulkan_context)
   {

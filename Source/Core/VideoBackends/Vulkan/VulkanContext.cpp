@@ -453,10 +453,9 @@ void VulkanContext::PopulateBackendInfoMultisampleModes(
     config->backend_info.AAModes.emplace_back(64);
 }
 
-std::unique_ptr<VulkanContext> VulkanContext::Create(VkInstance instance, VkPhysicalDevice gpu,
-                                                     VkSurfaceKHR surface,
-                                                     bool enable_debug_reports,
-                                                     bool enable_validation_layer)
+std::unique_ptr<VulkanContext>
+VulkanContext::Create(VkInstance instance, const WindowSystemInfo& wsi, VkPhysicalDevice gpu,
+                      VkSurfaceKHR surface, bool enable_debug_reports, bool enable_validation_layer)
 {
   std::unique_ptr<VulkanContext> context = std::make_unique<VulkanContext>(instance, gpu);
 
@@ -469,7 +468,7 @@ std::unique_ptr<VulkanContext> VulkanContext::Create(VkInstance instance, VkPhys
     context->EnableDebugReports();
 
   // Attempt to create the device.
-  if (!context->CreateDevice(surface, enable_validation_layer))
+  if (!context->CreateDevice(wsi, surface, enable_validation_layer))
   {
     return nullptr;
   }
@@ -477,7 +476,7 @@ std::unique_ptr<VulkanContext> VulkanContext::Create(VkInstance instance, VkPhys
   return context;
 }
 
-bool VulkanContext::SelectDeviceExtensions(bool enable_surface)
+bool VulkanContext::SelectDeviceExtensions(const WindowSystemInfo& wsi, bool enable_surface)
 {
   u32 extension_count = 0;
   VkResult res =
@@ -502,10 +501,10 @@ bool VulkanContext::SelectDeviceExtensions(bool enable_surface)
   for (const auto& extension_properties : available_extension_list)
     INFO_LOG_FMT(VIDEO, "Available extension: {}", extension_properties.extensionName);
 
-  auto AddExtension = [&](const char* name, bool required) {
+  auto AddExtension = [&](std::string name, bool required) {
     if (std::find_if(available_extension_list.begin(), available_extension_list.end(),
                      [&](const VkExtensionProperties& properties) {
-                       return !strcmp(name, properties.extensionName);
+                       return !strcmp(name.c_str(), properties.extensionName);
                      }) != available_extension_list.end())
     {
       INFO_LOG_FMT(VIDEO, "Enabling extension: {}", name);
@@ -527,6 +526,14 @@ bool VulkanContext::SelectDeviceExtensions(bool enable_surface)
   if (AddExtension(VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME, true))
     INFO_LOG_FMT(VIDEO, "Using VK_EXT_full_screen_exclusive for exclusive fullscreen.");
 #endif
+
+  if (wsi.vk_get_device_extensions)
+  {
+    for (auto name : wsi.vk_get_device_extensions())
+    {
+      AddExtension(name, false);
+    }
+  }
 
   return true;
 }
@@ -568,7 +575,8 @@ bool VulkanContext::SelectDeviceFeatures()
   return true;
 }
 
-bool VulkanContext::CreateDevice(VkSurfaceKHR surface, bool enable_validation_layer)
+bool VulkanContext::CreateDevice(const WindowSystemInfo& wsi, VkSurfaceKHR surface,
+                                 bool enable_validation_layer)
 {
   u32 queue_family_count;
   vkGetPhysicalDeviceQueueFamilyProperties(m_physical_device, &queue_family_count, nullptr);
@@ -668,7 +676,7 @@ bool VulkanContext::CreateDevice(VkSurfaceKHR surface, bool enable_validation_la
   }
   device_info.pQueueCreateInfos = queue_infos.data();
 
-  if (!SelectDeviceExtensions(surface != VK_NULL_HANDLE))
+  if (!SelectDeviceExtensions(wsi, surface != VK_NULL_HANDLE))
     return false;
 
   // convert std::string list to a char pointer list which we can feed in
