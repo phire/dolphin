@@ -242,6 +242,7 @@ const Info<bool> MAIN_RENDER_WINDOW_AUTOSIZE{{System::Main, "Display", "RenderWi
                                              false};
 const Info<bool> MAIN_KEEP_WINDOW_ON_TOP{{System::Main, "Display", "KeepWindowOnTop"}, false};
 const Info<bool> MAIN_DISABLE_SCREENSAVER{{System::Main, "Display", "DisableScreenSaver"}, true};
+const Info<bool> MAIN_QUICK_UI{{System::Main, "Display", "QuickGUI"}, true};
 
 // Main.DSP
 

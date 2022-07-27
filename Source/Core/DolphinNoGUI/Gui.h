@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "DolphinNoGUI/Platform.h"
 #include "Core/Boot/Boot.h"
+#include "DolphinNoGUI/Platform.h"
 
 class Gui
 {
@@ -33,4 +33,3 @@ public:
 
   static std::unique_ptr<Gui> CreateNullGui();
 };
-

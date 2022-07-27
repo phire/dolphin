@@ -127,6 +127,11 @@ static std::unique_ptr<Platform> GetPlatform(const optparse::Values& options)
 {
   std::string platform_name = static_cast<const char*>(options.get("platform"));
 
+#if QT_PLATFORM
+  if (platform_name == "qt")
+    return Platform::CreateQtPlatform();
+#endif
+
 #if HAVE_X11
   if (platform_name == "x11" || platform_name.empty())
     return Platform::CreateX11Platform();
@@ -172,6 +177,10 @@ int main(int argc, char* argv[])
             ,
             "win32"
 #endif
+#if QT_PLATFORM
+            ,
+            "qt"
+#endif
       });
 
   optparse::Values& options = CommandLineParse::ParseArguments(parser.get(), argc, argv);
@@ -182,7 +191,7 @@ int main(int argc, char* argv[])
     user_directory = static_cast<const char*>(options.get("user"));
 
   UICommon::SetUserDirectory(user_directory);
-  UICommon::Init(); // Loads the config system
+  UICommon::Init();  // Loads the config system
 
   Common::ScopeGuard ui_common_guard([] {
     UICommon::Shutdown();
@@ -233,7 +242,7 @@ int main(int argc, char* argv[])
   }
 
   s_platform = GetPlatform(options);
-  if (!s_platform || !s_platform->Init())
+  if (!s_platform || !s_platform->Init(argc, argv))
   {
     fprintf(stderr, "No platform found, or failed to initialize.\n");
     return 1;

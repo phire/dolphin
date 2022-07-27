@@ -28,6 +28,11 @@ PRIVATE
   cpp-optparse
 )
 
+if (ENABLE_QUICK AND USE_QUICK_IN_NOGUI)
+  find_package(Qt6 6.3 REQUIRED)
+  target_link_libraries(dolphin-nogui PRIVATE dolphin-quick)
+endif()
+
 if(MSVC)
   # Add precompiled header
   target_link_libraries(dolphin-nogui PRIVATE use_pch)

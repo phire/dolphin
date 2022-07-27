@@ -172,6 +172,7 @@ extern const Info<int> MAIN_RENDER_WINDOW_HEIGHT;
 extern const Info<bool> MAIN_RENDER_WINDOW_AUTOSIZE;
 extern const Info<bool> MAIN_KEEP_WINDOW_ON_TOP;
 extern const Info<bool> MAIN_DISABLE_SCREENSAVER;
+extern const Info<bool> MAIN_QUICK_UI;
 
 // Main.General
 

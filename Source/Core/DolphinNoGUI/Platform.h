@@ -19,6 +19,7 @@ public:
   bool IsWindowFullscreen() const { return m_window_fullscreen; }
 
   virtual bool Init();
+  virtual bool Init(int& argc, char** argv) { return Init(); }
   virtual void SetTitle(const std::string& title);
   virtual void MainLoop() = 0;
 
@@ -41,6 +42,10 @@ public:
 
 #ifdef _WIN32
   static std::unique_ptr<Platform> CreateWin32Platform();
+#endif
+
+#ifdef QT_PLATFORM
+  static std::unique_ptr<Platform> CreateQtPlatform();
 #endif
 
 protected:
