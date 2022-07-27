@@ -28,7 +28,7 @@ public:
   void RequestShutdown();
 
   // Request an immediate shutdown.
-  void Stop();
+  virtual void Stop();
 
   static std::unique_ptr<Platform> CreateHeadlessPlatform();
 #ifdef HAVE_X11

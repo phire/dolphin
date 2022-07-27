@@ -3,6 +3,8 @@ add_executable(dolphin-nogui
   Platform.h
   PlatformHeadless.cpp
   MainNoGUI.cpp
+  Gui.h
+  Gui.cpp
 )
 
 if(ENABLE_X11 AND X11_FOUND)

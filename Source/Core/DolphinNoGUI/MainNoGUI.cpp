@@ -1,12 +1,14 @@
 // Copyright 2008 Dolphin Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include "DolphinNoGUI/Gui.h"
 #include "DolphinNoGUI/Platform.h"
 
 #include <OptionParser.h>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <signal.h>
 #include <string>
 #include <vector>
@@ -18,25 +20,19 @@
 #endif
 
 #include "Common/ScopeGuard.h"
+#include "Common/Event.h"
 #include "Common/StringUtil.h"
 #include "Core/Boot/Boot.h"
-#include "Core/BootManager.h"
-#include "Core/Core.h"
-#include "Core/DolphinAnalytics.h"
+#include "Core/Config/MainSettings.h"
 #include "Core/Host.h"
 
 #include "UICommon/CommandLineParse.h"
-#ifdef USE_DISCORD_PRESENCE
-#include "UICommon/DiscordPresence.h"
-#endif
 #include "UICommon/UICommon.h"
 
 #include "InputCommon/GCAdapter.h"
 
-#include "VideoCommon/RenderBase.h"
-#include "VideoCommon/VideoBackendBase.h"
-
 static std::unique_ptr<Platform> s_platform;
+static std::unique_ptr<Gui> s_gui;
 
 static void signal_handler(int)
 {
@@ -181,6 +177,19 @@ int main(int argc, char* argv[])
   optparse::Values& options = CommandLineParse::ParseArguments(parser.get(), argc, argv);
   std::vector<std::string> args = parser->args();
 
+  std::string user_directory;
+  if (options.is_set("user"))
+    user_directory = static_cast<const char*>(options.get("user"));
+
+  UICommon::SetUserDirectory(user_directory);
+  UICommon::Init(); // Loads the config system
+
+  Common::ScopeGuard ui_common_guard([] {
+    UICommon::Shutdown();
+  });
+
+  s_gui = Gui::CreateNullGui();
+
   std::optional<std::string> save_state_path;
   if (options.is_set("save_state"))
   {
@@ -217,15 +226,11 @@ int main(int argc, char* argv[])
     args.erase(args.begin());
     game_specified = true;
   }
-  else
+  else if (s_gui->HasMenu())
   {
     parser->print_help();
     return 0;
   }
-
-  std::string user_directory;
-  if (options.is_set("user"))
-    user_directory = static_cast<const char*>(options.get("user"));
 
   s_platform = GetPlatform(options);
   if (!s_platform || !s_platform->Init())
@@ -234,15 +239,11 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  const WindowSystemInfo wsi = s_platform->GetWindowSystemInfo();
+  GCAdapter::Init();
+  UICommon::InitControllers(s_platform->GetWindowSystemInfo());
 
-  UICommon::SetUserDirectory(user_directory);
-  UICommon::Init();
-  UICommon::InitControllers(wsi);
-
-  Common::ScopeGuard ui_common_guard([] {
+  Common::ScopeGuard ui_controller_guard([] {
     UICommon::ShutdownControllers();
-    UICommon::Shutdown();
   });
 
   if (save_state_path && !game_specified)
@@ -251,10 +252,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  Core::AddOnStateChangedCallback([](Core::State state) {
-    if (state == Core::State::Uninitialized)
-      s_platform->Stop();
-  });
+  s_gui->SetBootParameters(std::move(boot));
+  s_gui->Init(s_platform.get());
 
 #ifdef _WIN32
   signal(SIGINT, signal_handler);
@@ -269,25 +268,13 @@ int main(int argc, char* argv[])
   sigaction(SIGTERM, &sa, nullptr);
 #endif
 
-  DolphinAnalytics::Instance().ReportDolphinStart("nogui");
+  int ret = s_gui->Run();
 
-  if (!BootManager::BootCore(std::move(boot), wsi))
-  {
-    fprintf(stderr, "Could not boot the specified file\n");
-    return 1;
-  }
+  s_gui.reset();
 
-#ifdef USE_DISCORD_PRESENCE
-  Discord::UpdateDiscordPresence();
-#endif
-
-  s_platform->MainLoop();
-  Core::Stop();
-
-  Core::Shutdown();
   s_platform.reset();
 
-  return 0;
+  return ret;
 }
 
 #ifdef _WIN32
