@@ -71,6 +71,9 @@ void Host_Message(HostMessageID id)
 {
   if (id == HostMessageID::WMUserStop)
     s_platform->Stop();
+
+  if (id == HostMessageID::WMUserCreate)
+    s_gui->OnBoot();
 }
 
 void Host_UpdateTitle(const std::string& title)
@@ -126,6 +129,11 @@ std::unique_ptr<GBAHostInterface> Host_CreateGBAHost(std::weak_ptr<HW::GBA::Core
 static std::unique_ptr<Platform> GetPlatform(const optparse::Values& options)
 {
   std::string platform_name = static_cast<const char*>(options.get("platform"));
+
+#ifdef QUICK_GUI
+  if (Config::Get(Config::MAIN_QUICK_UI))
+    platform_name = "qt";  // Force Qt platform for quick GUI
+#endif
 
 #if QT_PLATFORM
   if (platform_name == "qt")
@@ -197,7 +205,14 @@ int main(int argc, char* argv[])
     UICommon::Shutdown();
   });
 
+#ifdef QUICK_GUI
+  if (Config::Get(Config::MAIN_QUICK_UI))
+    s_gui = Gui::CreateQuickGui();
+  else
+    s_gui = Gui::CreateNullGui();
+#else
   s_gui = Gui::CreateNullGui();
+#endif
 
   std::optional<std::string> save_state_path;
   if (options.is_set("save_state"))
