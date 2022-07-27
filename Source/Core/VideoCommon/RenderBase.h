@@ -26,6 +26,7 @@
 #include "Common/Event.h"
 #include "Common/Flag.h"
 #include "Common/MathUtil.h"
+#include "Common/RcPtr.h"
 #include "VideoCommon/AsyncShaderCompiler.h"
 #include "VideoCommon/BPMemory.h"
 #include "VideoCommon/FPSCounter.h"
@@ -43,6 +44,7 @@ class BoundingBox;
 class NativeVertexFormat;
 class NetPlayChatUI;
 class PointerWrap;
+struct TCacheEntry;
 struct TextureConfig;
 struct ComputePipelineConfig;
 struct AbstractPipelineConfig;
@@ -270,6 +272,8 @@ public:
   void ForceReloadTextures();
 
   const GraphicsModManager& GetGraphicsModManager() const;
+
+  std::function<void(Common::rc_ptr<TCacheEntry>)> m_present_callback;
 
 protected:
   // Bitmask containing information about which configuration has changed for the backend.

@@ -1424,6 +1424,11 @@ void Renderer::Swap(u32 xfb_addr, u32 fb_width, u32 fb_stride, u32 fb_height, u6
         g_stats.ResetFrame();
       }
 
+      if (m_present_callback) {
+        WaitForGPUIdle(); // FIXME: This should be considered a war-crime
+        m_present_callback(xfb_entry);
+      }
+
       g_shader_cache->RetrieveAsyncShaders();
       g_vertex_manager->OnEndFrame();
       BeginImGuiFrame();
