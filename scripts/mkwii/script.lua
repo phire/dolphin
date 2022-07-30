@@ -23,7 +23,7 @@ function onScriptUpdate(ctx)
 
         local speed = core.getSpd(ctx)
         local pos = core.getPos(ctx)
-		--ctx:WriteFloat(0x808b1ccc, -2.6)
+		ctx:WriteFloat(0x808b1ccc, -1.2)
 		local text = ""
 			text = text .. string.format("Frame: %d ", quaterframe // 4)
 			text = text .. "\n\n===== Speed ====="

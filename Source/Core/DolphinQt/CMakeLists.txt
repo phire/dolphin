@@ -190,6 +190,8 @@ add_executable(dolphin-emu
   Config/PatchesWidget.h
   Config/PropertiesDialog.cpp
   Config/PropertiesDialog.h
+  Config/PluginsWindow.cpp
+  Config/PluginsWindow.h
   Config/SettingsWindow.cpp
   Config/SettingsWindow.h
   Config/ToolTipControls/BalloonTip.cpp

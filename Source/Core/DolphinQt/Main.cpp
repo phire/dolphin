@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
 
   // Hook up alerts from core
   Common::RegisterMsgAlertHandler(QtMsgAlertHandler);
-
+  
   // Hook up translations
   Translation::Initialize();
 
@@ -210,7 +210,8 @@ int main(int argc, char* argv[])
   QObject::connect(QAbstractEventDispatcher::instance(), &QAbstractEventDispatcher::aboutToBlock,
                    &app, [] { Core::HostDispatchJobs(Core::System::GetInstance()); });
 
-  Plugins::LoadAllPlugins();
+  Plugins::Init();
+  Plugins::GetAllPlugins();
 
   std::optional<std::string> save_state_path;
   if (options.is_set("save_state"))
