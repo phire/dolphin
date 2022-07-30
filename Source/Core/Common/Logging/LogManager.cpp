@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <memory>
@@ -154,7 +155,7 @@ LogManager::LogManager()
   m_log[LogType::WIIMOTE] = {"Wiimote", "Wii Remote"};
   m_log[LogType::WII_IPC] = {"WII_IPC", "WII IPC"};
   m_log[LogType::SCRIPT] = {"Script", "Script"};
-  m_log[LogType::SCRIPT_HOST] = {"Script Host", "Script Host"};
+  m_log[LogType::SCRIPT_HOST] = {"Script_Host", "Script Host"};
 
   RegisterListener(LogListener::FILE_LISTENER,
                    std::make_unique<FileLogListener>(File::GetUserPath(F_MAINLOG_IDX)));

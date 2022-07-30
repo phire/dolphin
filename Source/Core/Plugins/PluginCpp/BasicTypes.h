@@ -7,6 +7,7 @@
 #include <functional>
 #include <string>
 #include <type_traits>
+#include "Common/FileUtil.h"
 
 template <typename T>
 struct Array {

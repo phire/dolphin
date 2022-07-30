@@ -80,6 +80,7 @@
 #include "DolphinQt/Config/LogConfigWidget.h"
 #include "DolphinQt/Config/LogWidget.h"
 #include "DolphinQt/Config/Mapping/MappingWindow.h"
+#include "DolphinQt/Config/PluginsWindow.h"
 #include "DolphinQt/Config/SettingsWindow.h"
 #include "DolphinQt/Debugger/AssemblerWidget.h"
 #include "DolphinQt/Debugger/BreakpointWidget.h"
@@ -697,6 +698,7 @@ void MainWindow::ConnectToolBar()
   connect(m_tool_bar, &ToolBar::SettingsPressed, this, &MainWindow::ShowSettingsWindow);
   connect(m_tool_bar, &ToolBar::ControllersPressed, this, &MainWindow::ShowControllersWindow);
   connect(m_tool_bar, &ToolBar::GraphicsPressed, this, &MainWindow::ShowGraphicsWindow);
+  connect(m_tool_bar, &ToolBar::PluginsPressed, this, &MainWindow::ShowPluginsWindow);
 
   connect(m_tool_bar, &ToolBar::StepPressed, m_code_widget, &CodeWidget::Step);
   connect(m_tool_bar, &ToolBar::StepOverPressed, m_code_widget, &CodeWidget::StepOver);
@@ -1426,6 +1428,19 @@ void MainWindow::ShowGraphicsWindow()
 {
   ShowSettingsWindow();
   m_settings_window->SelectPane(SettingsWindowPaneIndex::Graphics);
+}
+
+void MainWindow::ShowPluginsWindow()
+{
+  if(!m_plugins_window)
+  {
+  m_plugins_window = new PluginsWindow(this);
+  InstallHotkeyFilter(m_plugins_window);
+  }
+  m_plugins_window->RefreshPluginsList();
+  m_plugins_window->show();
+  m_plugins_window->raise();
+  m_plugins_window->activateWindow();
 }
 
 void MainWindow::ShowNetPlaySetupDialog()

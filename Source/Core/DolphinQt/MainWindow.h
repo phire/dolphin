@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include "DolphinQt/Config/PluginsWindow.h"
 
 #ifdef USE_RETRO_ACHIEVEMENTS
 #include "Common/Config/Config.h"
@@ -172,6 +173,7 @@ private:
   void ShowAudioWindow();
   void ShowControllersWindow();
   void ShowGraphicsWindow();
+  void ShowPluginsWindow();
   void ShowFreeLookWindow();
   void ShowAboutDialog();
   void ShowHotkeyDialog();
@@ -258,6 +260,7 @@ private:
   // raising the main window, so use a unique_ptr to make sure it gets destroyed.
   std::unique_ptr<FIFOPlayerWindow> m_fifo_window = nullptr;
   SkylanderPortalWindow* m_skylander_window = nullptr;
+  PluginsWindow* m_plugins_window = nullptr;
   InfinityBaseWindow* m_infinity_window = nullptr;
   WiiSpeakWindow* m_wii_speak_window = nullptr;
   LogitechMicWindow* m_logitech_mic_window = nullptr;

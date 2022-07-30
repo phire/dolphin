@@ -20,6 +20,7 @@ extern "C" {
 typedef uint64_t mod_handle_t;
 
 void plugin_init(mod_handle_t mod_id);
+void plugin_requestShutdown(mod_handle_t mod_id);
 
 void plugin_destory();
 }

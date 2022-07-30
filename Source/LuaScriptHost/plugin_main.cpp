@@ -9,6 +9,7 @@
 #include "callback_adaptor.h"
 #include "class_adaptor.h"
 
+#include <cstdint>
 #include <plugin.h>
 
 #include <stdio.h>
@@ -25,9 +26,10 @@
 #include <vector>
 
 static uint64_t mod_id;
+static lua_State *L;
 
-static void RunLua() {
-    lua_State *L = luaL_newstate();
+static void RunLua(std::string script) {
+    L = luaL_newstate();
     luaL_openlibs(L);
 
     lua_pushinteger(L, mod_id);
@@ -91,7 +93,7 @@ static void RunLua() {
         lua_setglobal(L, Info.Name.c_str);
     }
 
-    if (luaL_dofile(L, "script.lua") != LUA_OK) {
+    if (luaL_dofile(L, script.c_str()) != LUA_OK) {
         puts(lua_tostring(L, lua_gettop(L)));
         printf("Error loading/running script.lua\n");
         lua_close(L);
@@ -108,10 +110,16 @@ extern "C" {
 EXPORTED void plugin_init(uint64_t id) {
     mod_id = id;
     TestDiscovery();
+    printf("Here");
 
-    RunLua();
+    RunLua("script.lua");
 
     printf("LuaScriptHost initialized\n");
+}
+
+EXPORTED void plugin_requestShutdown(uint64_t id) {
+    if (!lua_status(L))
+        lua_close(L);
 }
 
 }
