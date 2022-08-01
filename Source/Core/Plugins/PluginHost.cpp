@@ -85,7 +85,7 @@ void Plugins::LoadPlugin(u32 id)
 
 void Plugins::ShutdownPlugin(u32 id)
 {
-    fmt::print("{} Shutting down\n", plugin_entries.at(id).virtualName);
+    fmt::print("Requesting shutdown of {}\n", plugin_entries.at(id).virtualName);
     plugin_entries.at(id).Active = false;
     plugin_entries.at(id).plugin_requestShutdown(Module_id);
 }
