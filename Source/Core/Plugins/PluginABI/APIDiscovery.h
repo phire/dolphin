@@ -43,7 +43,7 @@ struct Class {
     struct Member* Members;
 };
 
-struct Eumerator
+struct Enumerator
 {
     const char* Name;
     uint64_t Value;
@@ -52,8 +52,8 @@ struct Eumerator
 struct Enum {
     const char* EnumName;
     const char* UnderlyingType;
-    uint32_t NumEumerators;
-    Eumerator* Eumerators;
+    uint32_t NumEnumerators;
+    Enumerator* Enumerators;
 };
 
 struct Module

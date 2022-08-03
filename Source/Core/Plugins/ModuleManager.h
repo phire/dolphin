@@ -8,23 +8,14 @@
 
 #include "Plugins/PluginCpp/BasicTypes.h"
 
-struct VersionInfo {
-    uint32_t Version; // The actual version
-    uint32_t MinVersion; // The minimum version that this version is backwards comparable with
-};
-
-struct ModuleInfo
-{
-    String Name;
-    String Description;
-    VersionInfo StableVersion;
-    Array<VersionInfo> OtherVersions = {};
-};
-
 struct Module;
+namespace Discovery
+{
+    struct ModuleInfo;
+}
 
-void RegisterModuleDefintion(Module* ModuleType, ModuleInfo Info);
-Array<ModuleInfo>& GetAllModules();
+//void RegisterModuleDefintion(Module* ModuleType, Discovery::ModuleInfo Info);
+Array<Discovery::ModuleInfo>* GetAllModules();
 struct Module* GetModuleDefintion(const char* ModuleName, uint32_t Version);
 
 void* GetFnPtr(const char* ModuleName, uint32_t Version, const char* FunctionName);

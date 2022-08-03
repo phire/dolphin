@@ -3,6 +3,9 @@
 
 #include "Common/CommonTypes.h"
 
+#include <BasicTypes.h>
+#include <export.h>
+
 #include <functional>
 #include <vector>
 

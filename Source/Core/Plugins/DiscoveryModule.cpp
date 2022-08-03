@@ -8,82 +8,104 @@
 
 #include <APIDiscovery.h>
 
-#include "Plugins/PluginCpp/BasicTypes.h"
-#include "Plugins/ModuleManager.h"
+// #include "Plugins/PluginCpp/BasicTypes.h"
+// #include "Plugins/ModuleManager.h"
+#include "DiscoveryModule.h"
 
-#include <memory>
-#include <vector>
-#include <map>
 
-Array<ModuleInfo>* ListAllModules();
+// extern Function Discovery_Functions[1];
+// extern Function Discovery_Callbacks[1];
+// extern Class Discovery_Classes[1];
+// extern Enum Discovery_Enums[0];
+
+//ZAP_REGISTER_MODULE(Discovery, "This module provide tools to discover other modules", Zap::VersionInfo(1, 1));
+
+namespace zap_module_Discovery_namespace = Discovery;
+namespace Discovery {
+    extern const Module* zap_module_obj;
+    extern const Zap::ModuleInfo zap_module_info;
+    const Zap::ModuleInfo zap_module_info (
+        "Discovery",
+        "This module provide tools to discover other modules",
+        Zap::VersionInfo(1, 1),
+        zap_module_obj
+    );
+}
+
+
+// #include <memory>
+// #include <vector>
+// #include <map>
+
+//Array<ModuleInfo>* ListAllModules();
 
 // TODO: In the future, hope to generate these structures automatically though reflection.
 //       but until we get a good idea why they should look like, they are hand-written
 
-static Function Functions[] = {
-    {
-        .FunctionName = "ListAllModules",
-        .ReturnType = "Array*",
-        .ReturnOwnership = false,
-        .ArgumentCount = 0,
-        .Arguments = nullptr,
-        .Symbol = SYMBOL(ListAllModules),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&ListAllModules)
-    },
-    {
-        // TODO: We are just bashing this through to get a function pointer for now, do proper arguments and return types
-        .FunctionName = "GetModuleDefintion",
-        .ReturnType = "Array*",
-        .ReturnOwnership = false,
-        .ArgumentCount = 0,
-        .Arguments = nullptr,
-        .Symbol = SYMBOL(GetModuleDefintion),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&GetModuleDefintion)
-    }
-};
+// static Function Functions[] = {
+//     {
+//         .FunctionName = "ListAllModules",
+//         .ReturnType = "Array*",
+//         .ReturnOwnership = false,
+//         .ArgumentCount = 0,
+//         .Arguments = nullptr,
+//         .Symbol = SYMBOL(ListAllModules),
+//         .FnPtr = reinterpret_cast<void* (*)(void)>(&ListAllModules)
+//     },
+//     {
+//        // TODO: We are just bashing this through to get a function pointer for now, do proper arguments and return types
+//         .FunctionName = "GetModuleDefintion",
+//         .ReturnType = "Array*",
+//         .ReturnOwnership = false,
+//         .ArgumentCount = 0,
+//         .Arguments = nullptr,
+//         .Symbol = SYMBOL(GetModuleDefintion),
+//         .FnPtr = reinterpret_cast<void* (*)(void)>(&GetModuleDefintion)
+//     }
+// };
 
-static Member ModuleInfo_Members[] = {
-    { .Name = "Name",
-      .Type = "String",
-      .Offset = offsetof(ModuleInfo, Name) },
-    { .Name = "Description",
-      .Type = "String",
-      .Offset = offsetof(ModuleInfo, Description) },
-    { .Name = "StableVersion",
-      .Type = "VersionInfo",
-      .Offset = offsetof(ModuleInfo, StableVersion) },
-    { .Name = "OtherVersions",
-      .Type = "Array<VersionInfo>",
-      .Offset = offsetof(ModuleInfo, OtherVersions) }
-};
+// static Member ModuleInfo_Members[] = {
+//     { .Name = "Name",
+//       .Type = "String",
+//       .Offset = offsetof(ModuleInfo, Name) },
+//     { .Name = "Description",
+//       .Type = "String",
+//       .Offset = offsetof(ModuleInfo, Description) },
+//     { .Name = "StableVersion",
+//       .Type = "VersionInfo",
+//       .Offset = offsetof(ModuleInfo, StableVersion) },
+//     { .Name = "OtherVersions",
+//       .Type = "Array<VersionInfo>",
+//       .Offset = offsetof(ModuleInfo, OtherVersions) }
+// };
 
-static Class ModuleInfo_Info = {
-    .ClassName = "ModuleInfo",
-    .MethodCount = 0,
-    .MemberCount = 4,
-    .Methods = nullptr,
-    .Members = ModuleInfo_Members
-};
+// static Class ModuleInfo_Info = {
+//     .ClassName = "ModuleInfo",
+//     .MethodCount = 0,
+//     .MemberCount = 4,
+//     .Methods = nullptr,
+//     .Members = ModuleInfo_Members
+// };
 
-static Module Discovery = {
-    .Version = 1,
-    .GlobalFunctionsCount = 2,
-    .CallbackCount = 0,
-    .ClassCount = 1,
-    .GlobalFunctions = Functions,
-    .Callbacks = {},
-    .Classes = &ModuleInfo_Info
-};
+// static Module Discovery = {
+//     .Version = 1,
+//     .GlobalFunctionsCount = 2,
+//     .CallbackCount = 0,
+//     .ClassCount = 1,
+//     .GlobalFunctions = Functions,
+//     .Callbacks = {},
+//     .Classes = &ModuleInfo_Info
+// };
 
 
-Array<ModuleInfo>* ListAllModules() {
-    return &GetAllModules();
-}
+// Array<ModuleInfo>* ListAllModules() {
+//     return &GetAllModules();
+// }
 
-void InitDiscoveryModule() {
-    RegisterModuleDefintion(&Discovery, ModuleInfo {
-        String("Discovery"),
-        String("This module provide tools to discover other modules"),
-        VersionInfo{1, 1}
-    });
-}
+// void InitDiscoveryModule() {
+//     RegisterModuleDefintion(&Discovery, ModuleInfo {
+//         String("Discovery"),
+//         String("This module provide tools to discover other modules"),
+//         VersionInfo{1, 1}
+//     });
+// }

@@ -8,6 +8,8 @@
 
 #include "Common/Logging/Log.h"
 
+#include "Plugins/LoggingModule.h"
+
 #include "Plugins/PluginCpp/BasicTypes.h"
 #include "Plugins/ModuleManager.h"
 
@@ -51,7 +53,7 @@ void LogMsg(uint64_t StreamHandle, Common::Log::LogLevel level, String* msg) {
     Common::Log::GenericLogFmt<1>(level, Common::Log::LogType::SCRIPT, padded_file.c_str(), 0, FMT_STRING("{}"), msg->to_string());
 }
 
-static Eumerator LogLevelsEumerators[] {
+static Enumerator LogLevelsEumerators[] {
     {
         .Name = "Notice",
         .Value = static_cast<u_int64_t>(Common::Log::LogLevel::LNOTICE)
@@ -77,8 +79,8 @@ static Eumerator LogLevelsEumerators[] {
 static Enum LogLevel {
     .EnumName = "LogLevel",
     .UnderlyingType = "uint32_t",
-    .NumEumerators = 5,
-    .Eumerators = LogLevelsEumerators,
+    .NumEnumerators = 5,
+    .Enumerators = LogLevelsEumerators,
 };
 
 static Argument CreateLogStreamArgs[] = {
@@ -141,9 +143,9 @@ static Module Logging = {
 };
 
 void InitLoggingModule() {
-    RegisterModuleDefintion(&Logging, ModuleInfo {
-        String("Logging"),
-        String("Provides a global way to log messages"),
-        VersionInfo{1, 1}
-    });
+    // RegisterModuleDefintion(&Logging, ModuleInfo {
+    //     String("Logging"),
+    //     String("Provides a global way to log messages"),
+    //     VersionInfo{1, 1}
+    // });
 }
