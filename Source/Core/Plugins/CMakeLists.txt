@@ -15,6 +15,7 @@ add_library(plugins
 
 target_link_libraries(plugins
 PRIVATE
+    plugin_cpp
     plugin_abi
     fmt::fmt
 )

@@ -19,68 +19,70 @@ namespace CpuApi {
 
 static CpuMemoryHandle CurrentHandle = 0;
 
-u32 CpuMemory_ReadU8(CpuMemoryHandle handle, u32 address)
-{
-  if (handle != CurrentHandle) {
-    // TODO: raise error
-    return 0;
+struct CpuMemory {
+
+  u32 ReadU8(CpuMemoryHandle handle, u32 address)
+  {
+    if (handle != CurrentHandle) {
+      // TODO: raise error
+      return 0;
+    }
+
+    return PowerPC::HostRead_U8(address);
   }
 
-  return PowerPC::HostRead_U8(address);
-}
+  u32 ReadU16(CpuMemoryHandle handle, u32 address)
+  {
+    if (handle != CurrentHandle) {
+      return 0;
+    }
 
-u32 CpuMemory_ReadU16(CpuMemoryHandle handle, u32 address)
-{
-  if (handle != CurrentHandle) {
-    return 0;
+    return PowerPC::HostRead_U16(address);
   }
 
-  return PowerPC::HostRead_U16(address);
-}
+  u32 ReadU32(CpuMemoryHandle handle, u32 address)
+  {
+    if (handle != CurrentHandle) {
+      return 0;
+    }
 
-u32 CpuMemory_ReadU32(CpuMemoryHandle handle, u32 address)
-{
-  if (handle != CurrentHandle) {
-    return 0;
+    return PowerPC::HostRead_U32(address);
   }
 
-  return PowerPC::HostRead_U32(address);
-}
+  u64 ReadU64(CpuMemoryHandle handle, u32 address)
+  {
+    if (handle != CurrentHandle) {
+      return 0;
+    }
 
-u64 CpuMemory_ReadU64(CpuMemoryHandle handle, u32 address)
-{
-  if (handle != CurrentHandle) {
-    return 0;
+    return PowerPC::HostRead_U64(address);
   }
 
-  return PowerPC::HostRead_U64(address);
-}
+  inline WrappedFloat ReadFloat_wrap(CpuMemoryHandle handle, u32 address)
+  {
+    if (handle != CurrentHandle) {
+      return 0;
+    }
 
-inline WrappedFloat ReadFloat(CpuMemoryHandle handle, u32 address)
-{
-  if (handle != CurrentHandle) {
-    return 0;
+    return PowerPC::HostRead_F32(address);
   }
 
-  return PowerPC::HostRead_F32(address);
-}
-
-u32 CpuMemory_ReadFloat(CpuMemoryHandle handle, u32 address) {
-  return ReadFloat(handle, address).Wrap32();
-}
-
-inline WrappedDouble ReadDouble(CpuMemoryHandle handle, u32 address)
-{
-  if (handle != CurrentHandle) {
-    return 0;
+  u32 ReadFloat(CpuMemoryHandle handle, u32 address) {
+    return ReadFloat_wrap(handle, address).Wrap32();
   }
 
-  return PowerPC::HostRead_F64(address);
-}
+  inline WrappedDouble ReadDouble_wrap(CpuMemoryHandle handle, u32 address)
+  {
+    if (handle != CurrentHandle) {
+      return 0;
+    }
+
+    return PowerPC::HostRead_F64(address);
+  }
 
 u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address)
 {
-  return ReadDouble(handle, address).Wrap64();
+  return ReadDouble_wrap(handle, address).Wrap64();
 }
 
 void CpuMemory_WriteU8(CpuMemoryHandle handle, u32 address, u8 value) {
@@ -113,21 +115,22 @@ void CpuMemory_WriteDouble(CpuMemoryHandle handle, u32 address, double value)
   PowerPC::HostWrite_F64(value, address);
 }
 
-
 static void BreakOnCycleEvent(u64 userdata, s64 cyclesLate) {
   CurrentHandle += 1;
   auto callback = Common::BitCast<Functor<void (CpuMemoryHandle, u64)>>(userdata);
   callback(CurrentHandle, static_cast<u64>(cyclesLate));
 }
 
-void CpuMemory_BreakOnCycle(CpuMemoryHandle handle, s64 CyclesIntoFuture, Functor<void (CpuMemoryHandle, u64)> callback) {
-  if (handle != CurrentHandle) {
-    return;
+  void CpuMemory_BreakOnCycle(CpuMemoryHandle handle, s64 CyclesIntoFuture, Functor<void (CpuMemoryHandle, u64)> callback) {
+    if (handle != CurrentHandle) {
+      return;
+    }
+
+    u64 Userdata = Common::BitCast<u64>(callback);
+    CoreTiming::ScheduleAnonymousEvent(CyclesIntoFuture, BreakOnCycleEvent, Userdata);
   }
 
-  u64 Userdata = Common::BitCast<u64>(callback);
-  CoreTiming::ScheduleAnonymousEvent(CyclesIntoFuture, BreakOnCycleEvent, Userdata);
-}
+};
 
 static bool s_initialized = false;
 static std::vector<Functor<void (CpuMemoryHandle, u64)>> BreakOnRun;

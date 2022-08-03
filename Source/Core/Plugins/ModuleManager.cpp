@@ -5,14 +5,17 @@
 #include <plugin.h>
 #include <APIDiscovery.h>
 
+#include "DiscoveryModule.h"
+
 #include <algorithm>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
-static Array<ModuleInfo> AllModules;
-static std::vector<ModuleInfo> AllModulesVector;
+static Array<Discovery::ModuleInfo> AllModules;
+static std::vector<Discovery::ModuleInfo> AllModulesVector;
+
 typedef std::pair<std::string, uint32_t> ModuleKey;
 static std::map<ModuleKey, Module*> ModuleMap;
 
@@ -39,7 +42,7 @@ static void RegisterFunctions(ModuleKey moduleKey, Module* module) {
     }
 }
 
-void RegisterModuleDefintion(Module* ModuleType, ModuleInfo Info) {
+void RegisterModuleDefintion(Module* ModuleType, Discovery::ModuleInfo Info) {
     auto key = std::make_pair(Info.Name.to_string(), Info.StableVersion.Version);
     ModuleMap[key] = ModuleType;
     AllModulesVector.push_back(Info);
@@ -49,8 +52,8 @@ void RegisterModuleDefintion(Module* ModuleType, ModuleInfo Info) {
     RegisterFunctions(key, ModuleType);
 }
 
-Array<ModuleInfo>& GetAllModules() {
-    return AllModules;
+Array<Discovery::ModuleInfo>* GetAllModules() {
+    return &AllModules;
 }
 
 struct Module* GetModuleDefintion(const char* ModuleName, uint32_t Version) {
