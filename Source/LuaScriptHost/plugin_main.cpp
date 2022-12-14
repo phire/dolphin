@@ -13,6 +13,7 @@
 #include <plugin.h>
 
 #include <stdio.h>
+#include <string.h>
 
 // We have lua compiled as c++, so this works
 #include <lua.h>
@@ -27,6 +28,8 @@
 
 static uint64_t mod_id;
 static lua_State *L = nullptr;
+
+struct Module* (*GetModuleDefintion)(const char* ModuleName, uint32_t Version) = nullptr;
 
 static void RunLua(std::string script) {
     L = luaL_newstate();
@@ -63,7 +66,7 @@ static void RunLua(std::string script) {
         }
 
         for (uint64_t j = 0; j < Mod->ClassCount; j++) {
-            AddClass(L, Mod->Classes[j]);
+            AddClass(L, Mod->Classes[j], Info.Name.c_str, Info.StableVersion.Version);
         }
 
         // Attach all global functions to it
@@ -75,7 +78,12 @@ static void RunLua(std::string script) {
             auto ptr = reinterpret_cast<FunctionInfo*>(lua_newuserdatauv(L, sizeof(FunctionInfo), 0));
             new (ptr) FunctionInfo();
 
-            ptr->FnPtr = Func.FnPtr;
+            ptr->FnPtr = reinterpret_cast<void *(*)()>(GetFunctionPtr(Info.Name.c_str, Info.StableVersion.Version, Func.FunctionName));
+
+            if (ptr->FnPtr == nullptr) {
+                luaL_error(L, "Failed to find function %s in %s ver %d", Func.FunctionName, Info.Name.c_str, Info.StableVersion.Version);
+            }
+
             for (uint32_t k = 0; k < Func.ArgumentCount; k++) {
                 Argument& Arg = Func.Arguments[k];
 
@@ -106,12 +114,25 @@ static void RunLua(std::string script) {
     // script exported
 }
 
+
+RawFunctor* getFunctionPtrFunctor = nullptr;
+
+void* GetFunctionPtr(const char* ModuleName, uint64_t ModuleVersion, const char* FunctionName)
+{
+    String ModuleNameStr = { (uint32_t)strlen(ModuleName), ModuleName };
+    String FunctionNameStr = { (uint32_t)strlen(FunctionName), FunctionName };
+
+    return getFunctionPtrFunctor->FnPtr(getFunctionPtrFunctor, &ModuleNameStr, ModuleVersion, &FunctionNameStr);
+}
+
 extern "C" {
 
-EXPORTED void plugin_init(uint64_t id) {
-    mod_id = id;
+EXPORTED void plugin_init(RawFunctor* getFunctionPtr) {
+    getFunctionPtrFunctor = getFunctionPtr;
+
+    GetModuleDefintion = reinterpret_cast<decltype(GetModuleDefintion)>(GetFunctionPtr("Discovery", 1, "GetModuleDefintion"));
     TestDiscovery();
-    printf("Here");
+    printf("Here\n");
 
     RunLua("script.lua");
 

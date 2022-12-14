@@ -15,19 +15,31 @@
 #include <vector>
 #include <map>
 
-EXPORTED Array<ModuleInfo>* ListAllModules();
+Array<ModuleInfo>* ListAllModules();
 
 // TODO: In the future, hope to generate these structures automatically though reflection.
 //       but until we get a good idea why they should look like, they are hand-written
 
-static Function ListAllModules_Info = {
-    .FunctionName = "ListAllModules",
-    .ReturnType = "Array*",
-    .ReturnOwnership = false,
-    .ArgumentCount = 0,
-    .Arguments = nullptr,
-    .Symbol = SYMBOL(ListAllModules),
-    .FnPtr = reinterpret_cast<void* (*)(void)>(&ListAllModules)
+static Function Functions[] = {
+    {
+        .FunctionName = "ListAllModules",
+        .ReturnType = "Array*",
+        .ReturnOwnership = false,
+        .ArgumentCount = 0,
+        .Arguments = nullptr,
+        .Symbol = SYMBOL(ListAllModules),
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&ListAllModules)
+    },
+    {
+        // TODO: We are just bashing this through to get a function pointer for now, do proper arguments and return types
+        .FunctionName = "GetModuleDefintion",
+        .ReturnType = "Array*",
+        .ReturnOwnership = false,
+        .ArgumentCount = 0,
+        .Arguments = nullptr,
+        .Symbol = SYMBOL(GetModuleDefintion),
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&GetModuleDefintion)
+    }
 };
 
 static Member ModuleInfo_Members[] = {
@@ -55,18 +67,16 @@ static Class ModuleInfo_Info = {
 
 static Module Discovery = {
     .Version = 1,
-    .GlobalFunctionsCount = 1,
+    .GlobalFunctionsCount = 2,
     .CallbackCount = 0,
     .ClassCount = 1,
-    .GlobalFunctions = {
-        &ListAllModules_Info,
-    },
+    .GlobalFunctions = Functions,
     .Callbacks = {},
-    .Classes = { &ModuleInfo_Info }
+    .Classes = &ModuleInfo_Info
 };
 
 
-EXPORTED Array<ModuleInfo>* ListAllModules() {
+Array<ModuleInfo>* ListAllModules() {
     return &GetAllModules();
 }
 

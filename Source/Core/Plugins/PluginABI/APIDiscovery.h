@@ -25,7 +25,7 @@ struct Function {
     bool ReturnOwnership; // false:
     const uint32_t ArgumentCount;
     struct Argument* Arguments;
-    const char* Symbol; // unused for callbacks
+    const char* Symbol; // TODO: Remove, it's useless now
     void* (*FnPtr)(void); // unused for callbacks
 };
 
@@ -75,8 +75,6 @@ struct RawFunctor
     void* unused; // for now
     // Implementations should extend this struct with extra fields
 };
-
-__attribute__ ((visibility("default"))) struct Module* GetModuleDefintion(const char* ModuleName, uint32_t Version);
 
 #ifdef __cplusplus
 } // extern "C"

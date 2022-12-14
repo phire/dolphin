@@ -10,7 +10,6 @@
 #include <fmt/format.h>
 
 #include <BasicTypes.h>
-#include <export.h>
 
 #include "Core/PowerPC/MMU.h"
 
@@ -20,7 +19,7 @@ namespace CpuApi {
 
 static CpuMemoryHandle CurrentHandle = 0;
 
-EXPORTED u32 CpuMemory_ReadU8(CpuMemoryHandle handle, u32 address)
+u32 CpuMemory_ReadU8(CpuMemoryHandle handle, u32 address)
 {
   if (handle != CurrentHandle) {
     // TODO: raise error
@@ -30,7 +29,7 @@ EXPORTED u32 CpuMemory_ReadU8(CpuMemoryHandle handle, u32 address)
   return PowerPC::HostRead_U8(address);
 }
 
-EXPORTED u32 CpuMemory_ReadU16(CpuMemoryHandle handle, u32 address)
+u32 CpuMemory_ReadU16(CpuMemoryHandle handle, u32 address)
 {
   if (handle != CurrentHandle) {
     return 0;
@@ -39,7 +38,7 @@ EXPORTED u32 CpuMemory_ReadU16(CpuMemoryHandle handle, u32 address)
   return PowerPC::HostRead_U16(address);
 }
 
-EXPORTED u32 CpuMemory_ReadU32(CpuMemoryHandle handle, u32 address)
+u32 CpuMemory_ReadU32(CpuMemoryHandle handle, u32 address)
 {
   if (handle != CurrentHandle) {
     return 0;
@@ -48,7 +47,7 @@ EXPORTED u32 CpuMemory_ReadU32(CpuMemoryHandle handle, u32 address)
   return PowerPC::HostRead_U32(address);
 }
 
-EXPORTED u64 CpuMemory_ReadU64(CpuMemoryHandle handle, u32 address)
+u64 CpuMemory_ReadU64(CpuMemoryHandle handle, u32 address)
 {
   if (handle != CurrentHandle) {
     return 0;
@@ -66,7 +65,7 @@ inline WrappedFloat ReadFloat(CpuMemoryHandle handle, u32 address)
   return PowerPC::HostRead_F32(address);
 }
 
-EXPORTED u32 CpuMemory_ReadFloat(CpuMemoryHandle handle, u32 address) {
+u32 CpuMemory_ReadFloat(CpuMemoryHandle handle, u32 address) {
   return ReadFloat(handle, address).Wrap32();
 }
 
@@ -79,37 +78,37 @@ inline WrappedDouble ReadDouble(CpuMemoryHandle handle, u32 address)
   return PowerPC::HostRead_F64(address);
 }
 
-EXPORTED u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address) 
+u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address)
 {
   return ReadDouble(handle, address).Wrap64();
 }
 
-EXPORTED void CpuMemory_WriteU8(CpuMemoryHandle handle, u32 address, u8 value) {
+void CpuMemory_WriteU8(CpuMemoryHandle handle, u32 address, u8 value) {
 
   PowerPC::HostWrite_U8(value, address);
 }
 
-EXPORTED void CpuMemory_WriteU16(CpuMemoryHandle handle, u32 address, u16 value) 
+void CpuMemory_WriteU16(CpuMemoryHandle handle, u32 address, u16 value)
 {
   PowerPC::HostWrite_U16(value, address);
 }
 
-EXPORTED void CpuMemory_WriteU32(CpuMemoryHandle handle, u32 address, u32 value) 
+void CpuMemory_WriteU32(CpuMemoryHandle handle, u32 address, u32 value)
 {
   PowerPC::HostWrite_U32(value, address);
 }
 
-EXPORTED void CpuMemory_WriteU64(CpuMemoryHandle handle, u32 address, u64 value) 
+void CpuMemory_WriteU64(CpuMemoryHandle handle, u32 address, u64 value)
 {
   PowerPC::HostWrite_U64(value, address);
 }
 
-EXPORTED void CpuMemory_WriteFloat(CpuMemoryHandle handle, u32 address, float value) 
+void CpuMemory_WriteFloat(CpuMemoryHandle handle, u32 address, float value)
 {
   PowerPC::HostWrite_F32(value, address);
 }
 
-EXPORTED void CpuMemory_WriteDouble(CpuMemoryHandle handle, u32 address, double value)
+void CpuMemory_WriteDouble(CpuMemoryHandle handle, u32 address, double value)
 {
   PowerPC::HostWrite_F64(value, address);
 }
@@ -121,7 +120,7 @@ static void BreakOnCycleEvent(u64 userdata, s64 cyclesLate) {
   callback(CurrentHandle, static_cast<u64>(cyclesLate));
 }
 
-EXPORTED void CpuMemory_BreakOnCycle(CpuMemoryHandle handle, s64 CyclesIntoFuture, Functor<void (CpuMemoryHandle, u64)> callback) {
+void CpuMemory_BreakOnCycle(CpuMemoryHandle handle, s64 CyclesIntoFuture, Functor<void (CpuMemoryHandle, u64)> callback) {
   if (handle != CurrentHandle) {
     return;
   }
@@ -133,7 +132,7 @@ EXPORTED void CpuMemory_BreakOnCycle(CpuMemoryHandle handle, s64 CyclesIntoFutur
 static bool s_initialized = false;
 static std::vector<Functor<void (CpuMemoryHandle, u64)>> BreakOnRun;
 
-EXPORTED void Cpu_BreakOnRun(Functor<void (CpuMemoryHandle, u64)> callback) {
+void Cpu_BreakOnRun(Functor<void (CpuMemoryHandle, u64)> callback) {
   // TODO: Should this be callable from threads other than CPU?
   //       Currenty it's not
   //       How are we going to make sure this is only callable from the proper thread?
@@ -153,7 +152,7 @@ static void InitCallback(u64 userdata, s64 cycles_late) {
   BreakOnRun.clear();
   s_initialized = true;
 }
-  
+
 void Init() {
   CoreTiming::ScheduleAnonymousEvent(0, InitCallback, 0);
 }

@@ -7,11 +7,14 @@
 
 #include "Plugins/ModuleManager.h"
 
+namespace BasicGuiAPI {
 
 typedef u64 BasicGuiHandle;
 
-EXPORTED u32 BasicGui_DrawText(u64 handle, String* text, u32 posX, u32 posY, u32 color);
-EXPORTED u64 BasicGui_RegisterDrawHook(void (*Fn)(BasicGuiHandle));
+u32 BasicGui_DrawText(u64 handle, String* text, u32 posX, u32 posY, u32 color);
+u64 BasicGui_RegisterDrawHook(Functor<void (BasicGuiHandle)> Callback);
+
+}
 
 
 // TODO: In the future, hope to generate these structures automatically though reflection.
@@ -44,7 +47,7 @@ static Function BasicGuiHandle_Methods[] = {
         .ArgumentCount = ARRAY_LEN(DrawText_Args),
         .Arguments = DrawText_Args,
         .Symbol = SYMBOL(BasicGui_DrawText),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&BasicGui_DrawText)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&BasicGuiAPI::BasicGui_DrawText)
     },
 };
 
@@ -88,7 +91,7 @@ static Function BasicGuiHandle_Functions[] = {
         .ArgumentCount = ARRAY_LEN(RegisterDrawHook_Args),
         .Arguments = RegisterDrawHook_Args,
         .Symbol = SYMBOL(BasicGui_RegisterDrawHook),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&BasicGui_RegisterDrawHook)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&BasicGuiAPI::BasicGui_RegisterDrawHook)
     },
 };
 

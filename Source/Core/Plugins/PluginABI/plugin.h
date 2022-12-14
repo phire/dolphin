@@ -18,8 +18,9 @@ extern "C" {
 // call as coming from a given mod
 // Mods should keep it around
 typedef uint64_t mod_handle_t;
+struct RawFunctor;
 
-void plugin_init(mod_handle_t mod_id);
+void plugin_init(RawFunctor* getFunctionPtr);
 void plugin_requestShutdown(mod_handle_t mod_id);
 
 void plugin_destory();

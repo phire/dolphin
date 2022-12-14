@@ -25,8 +25,14 @@ struct Module;
 
 void RegisterModuleDefintion(Module* ModuleType, ModuleInfo Info);
 Array<ModuleInfo>& GetAllModules();
+struct Module* GetModuleDefintion(const char* ModuleName, uint32_t Version);
+
+void* GetFnPtr(const char* ModuleName, uint32_t Version, const char* FunctionName);
+
 
 void InitDiscoveryModule();
 void InitLoggingModule();
 void InitBasicGuiModule();
 void InitCPUModule();
+
+
