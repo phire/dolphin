@@ -11,7 +11,6 @@
 #include <fmt/format.h>
 
 #include <BasicTypes.h>
-#include <export.h>
 
 #include <cstdlib>
 
@@ -46,7 +45,7 @@ void EndDraw() {
   CurrentHandle = 0;
 }
 
-EXPORTED u32 BasicGui_DrawText(BasicGuiHandle handle, String* text, u32 posX, u32 posY, u32 color)
+u32 BasicGui_DrawText(BasicGuiHandle handle, String* text, u32 posX, u32 posY, u32 color)
 {
   if (handle != CurrentHandle) {
     // TODO: raise error
@@ -79,7 +78,7 @@ EXPORTED u32 BasicGui_DrawText(BasicGuiHandle handle, String* text, u32 posX, u3
   return window_height / ImGui::GetIO().DisplayFramebufferScale.y;
 }
 
-EXPORTED u64 BasicGui_RegisterDrawHook(Functor<void (BasicGuiHandle)> Callback) {
+u64 BasicGui_RegisterDrawHook(Functor<void (BasicGuiHandle)> Callback) {
   // TODO: add some tracking so we can later remove this hook
   Hooks.push_back(Callback);
   return 0;

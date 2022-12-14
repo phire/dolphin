@@ -14,9 +14,6 @@
 ModuleArray* (*ListAllModules)() = nullptr;
 
 void TestDiscovery() {
-    // GetModuleDefintion is one of the few functions that is exported.
-    // The only module that plugins need to assume is always there is Discovery
-    // plugins can  we only know about discovery
     Module* Discovery = GetModuleDefintion("Discovery", 1);
 
     if (Discovery == nullptr) {

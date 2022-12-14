@@ -34,3 +34,6 @@ struct ModuleArray {
 };
 
 ModuleArray* GetModuleList();
+
+extern struct Module* (*GetModuleDefintion)(const char* ModuleName, uint32_t Version);
+extern void* GetFunctionPtr(const char* ModuleName, uint64_t ModuleVersion, const char* FunctionName);

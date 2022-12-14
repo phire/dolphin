@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "class_adaptor.h"
+#include "discovery.h"
 #include "function_adaptor.h"
 #include "type_adaptor.h"
 #include <APIDiscovery.h>
@@ -104,10 +105,10 @@ void RegisterClass(Class& ClassDesc)
     RegisterType(ClassDesc.ClassName, { ClassArgHandler, ClassAccessHandler });
 }
 
-// Actually set up the class 
+// Actually set up the class
 // We need to do this after preregistring all classes and registering the callbacks
 // so that methods types can reference other classes/callbacks
-void AddClass(lua_State *L, Class& ClassDesc) {
+void AddClass(lua_State *L, Class& ClassDesc, const char* ModuleName, uint32_t ModuleVersion) {
     if (!HaveClassMetaTable)
         createClassMetatable(L);
 
@@ -118,7 +119,12 @@ void AddClass(lua_State *L, Class& ClassDesc) {
         auto Info = reinterpret_cast<MethodInfo*>(lua_newuserdatauv(L, sizeof(MethodInfo), 0));
         new (Info) MethodInfo();
 
-        Info->FnPtr = Method.FnPtr;
+        std::string FuncName = std::string(ClassDesc.ClassName) + "::" + Method.FunctionName;
+        Info->FnPtr = reinterpret_cast<void *(*)()>(GetFunctionPtr(ModuleName, ModuleVersion, FuncName.c_str()));
+
+        if (Info->FnPtr == nullptr) {
+            luaL_error(L, "Failed to find function %s in %s ver %d", FuncName.c_str(), ModuleName, ModuleVersion);
+        }
 
         // Add an explicit self pointer
         Info->Args.push_back(LookupType(ClassDesc.ClassName).ArgHandler);

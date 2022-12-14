@@ -27,7 +27,7 @@ static std::map<uint64_t, LogStreamInfo> LogStreams;
 // We want log linked with the script/mod that created them.
 // So before they log, scripts/mods are expected to use their mod_id to create
 // one or more log streams that they can log into later.
-EXPORTED uint64_t CreateLogStream(mod_handle_t mod_id, String *StreamName) {
+uint64_t CreateLogStream(mod_handle_t mod_id, String *StreamName) {
     // Find a unique stream id
     uint64_t stream_id = mod_id ^ 0xaa55;
     while (LogStreams.find(stream_id) != LogStreams.end())
@@ -40,7 +40,7 @@ EXPORTED uint64_t CreateLogStream(mod_handle_t mod_id, String *StreamName) {
 
 // However, we don't currently have anywhere to send the various log streams.
 // They just get merged together with a different function name
-EXPORTED void LogMsg(uint64_t StreamHandle, Common::Log::LogLevel level, String* msg) {
+void LogMsg(uint64_t StreamHandle, Common::Log::LogLevel level, String* msg) {
     auto it = LogStreams.find(StreamHandle);
     if (it == LogStreams.end()) {
         ERROR_LOG_FMT(SCRIPT_HOST, "LogMsg to invalid stream ({:x}) - \"{}\"", StreamHandle, msg->to_string());

@@ -72,17 +72,18 @@ struct FunctorOwner {
 
 template<typename S>
 class Functor;
- 
+
 template<typename ReturnType, typename... ArgTypes>
-class Functor<ReturnType(ArgTypes...)> {    
-    struct FuntorData {
+class Functor<ReturnType(ArgTypes...)> {
+protected:
+    struct FunctorData {
         ReturnType (*FnPtr) (void*, ArgTypes...);
         FunctorOwner* Owner; // Contains ownership info
 
         // The owner of this function is allowed to extend this structure with extra state
     };
 
-    FuntorData* Data;
+    FunctorData* Data;
 
     static void _check() {
         static_assert(sizeof(Functor) == sizeof(void*));
@@ -95,5 +96,9 @@ public:
 
     FunctorOwner* GetOwner() const {
         return Data->Owner.Name;
+    }
+
+    operator void*() const {
+        return reinterpret_cast<void*>(Data);
     }
 };

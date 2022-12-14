@@ -9,24 +9,25 @@
 
 using CpuMemoryHandle = u64;
 
-extern "C" {
+namespace CpuApi {
 
-EXPORTED u32 CpuMemory_ReadU8(CpuMemoryHandle handle, u32 address);
-EXPORTED u32 CpuMemory_ReadU16(CpuMemoryHandle handle, u32 address);
-EXPORTED u32 CpuMemory_ReadU32(CpuMemoryHandle handle, u32 address);
-EXPORTED u64 CpuMemory_ReadU64(CpuMemoryHandle handle, u32 address);
-EXPORTED u32 CpuMemory_ReadFloat(CpuMemoryHandle handle, u32 address);
-EXPORTED u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address);
-EXPORTED void CpuMemory_WriteU8(CpuMemoryHandle handle, u32 address, u8 value);
-EXPORTED void CpuMemory_WriteU16(CpuMemoryHandle handle, u32 address, u8 value);
-EXPORTED void CpuMemory_WriteU32(CpuMemoryHandle handle, u32 address, u8 value);
-EXPORTED void CpuMemory_WriteU64(CpuMemoryHandle handle, u32 address, u8 value);
-EXPORTED void CpuMemory_WriteFloat(CpuMemoryHandle handle, u32 address, u8 value);
-EXPORTED void CpuMemory_WriteDouble(CpuMemoryHandle handle, u32 address, u8 value);
-EXPORTED void CpuMemory_BreakOnCycle(CpuMemoryHandle handle, s64 CyclesIntoFuture, RawFunctor callback);
-EXPORTED void Cpu_BreakOnRun(RawFunctor callback);
+extern u32 CpuMemory_ReadU8(CpuMemoryHandle handle, u32 address);
+extern u32 CpuMemory_ReadU16(CpuMemoryHandle handle, u32 address);
+extern u32 CpuMemory_ReadU32(CpuMemoryHandle handle, u32 address);
+extern u64 CpuMemory_ReadU64(CpuMemoryHandle handle, u32 address);
+extern u32 CpuMemory_ReadFloat(CpuMemoryHandle handle, u32 address);
+extern u64 CpuMemory_ReadDouble(CpuMemoryHandle handle, u32 address);
+extern void CpuMemory_WriteU8(CpuMemoryHandle handle, u32 address, u8 value);
+extern void CpuMemory_WriteU16(CpuMemoryHandle handle, u32 address, u16 value);
+extern void CpuMemory_WriteU32(CpuMemoryHandle handle, u32 address, u32 value);
+extern void CpuMemory_WriteU64(CpuMemoryHandle handle, u32 address, u64 value);
+extern void CpuMemory_WriteFloat(CpuMemoryHandle handle, u32 address, float value);
+extern void CpuMemory_WriteDouble(CpuMemoryHandle handle, u32 address, double value);
+extern void CpuMemory_BreakOnCycle(CpuMemoryHandle handle, s64 CyclesIntoFuture, Functor<void (CpuMemoryHandle, u64)> callback);
+extern void Cpu_BreakOnRun(Functor<void (CpuMemoryHandle, u64)> callback);
 
 }
+
 
 static Argument Read_Args[] = {
     {
@@ -126,7 +127,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(Read_Args),
         .Arguments = Read_Args,
         .Symbol = SYMBOL(CpuMemory_ReadU8),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_ReadU8)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_ReadU8)
     },
     {
         .FunctionName = "ReadU16",
@@ -135,7 +136,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(Read_Args),
         .Arguments = Read_Args,
         .Symbol = SYMBOL(CpuMemory_ReadU16),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_ReadU16)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_ReadU16)
     },
     {
         .FunctionName = "ReadU32",
@@ -144,7 +145,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(Read_Args),
         .Arguments = Read_Args,
         .Symbol = SYMBOL(CpuMemory_ReadU32),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_ReadU32)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_ReadU32)
     },
     {
         .FunctionName = "ReadU64",
@@ -153,7 +154,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(Read_Args),
         .Arguments = Read_Args,
         .Symbol = SYMBOL(CpuMemory_ReadU64),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_ReadU64)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_ReadU64)
     },
     {
         .FunctionName = "ReadFloat",
@@ -162,7 +163,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(Read_Args),
         .Arguments = Read_Args,
         .Symbol = SYMBOL(CpuMemory_ReadFloat),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_ReadFloat)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_ReadFloat)
     },
     {
         .FunctionName = "ReadDouble",
@@ -171,7 +172,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(Read_Args),
         .Arguments = Read_Args,
         .Symbol = SYMBOL(CpuMemory_ReadDouble),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_ReadDouble)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_ReadDouble)
     },
     {
         .FunctionName = "WriteU8",
@@ -180,7 +181,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(WriteU8_Args),
         .Arguments = WriteU8_Args,
         .Symbol = SYMBOL(CpuMemory_WriteU8),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_WriteU8)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_WriteU8)
     },
     {
         .FunctionName = "WriteU16",
@@ -189,7 +190,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(WriteU16_Args),
         .Arguments = WriteU16_Args,
         .Symbol = SYMBOL(CpuMemory_WriteU16),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_WriteU16)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_WriteU16)
     },
     {
         .FunctionName = "WriteU32",
@@ -198,7 +199,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(WriteU32_Args),
         .Arguments = WriteU32_Args,
         .Symbol = SYMBOL(CpuMemory_WriteU32),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_WriteU32)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_WriteU32)
     },
     {
         .FunctionName = "WriteU64",
@@ -207,7 +208,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(WriteU64_Args),
         .Arguments = WriteU64_Args,
         .Symbol = SYMBOL(CpuMemory_WriteU64),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_WriteU64)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_WriteU64)
     },
     {
         .FunctionName = "WriteFloat",
@@ -216,7 +217,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(WriteFloat_Args),
         .Arguments = WriteFloat_Args,
         .Symbol = SYMBOL(CpuMemory_WriteFloat),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_WriteFloat)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_WriteFloat)
     },
     {
         .FunctionName = "WriteDouble",
@@ -225,7 +226,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(WriteDouble_Args),
         .Arguments = WriteDouble_Args,
         .Symbol = SYMBOL(CpuMemory_WriteDouble),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_WriteDouble)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_WriteDouble)
     },
     {
         .FunctionName = "BreakOnCycle",
@@ -234,7 +235,7 @@ static Function CpuMemory_Methods[] = {
         .ArgumentCount = ARRAY_LEN(BreakOnCycle_Args),
         .Arguments = BreakOnCycle_Args,
         .Symbol = SYMBOL(CpuMemory_BreakOnCycle),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuMemory_BreakOnCycle)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::CpuMemory_BreakOnCycle)
     },
 };
 
@@ -264,7 +265,7 @@ static Function Cpu_Functions[] = {
         .ArgumentCount = ARRAY_LEN(Cpu_BreakOnRun_Args),
         .Arguments = Cpu_BreakOnRun_Args,
         .Symbol = SYMBOL(Cpu_BreakOnRun),
-        .FnPtr = reinterpret_cast<void* (*)(void)>(&Cpu_BreakOnRun)
+        .FnPtr = reinterpret_cast<void* (*)(void)>(&CpuApi::Cpu_BreakOnRun)
     }
 };
 
