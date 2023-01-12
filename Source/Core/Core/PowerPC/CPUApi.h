@@ -1,6 +1,8 @@
 // Copyright 2021 Dolphin Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#pragma once
+
 #include "Common/CommonTypes.h"
 
 #include <BasicTypes.h>
@@ -11,10 +13,10 @@
 
 namespace CpuApi {
 
-typedef u64 CpuMemoryHandle;
 
-void Init();
-void Shutdown();
+
+ZAP_IGNORE void Init();
+ZAP_IGNORE void Shutdown();
 
 
 }
