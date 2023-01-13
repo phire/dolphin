@@ -23,20 +23,20 @@
 
 namespace Vulkan
 {
-SwapChain::SwapChain(const WindowSystemInfo& wsi, VkSurfaceKHR surface, bool vsync)
-    : m_wsi(wsi), m_surface(surface), m_vsync_enabled(vsync),
-      m_fullscreen_supported(g_vulkan_context->SupportsExclusiveFullscreen(wsi, surface))
+VKSwapChain::VKSwapChain(const WindowSystemInfo& wsi, VkSurfaceKHR surface, bool vsync)
+    : SwapChain(wsi, g_vulkan_context->SupportsExclusiveFullscreen(wsi, surface), vsync),
+      m_surface(surface)
 {
 }
 
-SwapChain::~SwapChain()
+VKSwapChain::~VKSwapChain()
 {
   DestroySwapChainImages();
   DestroySwapChain();
   DestroySurface();
 }
 
-VkSurfaceKHR SwapChain::CreateVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi)
+VkSurfaceKHR VKSwapChain::CreateVulkanSurface(VkInstance instance, const WindowSystemInfo& wsi)
 {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
   if (wsi.type == WindowSystemType::Windows)
@@ -128,17 +128,17 @@ VkSurfaceKHR SwapChain::CreateVulkanSurface(VkInstance instance, const WindowSys
   return VK_NULL_HANDLE;
 }
 
-std::unique_ptr<SwapChain> SwapChain::Create(const WindowSystemInfo& wsi, VkSurfaceKHR surface,
+std::unique_ptr<SwapChain> VKSwapChain::Create(const WindowSystemInfo& wsi, VkSurfaceKHR surface,
                                              bool vsync)
 {
-  std::unique_ptr<SwapChain> swap_chain = std::make_unique<SwapChain>(wsi, surface, vsync);
+  std::unique_ptr<VKSwapChain> swap_chain = std::make_unique<VKSwapChain>(wsi, surface, vsync);
   if (!swap_chain->CreateSwapChain() || !swap_chain->SetupSwapChainImages())
     return nullptr;
 
   return swap_chain;
 }
 
-bool SwapChain::SelectSurfaceFormat()
+bool VKSwapChain::SelectSurfaceFormat()
 {
   u32 format_count;
   VkResult res = vkGetPhysicalDeviceSurfaceFormatsKHR(g_vulkan_context->GetPhysicalDevice(),
@@ -185,7 +185,7 @@ bool SwapChain::SelectSurfaceFormat()
   return false;
 }
 
-bool SwapChain::SelectPresentMode()
+bool VKSwapChain::SelectPresentMode()
 {
   VkResult res;
   u32 mode_count;
@@ -237,7 +237,7 @@ bool SwapChain::SelectPresentMode()
   return true;
 }
 
-bool SwapChain::CreateSwapChain()
+bool VKSwapChain::CreateSwapChain()
 {
   // Look up surface properties to determine image count and dimensions
   VkSurfaceCapabilitiesKHR surface_capabilities;
@@ -371,7 +371,7 @@ bool SwapChain::CreateSwapChain()
   return true;
 }
 
-bool SwapChain::SetupSwapChainImages()
+bool VKSwapChain::SetupSwapChainImages()
 {
   ASSERT(m_swap_chain_images.empty());
 
@@ -428,7 +428,7 @@ bool SwapChain::SetupSwapChainImages()
   return true;
 }
 
-void SwapChain::DestroySwapChainImages()
+void VKSwapChain::DestroySwapChainImages()
 {
   for (auto& it : m_swap_chain_images)
   {
@@ -439,7 +439,7 @@ void SwapChain::DestroySwapChainImages()
   m_swap_chain_images.clear();
 }
 
-void SwapChain::DestroySwapChain()
+void VKSwapChain::DestroySwapChain()
 {
   if (m_swap_chain == VK_NULL_HANDLE)
     return;
@@ -452,7 +452,7 @@ void SwapChain::DestroySwapChain()
   m_swap_chain = VK_NULL_HANDLE;
 }
 
-VkResult SwapChain::AcquireNextImage()
+VkResult VKSwapChain::AcquireNextImage()
 {
   VkResult res = vkAcquireNextImageKHR(g_vulkan_context->GetDevice(), m_swap_chain, UINT64_MAX,
                                        g_command_buffer_mgr->GetCurrentCommandBufferSemaphore(),
@@ -463,7 +463,7 @@ VkResult SwapChain::AcquireNextImage()
   return res;
 }
 
-bool SwapChain::ResizeSwapChain()
+bool VKSwapChain::ResizeSwapChain()
 {
   DestroySwapChainImages();
   if (!CreateSwapChain() || !SetupSwapChainImages())
@@ -475,7 +475,7 @@ bool SwapChain::ResizeSwapChain()
   return true;
 }
 
-bool SwapChain::RecreateSwapChain()
+bool VKSwapChain::RecreateSwapChain()
 {
   DestroySwapChainImages();
   DestroySwapChain();
@@ -531,7 +531,7 @@ bool SwapChain::SetFullscreenState(bool state)
 #endif
 }
 
-bool SwapChain::RecreateSurface(void* native_handle)
+bool VKSwapChain::RecreateSurface(void* native_handle)
 {
   // Destroy the old swap chain, images, and surface.
   DestroySwapChainImages();
@@ -574,7 +574,7 @@ bool SwapChain::RecreateSurface(void* native_handle)
   return true;
 }
 
-void SwapChain::DestroySurface()
+void VKSwapChain::DestroySurface()
 {
   vkDestroySurfaceKHR(g_vulkan_context->GetVulkanInstance(), m_surface, nullptr);
   m_surface = VK_NULL_HANDLE;

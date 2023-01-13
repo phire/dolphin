@@ -153,7 +153,7 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   VkSurfaceKHR surface = VK_NULL_HANDLE;
   if (enable_surface)
   {
-    surface = SwapChain::CreateVulkanSurface(instance, wsi);
+    surface = VKSwapChain::CreateVulkanSurface(instance, wsi);
     if (surface == VK_NULL_HANDLE)
     {
       PanicAlertFmt("Failed to create Vulkan surface.");
@@ -218,7 +218,7 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
   std::unique_ptr<SwapChain> swap_chain;
   if (surface != VK_NULL_HANDLE)
   {
-    swap_chain = SwapChain::Create(wsi, surface, g_ActiveConfig.bVSyncActive);
+    swap_chain = VKSwapChain::Create(wsi, surface, g_ActiveConfig.bVSyncActive);
     if (!swap_chain)
     {
       PanicAlertFmt("Failed to create Vulkan swap chain.");
