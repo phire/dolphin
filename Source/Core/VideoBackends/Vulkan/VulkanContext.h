@@ -83,6 +83,7 @@ public:
   }
   u32 GetShaderSubgroupSize() const { return m_shader_subgroup_size; }
   bool SupportsShaderSubgroupOperations() const { return m_supports_shader_subgroup_operations; }
+  bool UseCachedCorrentMemory() const { return m_use_cached_coherrent_memory; }
 
   // Helpers for getting constants
   VkDeviceSize GetUniformBufferAlignment() const
@@ -143,6 +144,7 @@ private:
 
   u32 m_shader_subgroup_size = 1;
   bool m_supports_shader_subgroup_operations = false;
+  bool m_use_cached_coherrent_memory = false;
 
   std::vector<std::string> m_device_extensions;
 };

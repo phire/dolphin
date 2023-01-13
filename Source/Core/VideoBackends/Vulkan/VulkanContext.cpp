@@ -795,6 +795,29 @@ bool VulkanContext::CreateAllocator(u32 vk_api_version)
     return false;
   }
 
+  m_use_cached_coherrent_memory = false;
+  if (!DriverDetails::HasBug(DriverDetails::BUG_SLOW_CACHED_READBACK_MEMORY))
+  {
+    // Check if this GPU even supports allocating Cached Coherrent memory
+
+    VmaAllocationCreateInfo alloc_create_info = {};
+    alloc_create_info.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
+       VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+    alloc_create_info.usage = VMA_MEMORY_USAGE_AUTO;
+    alloc_create_info.pool = VK_NULL_HANDLE;
+    alloc_create_info.pUserData = nullptr;
+    alloc_create_info.priority = 0.0;
+    alloc_create_info.preferredFlags = 0;
+    alloc_create_info.requiredFlags = 0;
+
+    u32 index;
+
+    if (vmaFindMemoryTypeIndex(m_allocator, 0, &alloc_create_info, &index) != VK_ERROR_FEATURE_NOT_PRESENT)
+    {
+      m_use_cached_coherrent_memory = true;
+    }
+  }
+
   return true;
 }
 
