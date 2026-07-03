@@ -21,7 +21,7 @@ struct VersionInfo {
 struct ModuleInfo;
 
 
-extern std::vector<ModuleInfo*> AllModules;
+//extern std::vector<ModuleInfo*> AllModules;
 
 
 #if defined(__clang__)
@@ -46,7 +46,7 @@ struct ModuleInfo {
         StableVersion(version),
         moduleObj(obj)
     {
-        AllModules.push_back(this);
+        //AllModules.push_back(this);
     }
 };
 

@@ -4,6 +4,7 @@
 #include "Plugins/PluginHost.h"
 #include "Common/Logging/Log.h"
 #include "Plugins/ModuleManager.h"
+#include "Core/PowerPC/CPUApi.h"
 
 #include <dlfcn.h>
 #include <fmt/core.h>
@@ -31,10 +32,24 @@ void* Plugins::GetFnPtrFunctor::GetFunction(void* data_void, String* module_name
 
 void Plugins::Init()
 {
-    InitDiscoveryModule();
-    InitLoggingModule();
-    InitBasicGuiModule();
-    InitCPUModule();
+    // InitDiscoveryModule();
+    // InitLoggingModule();
+    // InitBasicGuiModule();
+    // InitCPUModule();
+
+    fmt::print("Registering CPU API\n");
+    auto api = CpuApi::RegisterCpuApi();
+
+    fmt::print("Registered CPU API: {} - {}\n", api.m_name, api.m_description);
+
+    for (auto& f : api.m_functions)
+    {
+        fmt::print("Registered function {}: {}\n", f.m_name, f.m_description);
+        for (auto& arg : f.m_arg_types)
+        {
+            fmt::print("  Arg: {}\n", arg);
+        }
+    }
 }
 
 std::vector<Plugins::PluginFiles> Plugins::GetAllPlugins()

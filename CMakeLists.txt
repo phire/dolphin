@@ -758,6 +758,8 @@ add_subdirectory(Externals/Lua)
 
 add_subdirectory(Externals/FatFs)
 
+add_subdirectory(Externals/FunctionTraits)
+
 if (USE_RETRO_ACHIEVEMENTS)
   add_subdirectory(Externals/rcheevos)
 endif()

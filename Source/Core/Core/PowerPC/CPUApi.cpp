@@ -8,6 +8,7 @@
 #include "Core/System.h"
 #include "Core/Core.h"
 
+#include "FunctionTraits.h"
 
 #include <climits>
 #include <compare>
@@ -21,9 +22,10 @@
 
 
 
-static void BreakOnCycleEvent(Core::System& system, u64 userdata, s64 cyclesLate);
 
 namespace CpuApi {
+
+static void BreakOnCycleEvent(Core::System& system, u64 userdata, s64 cyclesLate);
 
 struct CpuMemory;
 
@@ -31,7 +33,7 @@ static u64 CurrentHandle = 0;
 static bool s_initialized = false;
 static std::vector<Functor<void (Core::System&, CpuMemory*, u64)>> BreakOnRun;
 
-ZAP_NAMESPACE_MODULE("Cpu", Zap::VersionInfo(1, 1), "Allows accessing CPU state and memory");
+//ZAP_NAMESPACE_MODULE("Cpu", Zap::VersionInfo(1, 1), "Allows accessing CPU state and memory");
 
 struct CpuMemory {
   //ZAP_CHECKED_HANDLE(CpuMemory);
@@ -142,7 +144,6 @@ ZAP_IGNORE void Shutdown() {
   s_initialized = false;
 }
 
-} // namespace CpuApi
 
 static void BreakOnCycleEvent(Core::System& system, u64 userdata, s64 cyclesLate) {
   auto callback = std::bit_cast<Functor<void (Core::System&, CpuApi::CpuMemory*, u64)>>(userdata);
@@ -152,3 +153,37 @@ static void BreakOnCycleEvent(Core::System& system, u64 userdata, s64 cyclesLate
   callback(system, &cpu_memory_handle, static_cast<u64>(cyclesLate));
 }
 
+
+
+void foo(int b) {
+
+  fmt::print("foo: {}\n", b);
+}
+
+ ::ModuleRegistration RegisterCpuApi() {
+  ModuleRegistration m("Cpu", "Allows accessing CPU state and memory");
+
+  m.Function("OnGameStart", Cpu_BreakOnRun, "Runs the callback before the first instruction of the game is executed");
+
+  //auto& handle =
+
+  return m;
+}
+
+} // namespace CpuApi
+
+ template<typename F>
+  void ModuleRegistration::Function(const char* name, F&& f, const char* description) {
+    // Register the function with the module
+    std::vector<std::string> arg_types;
+
+    const auto arg_visiter = [&arg_types]<std::size_t I, typename ArgTypeT>() noexcept
+    {
+      arg_types.push_back(std::string(StdExt::TypeName_v<ArgTypeT>));
+      return true;
+    };
+
+    StdExt::ForEachArg<F>(arg_visiter);
+
+    m_functions.emplace_back(name, description, arg_types);
+  }

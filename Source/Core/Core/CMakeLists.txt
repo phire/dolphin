@@ -677,6 +677,7 @@ PUBLIC
   discio
   enet::enet
   expr
+  FunctionTraits
   inputcommon
   MbedTLS::mbedtls
   pugixml

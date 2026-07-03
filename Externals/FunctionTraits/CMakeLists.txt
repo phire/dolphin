@@ -1,0 +1,2 @@
+add_library(FunctionTraits INTERFACE)
+target_include_directories(FunctionTraits INTERFACE include/)

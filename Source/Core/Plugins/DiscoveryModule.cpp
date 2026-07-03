@@ -20,17 +20,17 @@
 
 //ZAP_REGISTER_MODULE(Discovery, "This module provide tools to discover other modules", Zap::VersionInfo(1, 1));
 
-namespace zap_module_Discovery_namespace = Discovery;
-namespace Discovery {
-    extern const Module* zap_module_obj;
-    extern const Zap::ModuleInfo zap_module_info;
-    const Zap::ModuleInfo zap_module_info (
-        "Discovery",
-        "This module provide tools to discover other modules",
-        Zap::VersionInfo(1, 1),
-        zap_module_obj
-    );
-}
+// namespace zap_module_Discovery_namespace = Discovery;
+// namespace Discovery {
+//     extern const Module* zap_module_obj;
+//     extern const Zap::ModuleInfo zap_module_info;
+//     const Zap::ModuleInfo zap_module_info (
+//         "Discovery",
+//         "This module provide tools to discover other modules",
+//         Zap::VersionInfo(1, 1),
+//         zap_module_obj
+//     );
+// }
 
 
 // #include <memory>
