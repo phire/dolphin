@@ -165,6 +165,10 @@ void foo(int b) {
 
   m.Function("OnGameStart", Cpu_BreakOnRun, "Runs the callback before the first instruction of the game is executed");
 
+  auto f = FunctionMaker<void, int>::make<&foo>("foo");
+  fmt::print("Raw function pointer: {}\n", f.m_function_ptr);
+  fmt::print("Wrapped function pointer: {}\n", f.m_wrapped_function_ptr);
+
   //auto& handle =
 
   return m;
@@ -172,18 +176,52 @@ void foo(int b) {
 
 } // namespace CpuApi
 
- template<typename F>
-  void ModuleRegistration::Function(const char* name, F&& f, const char* description) {
-    // Register the function with the module
-    std::vector<std::string> arg_types;
 
-    const auto arg_visiter = [&arg_types]<std::size_t I, typename ArgTypeT>() noexcept
-    {
-      arg_types.push_back(std::string(StdExt::TypeName_v<ArgTypeT>));
-      return true;
-    };
+// private:
+//   template<typename Tuple, typename FirstArgType, typename... RemainingArgTypes>
+//   inline ReturnType call(Tuple tuple, FirstArgType first_arg, RemainingArgTypes... remaining_args) const {
+//     call(std::tuple_cat(tuple, std::make_tuple(WrappedArg<FirstArgType>(first_arg))), remaining_args...);
+//   }
 
-    StdExt::ForEachArg<F>(arg_visiter);
+//   template<typename Tuple, typename ArgType>
+//   inline ReturnType call(Tuple tuple, ArgType arg, ...) const {
 
-    m_functions.emplace_back(name, description, arg_types);
-  }
+// template <typename F>
+// struct FnTrait;
+
+// template <typename ReturnType, typename... ArgTypes>
+// //struct FnTrait<ReturnType(ArgTypes...)> {
+// struct FnTrait<ReturnType(*)(ArgTypes...)> {
+//   using return_type = ReturnType;
+//   template <template <typename...> class TargetTemplate>
+//   using apply_args = TargetTemplate<ArgTypes...>;
+// };
+
+// template<auto F, typename... WrappedArgs>
+// auto WrappedFunction(typename FnTrait<decltype(F)>::template apply_args<WrappedArg>::type... args) -> typename FnTrait<decltype(F)>::return_type {
+//   return F(args.Unwrap()...);
+
+// }
+
+
+
+template<typename F>
+void ModuleRegistration::Function(const char* name, const F&& f, const char* description) {
+  // Register the function with the module
+  std::vector<std::string> arg_types;
+
+  const auto arg_visiter = [&arg_types]<std::size_t I, typename ArgTypeT>() noexcept
+  {
+    arg_types.push_back(std::string(StdExt::TypeName_v<ArgTypeT>));
+    return true;
+  };
+
+  StdExt::ForEachArg<F>(arg_visiter);
+
+  auto& fn = m_functions.emplace_back(name, description, arg_types);
+
+  //constexpr auto fn_ptr = &f;
+
+  fn.m_function_ptr = reinterpret_cast<void*>(std::forward<F>(f));
+  //fn.wrapped_function_ptr = reinterpret_cast<void*>(WrappedFunction<fn_ptr, F>::wrapped);
+}
