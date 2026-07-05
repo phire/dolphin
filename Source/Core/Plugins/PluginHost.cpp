@@ -11,6 +11,10 @@
 #include <fmt/format.h>
 #include <vector>
 
+#include <wasmtime.hh>
+#include <wasmtime/component/component.hh>
+#include <wasmtime/component/linker.hh>
+
 static uint64_t Module_id = 0x1000;
 static std::vector<Plugins::PluginFiles> plugin_entries;
 
@@ -30,6 +34,23 @@ void* Plugins::GetFnPtrFunctor::GetFunction(void* data_void, String* module_name
     return GetFnPtr(module_name->Data, version, function->Data);
 }
 
+using namespace wasmtime;
+
+void hello(std::string_view msg) {
+    fmt::print("hello called with message: \"{}\"\n", msg);
+}
+
+Result<std::monostate> hello_wrapper(Store::Context cx, const component::FuncType& ty, std::span<component::Val> params, std::span<component::Val> results) {
+    hello(params[0].get_string());
+
+    return std::monostate();
+}
+
+Result<std::monostate> hi(Store::Context cx, const component::FuncType& ty, std::span<component::Val> params, std::span<component::Val> results) {
+    fmt::print("hi called from component!\n");
+    return std::monostate();
+}
+
 void Plugins::Init()
 {
     // InitDiscoveryModule();
@@ -37,19 +58,114 @@ void Plugins::Init()
     // InitBasicGuiModule();
     // InitCPUModule();
 
-    fmt::print("Registering CPU API\n");
-    auto api = CpuApi::RegisterCpuApi();
+    fmt::print("Compiling module\n");
 
-    fmt::print("Registered CPU API: {} - {}\n", api.m_name, api.m_description);
+    auto src = R"(
+        (component
+            (type (;0;) (func (param "msg" string)))
+            (type (;1;) (func))
+            (import "hello" (func $hello (;0;) (type 0)))
+            (import "hi" (func $hi (;1;) (type 1)))
 
-    for (auto& f : api.m_functions)
-    {
-        fmt::print("Registered function {}: {}\n", f.m_name, f.m_description);
-        for (auto& arg : f.m_arg_types)
-        {
-            fmt::print("  Arg: {}\n", arg);
+            (core module $main
+                (type (;0;) (func (param i32 i32)))
+                (type (;1;) (func))
+                (data $.rodata (;0;) (i32.const 1048576) "Hello from my-wasm-component!")
+                (import "$root" "hello" (func $hello (;0;) (type 0)))
+                (import "$root" "hi" (func $hi (;1;) (type 1)))
+                (table (;0;) 3 3 funcref)
+                (memory (;0;) 17)
+                (export "memory" (memory 0))
+                (export "run" (func $rrun))
+                (func $rrun (type 1)
+                    (;call $hi;)
+                    i32.const 1048576
+                    i32.const 29
+                    call $hello
+                )
+            )
+            (core module $wit-component-shim-module (;1;)
+                (type (;0;) (func (param i32 i32)))
+                (table (;0;) 1 1 funcref)
+                (export "0" (func 0))
+                (export "$imports" (table 0))
+                (func (;0;) (type 0) (param i32 i32)
+                    local.get 0
+                    local.get 1
+                    i32.const 0
+                    call_indirect (type 0)
+                )
+            )
+            (core module $wit-component-fixup (;2;)
+                (type (;0;) (func (param i32 i32)))
+                (import "" "0" (func (;0;) (type 0)))
+                (import "" "$imports" (table (;0;) 1 1 funcref))
+                (elem (;0;) (i32.const 0) func 0)
+            )
+            (core instance $wit-component-shim-instance (;0;) (instantiate $wit-component-shim-module))
+            (core func $hi (;0;) (canon lower (func $hi)))
+            (alias core export $wit-component-shim-instance "0" (core func $indirect-$root-hello (;0;)))
+            (core instance $$root (;1;)
+                (export "hi" (func $hi))
+                (export "hello" (func $indirect-$root-hello))
+            )
+            (core instance $main (;2;) (instantiate $main
+                    (with "$root" (instance $$root))
+                )
+            )
+            (alias core export $main "memory" (core memory $memory (;0;)))
+
+            (alias core export $wit-component-shim-instance "$imports" (core table $"shim table" (;0;)))
+            (core func $"#core-func2 indirect-$root-hello" (@name "indirect-$root-hello") (;2;) (canon lower (func $hello) (memory $memory) string-encoding=utf8))
+            (type (;1;) (func))
+
+            (core instance $fixup-args (;3;)
+                (export "$imports" (table $"shim table"))
+                (export "0" (func $"#core-func2 indirect-$root-hello"))
+            )
+            (core instance $fixup (;4;) (instantiate $wit-component-fixup
+                    (with "" (instance $fixup-args))
+                )
+            )
+
+            (alias core export $main "run" (core func $run (;3;)))
+            (func $run (;1;) (type 1) (canon lift (core func $run)))
+            (export $"#func2 run" (@name "run") (;2;) "run" (func $run))
+        )
+    )";
+
+    wasmtime::Engine engine;
+
+    auto component = wasmtime::component::Component::compile(engine, src).unwrap();
+
+    fmt::print("Initializing...\n");
+
+    wasmtime::Store store(engine);
+
+    wasmtime::component::Linker linker(engine);
+
+    linker.root().add_func("hello", &hello_wrapper).unwrap();
+    linker.root().add_func("hi", &hi).unwrap();
+
+    fmt::print("Instantiating module...\n");
+
+    auto instance = linker.instantiate(store, component).unwrap();
+
+    fmt::print("Calling module...\n");
+
+    if (auto index = instance.get_export_index(store, nullptr, "run")) {
+        if (auto run = instance.get_func(store, *index)) {
+            run->call(store, {}, {}).unwrap();
+        } else {
+            fmt::print("get_func failed\n");
         }
+    } else {
+        fmt::print("failed to find run function\n");
     }
+
+
+
+    fmt::print("done!\n");
 }
 
 std::vector<Plugins::PluginFiles> Plugins::GetAllPlugins()

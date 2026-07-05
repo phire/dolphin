@@ -685,6 +685,7 @@ PUBLIC
   videonull
   videoogl
   videosoftware
+  wasmtime
 
 PRIVATE
   FatFs
@@ -699,6 +700,8 @@ if(LIBUDEV_FOUND)
   target_include_directories(core PRIVATE ${LIBUDEV_INCLUDE_DIR})
   target_link_libraries(core PRIVATE ${LIBUDEV_LIBRARY})
 endif()
+
+target_include_directories(core PUBLIC wasmtime)
 
 if (APPLE)
   target_link_libraries(core

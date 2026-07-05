@@ -17,6 +17,6 @@ target_link_libraries(plugins
 PRIVATE
     plugin_cpp
     plugin_abi
+    wasmtime
     fmt::fmt
 )
-

@@ -134,3 +134,6 @@
 	path = Externals/wil
 	url = https://github.com/microsoft/wil.git
 	shallow = true
+[submodule "Externals/wasmtime"]
+	path = Externals/wasmtime
+	url = git@github.com:bytecodealliance/wasmtime.git

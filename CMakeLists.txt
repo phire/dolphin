@@ -766,6 +766,9 @@ endif()
 
 add_subdirectory(Externals/watcher)
 
+add_subdirectory(Externals/wasmtime/crates/c-api)
+
+
 # Any other platform or BSD is currently unsupported by cpp-ipc
 if(WIN32 OR LINUX OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "QNX")
   add_subdirectory(Externals/cpp-ipc)
