@@ -57,66 +57,17 @@ public:
   }
 };
 
-class FunctionRegistration {
-public:
-  FunctionRegistration(const char* name, const char* description, const std::vector<std::string>& arg_types) :
-    m_name(name), m_description(description), m_arg_types(arg_types) {}
-
-  std::string m_name;
-  std::string m_description;
-  std::vector<std::string> m_arg_types;
-  void* m_function_ptr = nullptr;
-  void* m_wrapped_function_ptr = nullptr;
-};
-
-
-template<typename R, typename... Args>
-struct FunctionMaker {
-    using FnPtr = R(*)(Args...);
-
-    template <FnPtr f>
-    static FunctionRegistration make(const char* name) {
-        std::vector<std::string> arg_types;
-        auto fn = FunctionRegistration(name, "", arg_types);
-
-        fn.m_function_ptr = reinterpret_cast<void*>(f);
-        fn.m_wrapped_function_ptr = reinterpret_cast<void*>(WrappedFunction<f, R, Args...>::wrapped);
-
-        return fn;
-    }
-};
-
-class ModuleRegistration {
-public:
-  ModuleRegistration(const char* name, const char* description) : m_name(name), m_description(description) {}
-
-  template<typename F>
-  void Function(const char* name, const F&& f, const char* description);
-
-
-  //template<typename R, typename... Args, R(Args...)* Fn>
-//   void Funct(const char* name) {
-//     std::vector<std::string> arg_types;
-//     auto& fn = m_functions.emplace_back(name, "", arg_types);
-
-//     //fn.wrapped_function_ptr = reinterpret_cast<void*>(WrappedFunction<Fn, R, Args...>::wrapped);
-//   }
-
-  std::string m_name;
-  std::string m_description;
-  std::vector<FunctionRegistration> m_functions;
-};
-
-
+namespace Plugin {
+    class ComponentBinding;
+}
 
 namespace CpuApi {
-
 
 
 ZAP_IGNORE void Init();
 ZAP_IGNORE void Shutdown();
 
-ModuleRegistration RegisterCpuApi();
+Plugin::ComponentBinding RegisterCpuApi();
 
 
 }

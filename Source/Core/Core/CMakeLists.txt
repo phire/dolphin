@@ -688,6 +688,7 @@ PUBLIC
   wasmtime
 
 PRIVATE
+  plugin_binding
   FatFs
   plugin_cpp
   fmt::fmt

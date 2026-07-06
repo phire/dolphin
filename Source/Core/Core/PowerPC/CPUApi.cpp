@@ -20,7 +20,7 @@
 
 #include <unordered_map>
 
-
+#include "Binding.h"
 
 
 namespace CpuApi {
@@ -33,79 +33,79 @@ static u64 CurrentHandle = 0;
 static bool s_initialized = false;
 static std::vector<Functor<void (Core::System&, CpuMemory*, u64)>> BreakOnRun;
 
-//ZAP_NAMESPACE_MODULE("Cpu", Zap::VersionInfo(1, 1), "Allows accessing CPU state and memory");
+//struct CpuMemory {
 
-struct CpuMemory {
-  //ZAP_CHECKED_HANDLE(CpuMemory);
+static Core::System& m_system = Core::System::GetInstance();
+static  Core::CPUThreadGuard m_cpu_guard = Core::CPUThreadGuard(m_system);
 
-  // u32 ReadU8(u32 address)
-  // {
-  //   return PowerPC::MMU::HostRead<u8>(m_cpu_guard, address);
-  // }
+  u32 ReadU8(u32 address)
+  {
+    return PowerPC::MMU::HostRead<u8>(m_cpu_guard, address);
+  }
 
-  // u32 ReadU16(u32 address)
-  // {
-  //   return PowerPC::MMU::HostRead<u16>(m_cpu_guard, address);
-  // }
+  u32 ReadU16(u32 address)
+  {
+    return PowerPC::MMU::HostRead<u16>(m_cpu_guard, address);
+  }
 
-  // u32 ReadU32(u32 address)
-  // {
-  //   return PowerPC::MMU::HostRead<u32>(m_cpu_guard, address);
-  // }
+  u32 ReadU32(u32 address)
+  {
+    return PowerPC::MMU::HostRead<u32>(m_cpu_guard, address);
+  }
 
-  // u64 ReadU64(u32 address)
-  // {
-  //   return PowerPC::MMU::HostRead<u64>(m_cpu_guard, address);
-  // }
+  u64 ReadU64(u32 address)
+  {
+    return PowerPC::MMU::HostRead<u64>(m_cpu_guard, address);
+  }
 
-  // float ReadFloat(u32 address) {
-  //   return PowerPC::MMU::HostRead<float>(m_cpu_guard, address);
-  // }
+  float ReadFloat(u32 address) {
+    return PowerPC::MMU::HostRead<float>(m_cpu_guard, address);
+  }
 
-  // double CpuMemory_ReadDouble(u32 address)
-  // {
-  //   return PowerPC::MMU::HostRead<double>(m_cpu_guard, address);
-  // }
+  double CpuMemory_ReadDouble(u32 address)
+  {
+    return PowerPC::MMU::HostRead<double>(m_cpu_guard, address);
+  }
 
-  // void CpuMemory_WriteU8(u32 address, u8 value) {
+  void CpuMemory_WriteU8(u32 address, u8 value) {
 
-  //   PowerPC::MMU::HostWrite<u8>(m_cpu_guard, value, address);
-  // }
+    PowerPC::MMU::HostWrite<u8>(m_cpu_guard, value, address);
+  }
 
-  // void CpuMemory_WriteU16(u32 address, u16 value)
-  // {
-  //   PowerPC::MMU::HostWrite<u16>(m_cpu_guard, value, address);
-  // }
+  void CpuMemory_WriteU16(u32 address, u16 value)
+  {
+    PowerPC::MMU::HostWrite<u16>(m_cpu_guard, value, address);
+  }
 
-  // void CpuMemory_WriteU32(u32 address, u32 value)
-  // {
-  //   PowerPC::MMU::HostWrite<u32>(m_cpu_guard, value, address);
-  // }
+  void CpuMemory_WriteU32(u32 address, u32 value)
+  {
+    PowerPC::MMU::HostWrite<u32>(m_cpu_guard, value, address);
+  }
 
-  // void CpuMemory_WriteU64(u32 address, u64 value)
-  // {
-  //   PowerPC::MMU::HostWrite<u64>(m_cpu_guard, value, address);
-  // }
+  void CpuMemory_WriteU64(u32 address, u64 value)
+  {
+    PowerPC::MMU::HostWrite<u64>(m_cpu_guard, value, address);
+  }
 
-  // void CpuMemory_WriteFloat(u32 address, float value)
-  // {
-  //   PowerPC::MMU::HostWrite<float>(m_cpu_guard, value, address);
-  // }
+  void CpuMemory_WriteFloat(u32 address, float value)
+  {
+    PowerPC::MMU::HostWrite<float>(m_cpu_guard, value, address);
+  }
 
-  // void CpuMemory_WriteDouble(u32 address, double value)
-  // {
-  //   PowerPC::MMU::HostWrite<double>(m_cpu_guard, value, address);
-  // }
+  void CpuMemory_WriteDouble(u32 address, double value)
+  {
+    PowerPC::MMU::HostWrite<double>(m_cpu_guard, value, address);
+  }
 
   void CpuMemory_BreakOnCycle(s64 CyclesIntoFuture, Functor<void (Core::System&, CpuMemory*, u64)> callback) {
     u64 Userdata = std::bit_cast<u64>(callback);
     Core::System::GetInstance().GetCoreTiming().ScheduleAnonymousEvent(CyclesIntoFuture, BreakOnCycleEvent, Userdata);
   }
 
-  Core::CPUThreadGuard& m_cpu_guard;
 
-  CpuMemory(Core::CPUThreadGuard& guard) : m_cpu_guard(guard) {}
-};
+
+//  CpuMemory(Core::CPUThreadGuard& guard) : m_cpu_guard(guard) {}
+//};
 
 
 
@@ -118,8 +118,8 @@ void Cpu_BreakOnRun(Functor<void (Core::System&, CpuMemory*, u64)> callback) {
     u64 ticks = Core::System::GetInstance().GetCoreTiming().GetTicks();
     auto& system = Core::System::GetInstance();
     auto guard = Core::CPUThreadGuard(system);
-    CpuMemory cpu_memory_handle(guard);
-    callback(system, &cpu_memory_handle, ticks);
+    // CpuMemory cpu_memory_handle(guard);
+    // callback(system, &cpu_memory_handle, ticks);
   } else {
     BreakOnRun.push_back(callback);
   }
@@ -128,10 +128,10 @@ void Cpu_BreakOnRun(Functor<void (Core::System&, CpuMemory*, u64)> callback) {
 static void InitCallback(Core::System& system, u64 userdata, s64 cycles_late) {
   CurrentHandle += 1;
   auto guard = Core::CPUThreadGuard(system);
-  auto cpu_memory_handle = CpuApi::CpuMemory (guard);
-  for(auto callback : BreakOnRun) {
-    callback(system, &cpu_memory_handle, static_cast<u64>(cycles_late));
-  }
+  // auto cpu_memory_handle = CpuApi::CpuMemory (guard);
+  // for(auto callback : BreakOnRun) {
+  //   callback(system, &cpu_memory_handle, static_cast<u64>(cycles_late));
+  // }
   BreakOnRun.clear();
   s_initialized = true;
 }
@@ -148,9 +148,9 @@ ZAP_IGNORE void Shutdown() {
 static void BreakOnCycleEvent(Core::System& system, u64 userdata, s64 cyclesLate) {
   auto callback = std::bit_cast<Functor<void (Core::System&, CpuApi::CpuMemory*, u64)>>(userdata);
   auto guard = Core::CPUThreadGuard(system);
-  auto cpu_memory_handle = CpuApi::CpuMemory (guard);
+  // auto cpu_memory_handle = CpuApi::CpuMemory (guard);
 
-  callback(system, &cpu_memory_handle, static_cast<u64>(cyclesLate));
+  //callback(system, &cpu_memory_handle, static_cast<u64>(cyclesLate));
 }
 
 
@@ -160,68 +160,31 @@ void foo(int b) {
   fmt::print("foo: {}\n", b);
 }
 
- ::ModuleRegistration RegisterCpuApi() {
-  ModuleRegistration m("Cpu", "Allows accessing CPU state and memory");
+Plugin::ComponentBinding RegisterCpuApi() {
+  using namespace Plugin;
 
-  m.Function("OnGameStart", Cpu_BreakOnRun, "Runs the callback before the first instruction of the game is executed");
+  ComponentBinding c("Cpu", "Allows accessing CPU state and memory");
 
-  auto f = FunctionMaker<void, int>::make<&foo>("foo");
-  fmt::print("Raw function pointer: {}\n", f.m_function_ptr);
-  fmt::print("Wrapped function pointer: {}\n", f.m_wrapped_function_ptr);
+  c.add(wrap_fn<foo>("foo", {"b"}));
 
-  //auto& handle =
+  c.add(wrap_fn<ReadU32>("ReadU32", {"address"}));
+  c.add(wrap_fn<ReadFloat>("ReadFloat", {"address"}));
+  c.add(wrap_fn<CpuMemory_ReadDouble>("ReadDouble", {"address"}));
+  c.add(wrap_fn<ReadU64>("ReadU64", {"address"}));
+  c.add(wrap_fn<ReadU16>("ReadU16", {"address"}));
+  c.add(wrap_fn<ReadU8>("ReadU8", {"address"}));
+  c.add(wrap_fn<CpuMemory_WriteU8>("WriteU8", {"address", "value"}));
+  c.add(wrap_fn<CpuMemory_WriteU16>("WriteU16", {"address", "value"}));
+  c.add(wrap_fn<CpuMemory_WriteU32>("WriteU32", {"address", "value"}));
+  c.add(wrap_fn<CpuMemory_WriteU64>("WriteU64", {"address", "value"}));
+  c.add(wrap_fn<CpuMemory_WriteFloat>("WriteFloat", {"address", "value"}));
+  c.add(wrap_fn<CpuMemory_WriteDouble>("WriteDouble", {"address", "value"}));
 
-  return m;
+  return c;
 }
 
 } // namespace CpuApi
 
 
-// private:
-//   template<typename Tuple, typename FirstArgType, typename... RemainingArgTypes>
-//   inline ReturnType call(Tuple tuple, FirstArgType first_arg, RemainingArgTypes... remaining_args) const {
-//     call(std::tuple_cat(tuple, std::make_tuple(WrappedArg<FirstArgType>(first_arg))), remaining_args...);
-//   }
-
-//   template<typename Tuple, typename ArgType>
-//   inline ReturnType call(Tuple tuple, ArgType arg, ...) const {
-
-// template <typename F>
-// struct FnTrait;
-
-// template <typename ReturnType, typename... ArgTypes>
-// //struct FnTrait<ReturnType(ArgTypes...)> {
-// struct FnTrait<ReturnType(*)(ArgTypes...)> {
-//   using return_type = ReturnType;
-//   template <template <typename...> class TargetTemplate>
-//   using apply_args = TargetTemplate<ArgTypes...>;
-// };
-
-// template<auto F, typename... WrappedArgs>
-// auto WrappedFunction(typename FnTrait<decltype(F)>::template apply_args<WrappedArg>::type... args) -> typename FnTrait<decltype(F)>::return_type {
-//   return F(args.Unwrap()...);
-
-// }
 
 
-
-template<typename F>
-void ModuleRegistration::Function(const char* name, const F&& f, const char* description) {
-  // Register the function with the module
-  std::vector<std::string> arg_types;
-
-  const auto arg_visiter = [&arg_types]<std::size_t I, typename ArgTypeT>() noexcept
-  {
-    arg_types.push_back(std::string(StdExt::TypeName_v<ArgTypeT>));
-    return true;
-  };
-
-  StdExt::ForEachArg<F>(arg_visiter);
-
-  auto& fn = m_functions.emplace_back(name, description, arg_types);
-
-  //constexpr auto fn_ptr = &f;
-
-  fn.m_function_ptr = reinterpret_cast<void*>(std::forward<F>(f));
-  //fn.wrapped_function_ptr = reinterpret_cast<void*>(WrappedFunction<fn_ptr, F>::wrapped);
-}
