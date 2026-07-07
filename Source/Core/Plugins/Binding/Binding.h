@@ -7,6 +7,9 @@
 #include "Common/CommonTypes.h"
 #include <wasmtime/component/val.hh>
 
+#include <tuple>
+#include <functional>
+
 namespace Plugin {
 
 template<typename T>
@@ -33,39 +36,48 @@ T UnpackArg(wasmtime::component::Val& val) {
 
 template<typename T>
 concept BindableArg = requires(T t) {
-  true == std::is_convertible_v<T, int32_t> || true == std::is_convertible_v<T, uint32_t> ||
-          true == std::is_convertible_v<T, int64_t> || true == std::is_convertible_v<T, uint64_t> ||
-          true == std::is_convertible_v<T, float> || true == std::is_convertible_v<T, double> ||
-          true == std::is_convertible_v<T, std::string_view>;
-  // UnpackArg<T>(wasmtime::component::Val());
+  std::invocable<decltype(UnpackArg<T>), wasmtime::component::Val>;
 };
 
 template<typename>
 struct FnTraits;
 
 template<typename R, typename... Args>
-struct FnTraits<R(&)(Args...)> {
+struct FnTraits<R(*)(Args...)> {
+
+  // Get nice error messages if the arguments are not bindable
+  static_assert((BindableArg<Args> && ...), "All arguments must be bindable");
+
   using ReturnType = R;
+  constexpr static bool is_void = std::is_void_v<R>;
   using ArgTypes = std::tuple<Args...>;
+  constexpr static std::size_t ArgCount = sizeof...(Args);
 
   using CppFunctionT = R(*)(Args...);
   using WrappedFunctionT = R(*)(WrappedArg<Args>...);
 
-  static_assert((BindableArg<Args> && ...), "All arguments must be bindable");
-
-  template<auto& f>
+  template<auto f>
   struct Invoker {
     using Val = wasmtime::component::Val;
     using Context = wasmtime::Store::Context;
     using FuncType = wasmtime::FuncType;
 
     static std::monostate wrapped(Context cx, const FuncType& ty, std::span<Val> params, std::span<Val> results) {
-      size_t i = 0;
-      if constexpr (!std::is_same_v<R, void>) {
-        auto result = f(UnpackArg<Args>(params[i++])...);
+      // the first arg is found at params[0], etc
+      // This pulls all each args from the correct index, unpacks them, and builds a tuple
+      auto unwrapped_args = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return std::make_tuple(UnpackArg<std::tuple_element_t<Is, ArgTypes>>(params[Is])...);
+      }(std::make_index_sequence<ArgCount>{});
+
+      if constexpr (!std::is_void_v<R>) {
+        // Call the original function with the unwrapped args
+        auto result = std::apply(f, unwrapped_args);
+
+        // And store the result into the results list
         results[0] = Val(result);
       } else {
-        f(UnpackArg<Args>(params[i++])...);
+        // Special case for void functions, since void is weird.
+        std::apply(f, unwrapped_args);
       }
 
       return std::monostate();
@@ -76,7 +88,7 @@ struct FnTraits<R(&)(Args...)> {
 
 template<auto& f, std::size_t N>
 struct Wrapped {
-  using Traits = FnTraits<decltype(f)>;
+  using Traits = FnTraits<decltype(&f)>;
   using Invoker = typename Traits::template Invoker<f>;
 
   Wrapped(std::string_view name, const char* (&&arg_names)[N])
