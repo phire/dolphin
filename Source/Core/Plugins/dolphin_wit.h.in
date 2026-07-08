@@ -1,0 +1,3 @@
+// CMake fills in this file with the contents of wit/dolphin.wit
+
+R"(${DOLPHIN_WIT_FILE})";

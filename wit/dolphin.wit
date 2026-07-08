@@ -1,0 +1,29 @@
+package dolphin-emu:dolphin@0.0.1;
+
+world guest {
+    import emu;
+}
+
+interface emu {
+    /// Allows accessing emulated CPU memory
+    resource Cpu {
+        /// Reads a u8 from emulated CPU memory
+        read-u8: func(address: u32) -> u8;
+
+        /// Reads a u16 from emulated CPU memory
+        read-u16: func(address: u32) -> u16;
+
+        /// <And so-on with the doc comments>
+        read-u32: func(address: u32) -> u32;
+        read-u64: func(address: u32) -> u64;
+        read-float: func(address: u32) -> float;
+        read-double: func(address: u32) -> double;
+
+        write-u8: func(address: u32, val: u8);
+        write-u16: func(address: u32, val: u16);
+        write-u32: func(address: u32, val: u32);
+        write-u64: func(address: u32, val: u64);
+        write-float: func(address: u32, val: float);
+        write-double: func(address: u32, val: double);
+    }
+}

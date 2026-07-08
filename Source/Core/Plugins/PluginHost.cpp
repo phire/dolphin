@@ -15,6 +15,8 @@
 #include <wasmtime/component/component.hh>
 #include <wasmtime/component/linker.hh>
 
+#include "Plugins/WitParser.h"
+
 static uint64_t Module_id = 0x1000;
 static std::vector<Plugins::PluginFiles> plugin_entries;
 
@@ -57,6 +59,8 @@ void Plugins::Init()
     // InitLoggingModule();
     // InitBasicGuiModule();
     // InitCPUModule();
+
+    auto items = parse_wit();
 
     fmt::print("Compiling module\n");
 
@@ -166,6 +170,8 @@ void Plugins::Init()
 
 
     fmt::print("done!\n");
+
+    std::exit(0);
 }
 
 std::vector<Plugins::PluginFiles> Plugins::GetAllPlugins()
