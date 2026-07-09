@@ -34,10 +34,10 @@ struct Gate {
         Since,
         Deprecated,
     };
-    bool is_none() const { return m_type == Type::None; }
+    constexpr bool is_none() const { return m_type == Type::None; }
 
-    Gate() : m_type(Type::None), m_value(std::monostate{}) {}
-    Gate(Type type, std::variant<std::monostate, std::string, SemVer> value) : m_type(type), m_value(value) {}
+    constexpr Gate() : m_type(Type::None), m_value(std::monostate{}) {}
+    constexpr Gate(Type type, std::variant<std::monostate, std::string, SemVer> value) : m_type(type), m_value(value) {}
 
     Type m_type;
     std::variant<std::monostate, std::string, SemVer> m_value;
@@ -104,9 +104,9 @@ struct Ty {
     std::vector<Ty> params;
     std::optional<std::string> id;
 
-    Ty(Kind kind_, std::vector<Ty> params_ = {}) : kind(kind_), params(std::move(params_)) {}
-    Ty(Kind kind_, std::string id_) : kind(kind_), id(id_) {}
-    Ty() : kind(Kind::Ignore) {}
+    constexpr Ty(Kind kind_, std::vector<Ty> params_ = {}) : kind(kind_), params(std::move(params_)) {}
+    constexpr Ty(Kind kind_, std::string id_) : kind(kind_), id(id_) {}
+    constexpr Ty() : kind(Kind::Ignore) {}
 };
 
 struct TypeAlias {
@@ -131,8 +131,8 @@ struct FuncType {
     bool async = false;
     bool static_ = false;
     bool constructor = false;
-    FuncType() = default;
-    FuncType(auto params_, auto results_) : params(std::move(params_)), results(std::move(results_)) {}
+    constexpr FuncType() = default;
+    constexpr FuncType(auto params_, auto results_) : params(std::move(params_)), results(std::move(results_)) {}
     std::vector<NamedType> params;
     std::vector<Ty> results;
 };

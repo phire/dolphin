@@ -6,7 +6,6 @@
 #include <string_view>
 #include <expected>
 #include <optional>
-#include <set>
 #include <algorithm>
 
 #include "Common/Logging/Log.h"
@@ -35,30 +34,45 @@ static constexpr std::string_view keywords[] = {
     "u64",       "u8",        "use",       "variant",   "with",      "world",
 };
 
-bool is_keyword(std::string_view text) {
-    static const std::set<std::string_view> keyword_set(keywords, keywords + sizeof(keywords) / sizeof(keywords[0]));
+constexpr bool is_digit(char c)
+{
+    return c >= '0' && c <= '9';
+}
 
-    return keyword_set.find(text) != keyword_set.end();
+constexpr bool is_ident_char(char c)
+{
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-';
+}
+
+constexpr bool is_keyword(std::string_view text)
+{
+    for (std::string_view kw : keywords)
+    {
+        if (kw == text)
+            return true;
+    }
+
+    return false;
 }
 
 
 
-using parse_error = std::tuple<std::string, std::string_view>;
+using parse_error = std::tuple<std::string_view, std::string_view>;
 
 #define TRY_OR_RETURN(expr) ({ auto&& _result = expr; if (!_result) return std::unexpected(_result.error()); *_result;  })
 
 
 
 struct Input : public std::string_view {
-    Input(std::string_view input) : std::string_view(input) {
+    constexpr Input(std::string_view input) : std::string_view(input) {
         consume_whitespace();
     }
 
-    bool match(std::string_view text) {
+    constexpr bool match(std::string_view text) {
         if (starts_with(text)) {
             if (is_keyword(text)) {
                 // If the text is a keyword, we need to make sure that the next character is not a valid identifier character.
-                if (size() > text.size() && (std::isalnum((*this)[text.size()]) || (*this)[text.size()] == '-')) {
+                if (size() > text.size() && is_ident_char((*this)[text.size()])) {
                     return false;
                 }
             }
@@ -70,70 +84,84 @@ struct Input : public std::string_view {
         return false;
     }
 
-    std::expected<std::monostate, parse_error> expect(std::string_view text) {
+    constexpr std::expected<std::monostate, parse_error> expect(std::string_view text) {
         if (match(text)) {
+            consume_whitespace();
             return {};
         }
 
-        std::string error_msg = "Expected '" + std::string(text) + "'";
-        return std::unexpected(std::make_tuple(error_msg, *this));
+        return std::unexpected(std::make_tuple("Expected token", *this));
     }
 
-    std::expected<size_t, parse_error> integer() {
-        size_t len = find_first_not_of("0123456789");
+    constexpr std::expected<size_t, parse_error> integer() {
+        size_t len = 0;
+        while (len < size() && is_digit((*this)[len])) {
+            ++len;
+        }
+
         if (len == 0) {
             return std::unexpected(std::make_tuple("Expected integer", *this));
         }
-        auto value = std::stoull(std::string(substr(0, len)));
+
+        size_t value = 0;
+        for (size_t i = 0; i < len; ++i) {
+            value = value * 10 + static_cast<size_t>((*this)[i] - '0');
+        }
+
         remove_prefix(len);
         consume_whitespace();
 
         return value;
     }
 
-    std::string_view consume(std::size_t n) {
+    constexpr std::string_view consume(std::size_t n) {
         std::string_view result = substr(0, n);
         remove_prefix(n);
         consume_whitespace();
         return result;
     }
 
-    size_t first_non_ident() {
-        return std::find_if(cbegin(), cend(), [](char c) { return !std::isalnum(c) && c != '-'; }) - cbegin();
+    constexpr size_t first_non_ident() {
+        size_t len = 0;
+        while (len < size() && is_ident_char((*this)[len])) {
+            ++len;
+        }
+        return len;
     }
 
 private:
 
-    bool consume_whitespace() {
-        bool has_whitespace = false;
+    constexpr bool consume_whitespace() {
+        auto orig_size = size();
         while (!empty()) {
             switch (front()) {
                 case ' ':
                 case '\t':
                 case '\n':
                 case '\r':
-                    has_whitespace = true;
                     remove_prefix(1);
-                    break;
+                    continue;
                 case '/':
                     if (size() > 1) {
                         if ((*this)[1] == '/') {
-                            has_whitespace = true;
-                            remove_prefix(find('\n'));
+                            const size_t newline_pos = find('\n');
+                            remove_prefix(std::min(newline_pos + 1, size()));
+                            continue;
                         } else if ((*this)[1] == '*') {
                             consume_multiline_comment();
+                            continue;
                         }
                     }
-                    break;
+                    [[fallthrough]];
                 default:
-                    return has_whitespace;
             }
+            break;
         }
-        return has_whitespace;
+        return size() != orig_size;
     }
 
     // Wit allows for nested multiline comments, so we need to deal with that.
-    void consume_multiline_comment() {
+    constexpr void consume_multiline_comment() {
         remove_prefix(2); // remove starting "/*"
         int depth = 1;
         while (!empty() && depth > 0) {
@@ -157,14 +185,14 @@ private:
 };
 
 template<typename T>
-std::expected<T, parse_error> wrapped(Input& input, std::string_view open, std::string_view close, std::expected<T, parse_error>(parse_func)(Input&)) {
+constexpr std::expected<T, parse_error> wrapped(Input& input, std::string_view open, std::string_view close, std::expected<T, parse_error>(parse_func)(Input&)) {
     TRY_OR_RETURN(input.expect(open));
     auto result = parse_func(input);
     TRY_OR_RETURN(input.expect(close));
     return result;
 }
 
-std::expected<std::string, parse_error> identifier(Input& input) {
+constexpr std::expected<std::string, parse_error> identifier(Input& input) {
 
     // identifiers prefixed with % are allowed to be keywords.
     bool raw = input.match("%");
@@ -182,7 +210,7 @@ std::expected<std::string, parse_error> identifier(Input& input) {
     return std::string(input.consume(len));
 }
 
-std::expected<std::string_view, parse_error> keyword(Input& input) {
+constexpr std::expected<std::string_view, parse_error> keyword(Input& input) {
     size_t len = input.first_non_ident();
 
     if (len == 0 || !is_keyword(input.substr(0, len))) {
@@ -192,14 +220,15 @@ std::expected<std::string_view, parse_error> keyword(Input& input) {
     return input.consume(len);
 }
 
-std::expected<Wit::SemVer, parse_error> semver(Input& input)
+constexpr std::expected<Wit::SemVer, parse_error> semver(Input& input)
 {
-    std::optional<unsigned> values[3] = {0, 0, 0};
+    unsigned values[3] = {0, 0, 0};
 
     for (size_t i = 0;;) {
         auto value = TRY_OR_RETURN(input.integer());
+        values[i] = static_cast<unsigned>(value);
         if (++i == 3) {
-            return Wit::SemVer{*values[0], *values[1], *values[2]};
+            return Wit::SemVer{values[0], values[1], values[2]};
         }
         TRY_OR_RETURN(input.expect("."));
     }
@@ -208,7 +237,7 @@ std::expected<Wit::SemVer, parse_error> semver(Input& input)
 // use-path ::= id
 //            | id ':' id '/' id ('@' valid-semver)?
 //           | ( id ':' )+ id ( '/' id )+ ('@' valid-semver)?
-std::expected<Wit::Path, parse_error> path(Input& input, bool allow_single) {
+constexpr std::expected<Wit::Path, parse_error> path(Input& input, bool allow_single) {
     Wit::Path result;
 
     auto ident = TRY_OR_RETURN(identifier(input));
@@ -248,7 +277,7 @@ std::expected<Wit::Path, parse_error> path(Input& input, bool allow_single) {
 //      package namespace:package[@1.2.3]
 // or
 //      package namespace:namespace2:path/to/package[@1.2.3]
-std::expected<std::optional<Wit::PackageDecl>, parse_error> package_decl(Input& input)
+constexpr std::expected<std::optional<Wit::PackageDecl>, parse_error> package_decl(Input& input)
 {
     if (!input.match("package"))
         return std::nullopt;
@@ -267,7 +296,7 @@ std::expected<std::optional<Wit::PackageDecl>, parse_error> package_decl(Input& 
 
 // feature-field ::= 'feature' '=' id
 // version-field ::= 'version' '=' <valid semver>
-std::expected<Wit::Gate, parse_error> gate(Input& input) {
+constexpr std::expected<Wit::Gate, parse_error> gate(Input& input) {
     using Type = Wit::Gate::Type;
     if (input.match("@unstable")) {
         std::string feature_name = TRY_OR_RETURN(wrapped(input, "(", ")", identifier));
@@ -288,7 +317,7 @@ std::expected<Wit::Gate, parse_error> gate(Input& input) {
 // use-path ::= id
 //            | id ':' id '/' id ('@' valid-semver)?
 //            | ( id ':' )+ id ( '/' id )+ ('@' valid-semver)?
-std::expected<Wit::UsePath, parse_error> use_path(Input& input) {
+constexpr std::expected<Wit::UsePath, parse_error> use_path(Input& input) {
     return path(input, true).transform([](auto p) { return Wit::UsePath(p); });
 }
 
@@ -307,7 +336,7 @@ std::expected<Wit::UsePath, parse_error> use_path(Input& input) {
 //      | future
 //      | stream
 //      | id
-std::expected<Wit::Ty, parse_error> ty(Input& input) {
+constexpr std::expected<Wit::Ty, parse_error> ty(Input& input) {
     auto kw_result = keyword(input);
     if (!kw_result) {
         return identifier(input).transform([](auto id) {
@@ -353,6 +382,7 @@ std::expected<Wit::Ty, parse_error> ty(Input& input) {
         auto inner = TRY_OR_RETURN(ty(input));
         if (input.match(",")) {
             auto size = TRY_OR_RETURN(input.integer());
+            (void)size;
             TRY_OR_RETURN(input.expect(">"));
             return Wit::Ty{Kind::FixedLengthList, {std::move(inner), Wit::Ty{Kind::U32}}};
         }
@@ -384,6 +414,8 @@ std::expected<Wit::Ty, parse_error> ty(Input& input) {
             }
             TRY_OR_RETURN(input.expect(">"));
         }
+
+        return Wit::Ty{Kind::Result, std::move(params)};
     }
 
     // map ::= 'map' '<' kt ',' ty '>'
@@ -432,7 +464,7 @@ std::expected<Wit::Ty, parse_error> ty(Input& input) {
     }
 
     return std::unexpected(
-        std::make_tuple(fmt::format("expected type, but found keyword: {}", kw),
+        std::make_tuple("Expected type keyword",
         input
     ));
 }
@@ -440,7 +472,7 @@ std::expected<Wit::Ty, parse_error> ty(Input& input) {
 // named-type-list ::= ϵ
 //                  | named-type ( ',' named-type )*
 // named-type ::= id ':' ty
-std::expected<std::vector<Wit::NamedType>, parse_error> named_type_list(Input& input) {
+constexpr std::expected<std::vector<Wit::NamedType>, parse_error> named_type_list(Input& input) {
     std::vector<Wit::NamedType> types;
 
     TRY_OR_RETURN(input.expect("("));
@@ -456,7 +488,7 @@ std::expected<std::vector<Wit::NamedType>, parse_error> named_type_list(Input& i
 }
 
 // func-type ::= 'async'? 'func' param-list result-list
-std::expected<Wit::FuncType, parse_error> func_type(Input& input) {
+constexpr std::expected<Wit::FuncType, parse_error> func_type(Input& input) {
     Wit::FuncType func_type;
     func_type.async = input.match("async");
 
@@ -472,7 +504,7 @@ std::expected<Wit::FuncType, parse_error> func_type(Input& input) {
 
 
 // func-item ::= id ':' func-type ';'
-std::expected<std::optional<Wit::Func>, parse_error> func_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Func>, parse_error> func_item(Input& input, Wit::Gate& gate) {
     Wit::Func func;
     func.gate = std::move(gate);
 
@@ -487,7 +519,7 @@ std::expected<std::optional<Wit::Func>, parse_error> func_item(Input& input, Wit
 // resource-method ::= func-item
 //                  | id ':' 'static' func-type ';'
 //                  | 'constructor' param-list ';'
-std::expected<std::optional<Wit::Resource>, parse_error> resource_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Resource>, parse_error> resource_item(Input& input, Wit::Gate& gate) {
     Wit::Resource resource;
 
     if (!input.match("resource"))
@@ -530,7 +562,7 @@ std::expected<std::optional<Wit::Resource>, parse_error> resource_item(Input& in
 //                 | variant-case ',' variant-cases?
 // variant-case ::= id
 //                | id '(' ty ')'
-std::expected<std::optional<Wit::Varient>, parse_error> variant_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Varient>, parse_error> variant_item(Input& input, Wit::Gate& gate) {
     Wit::Varient variant;
 
     if (!input.match("variant"))
@@ -558,7 +590,7 @@ std::expected<std::optional<Wit::Varient>, parse_error> variant_item(Input& inpu
 // record-fields ::= record-field
 //                 | record-field ',' record-fields?
 // record-field ::= id ':' ty
-std::expected<std::optional<Wit::Record>, parse_error> record_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Record>, parse_error> record_item(Input& input, Wit::Gate& gate) {
     Wit::Record record;
 
     if (!input.match("record"))
@@ -581,7 +613,7 @@ std::expected<std::optional<Wit::Record>, parse_error> record_item(Input& input,
 // flags-items ::= 'flags' id '{' flags-fields '}'
 // flags-fields ::= id
 //                | id ',' flags-fields?
-std::expected<std::optional<Wit::Flags>, parse_error> flags_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Flags>, parse_error> flags_item(Input& input, Wit::Gate& gate) {
     Wit::Flags flags;
 
     if (!input.match("flags"))
@@ -602,7 +634,7 @@ std::expected<std::optional<Wit::Flags>, parse_error> flags_item(Input& input, W
 // enum-items ::= 'enum' id '{' enum-cases '}'
 // enum-cases ::= id
 //              | id ',' enum-cases?
-std::expected<std::optional<Wit::Enum>, parse_error> enum_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Enum>, parse_error> enum_item(Input& input, Wit::Gate& gate) {
     Wit::Enum result;
 
     if (!input.match("enum"))
@@ -622,7 +654,7 @@ std::expected<std::optional<Wit::Enum>, parse_error> enum_item(Input& input, Wit
 
 // type-item ::= 'type' id '=' ty ';'
 // AKA type-alias
-std::expected<std::optional<Wit::TypeAlias>, parse_error> type_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::TypeAlias>, parse_error> type_item(Input& input, Wit::Gate& gate) {
     Wit::TypeAlias type;
 
     if (!input.match("type"))
@@ -645,7 +677,7 @@ std::expected<std::optional<Wit::TypeAlias>, parse_error> type_item(Input& input
 //                | flags-items
 //                | enum-items
 //                | type-item
-std::expected<std::optional<Wit::TypeDef>, parse_error> typedef_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::TypeDef>, parse_error> typedef_item(Input& input, Wit::Gate& gate) {
     if (auto resource = TRY_OR_RETURN(resource_item(input, gate)))
         return *resource;
     if (auto variant = TRY_OR_RETURN(variant_item(input, gate)))
@@ -668,7 +700,7 @@ std::expected<std::optional<Wit::TypeDef>, parse_error> typedef_item(Input& inpu
 //                  | use-names-item ',' use-names-list?
 // use-names-item ::= id
 //                  | id 'as' id
-std::expected<std::optional<Wit::Use>, parse_error> use_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Use>, parse_error> use_item(Input& input, Wit::Gate& gate) {
     Wit::Use use;
     if (!input.match("use"))
         return std::nullopt;
@@ -695,7 +727,7 @@ std::expected<std::optional<Wit::Use>, parse_error> use_item(Input& input, Wit::
 
 // interface-item ::= gate 'interface' id '{' interface-items* '}'
 // interface-items ::= gate interface-definition
-std::expected<std::vector<Wit::InterfaceItem>, parse_error> interface_items(Input& input) {
+constexpr std::expected<std::vector<Wit::InterfaceItem>, parse_error> interface_items(Input& input) {
     std::vector<Wit::InterfaceItem> items;
 
     TRY_OR_RETURN(input.expect("{"));
@@ -713,7 +745,7 @@ std::expected<std::vector<Wit::InterfaceItem>, parse_error> interface_items(Inpu
     return items;
 }
 
-std::expected<std::optional<Wit::Interface>, parse_error> interface_item(Input& input) {
+constexpr std::expected<std::optional<Wit::Interface>, parse_error> interface_item(Input& input) {
     Wit::Interface interface;
     interface.gate = TRY_OR_RETURN(gate(input));
 
@@ -735,13 +767,13 @@ std::expected<std::optional<Wit::Interface>, parse_error> interface_item(Input& 
 // extern-type ::= func-type ';'
 //               | 'interface' '{' interface-items* '}'
 //               | use-path ';'
-std::expected<Wit::ExternType, parse_error> extern_type(Input& input, Wit::Gate gate) {
+constexpr std::expected<Wit::ExternType, parse_error> extern_type(Input& input, Wit::Gate gate) {
     // to prevent ambiguity, we first try to peek to see if we have a namespaced identifier without any whitespace.
 
     size_t ident_len = input.first_non_ident();
     if (ident_len && input.size() > ident_len + 2 && input[ident_len] == ':') {
         char next = input[ident_len + 1];
-        if (std::isalnum(next) || next == '-') {
+        if (is_ident_char(next)) {
             auto path = TRY_OR_RETURN(use_path(input));
             TRY_OR_RETURN(input.expect(";"));
             return Wit::Rename{std::move(gate), std::move(path), {}};
@@ -786,7 +818,7 @@ std::expected<Wit::ExternType, parse_error> extern_type(Input& input, Wit::Gate 
 
 // export-item ::= 'export' id ':' extern-type
 //               | 'export' use-path ';'
-std::expected<std::optional<Wit::Export>, parse_error> export_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Export>, parse_error> export_item(Input& input, Wit::Gate& gate) {
     Wit::Export export_item;
     export_item.gate = std::move(gate);
     if (!input.match("export"))
@@ -800,7 +832,7 @@ std::expected<std::optional<Wit::Export>, parse_error> export_item(Input& input,
 
 // import-item ::= 'import' id ':' extern-type
 //               | 'import' use-path ';'
-std::expected<std::optional<Wit::Import>, parse_error> import_item(Input& input, Wit::Gate& gate) {
+constexpr std::expected<std::optional<Wit::Import>, parse_error> import_item(Input& input, Wit::Gate& gate) {
     Wit::Import import_item;
     import_item.gate = std::move(gate);
     if (!input.match("import"))
@@ -820,7 +852,7 @@ std::expected<std::optional<Wit::Import>, parse_error> import_item(Input& input,
 //                    | typedef-item
 //                    | include-item
 
-std::expected<std::optional<Wit::World>, parse_error> world_item(Input& input) {
+constexpr std::expected<std::optional<Wit::World>, parse_error> world_item(Input& input) {
     Wit::World world;
     world.gate = TRY_OR_RETURN(gate(input));
 
@@ -853,7 +885,7 @@ std::expected<std::optional<Wit::World>, parse_error> world_item(Input& input) {
 }
 
 // package-items ::= toplevel-use-item | interface-item | world-item
-std::expected<Wit::PackageItem, parse_error> package_items(Input& input) {
+constexpr std::expected<Wit::PackageItem, parse_error> package_items(Input& input) {
     // TODO: toplevel-use-item
     if (auto interface = TRY_OR_RETURN(interface_item(input))) {
         return *interface;
@@ -867,7 +899,7 @@ std::expected<Wit::PackageItem, parse_error> package_items(Input& input) {
 }
 
 // nested-package-definition ::= package-decl '{' package-items* '}'
-std::expected<std::optional<Wit::Nested>, parse_error> nested_package_definition(Input& input) {
+constexpr std::expected<std::optional<Wit::Nested>, parse_error> nested_package_definition(Input& input) {
     Wit::Nested nested;
     auto decl = TRY_OR_RETURN(package_decl(input));
     if (!decl) {
@@ -883,7 +915,7 @@ std::expected<std::optional<Wit::Nested>, parse_error> nested_package_definition
 
 
 // wit-file ::= (package-decl ';')? (package-items | nested-package-definition)*
-std::expected<std::vector<Wit::PackageItem>, parse_error> wit_file(Input& input) {
+constexpr std::expected<std::vector<Wit::PackageItem>, parse_error> wit_file(Input& input) {
     TRY_OR_RETURN(package_decl(input));
     TRY_OR_RETURN(input.expect(";"));
 
@@ -891,8 +923,10 @@ std::expected<std::vector<Wit::PackageItem>, parse_error> wit_file(Input& input)
 
     while (!input.empty()) {
         if (auto nested = TRY_OR_RETURN(nested_package_definition(input))) {
-            // TODO: do we need to tag these items, or something?
-            items.emplace_back(std::move(*nested));
+            // Nested package blocks currently flatten into top-level items.
+            for (auto& nested_item : nested->items) {
+                items.push_back(std::move(nested_item));
+            }
         }
         else {
             items.push_back(TRY_OR_RETURN(package_items(input)));
@@ -902,12 +936,27 @@ std::expected<std::vector<Wit::PackageItem>, parse_error> wit_file(Input& input)
     return items;
 }
 
-std::vector<Wit::PackageItem> parse_wit() {
-    static constexpr std::string_view dolphin_wit =
+static constexpr std::string_view get_embedded_wit()
+{
+    return
         #include "dolphin_wit.h"
     ;
+}
+
+consteval bool parse_wit_consteval()
+{
+    Input input(get_embedded_wit());
+    auto result = wit_file(input);
+    bool success = result.has_value() && input.empty();
+    return success;
+}
+
+static_assert(parse_wit_consteval(), "Failed to parse dolphin.wit at compile time");
+
+std::vector<Wit::PackageItem> parse_wit() {
 
     //constexpr ;
+    const std::string_view dolphin_wit = get_embedded_wit();
     Input input(dolphin_wit);
     auto result = wit_file(input);
 
@@ -925,7 +974,6 @@ std::vector<Wit::PackageItem> parse_wit() {
         if (end_of_line == std::string_view::npos)
             end_of_line = dolphin_wit.size();
         size_t line_offset = error_pos - start_of_line;
-        std::string_view line = dolphin_wit.substr(start_of_line, end_of_line - start_of_line);
         auto lines = dolphin_wit.substr(0, end_of_line);
         fmt::print(stderr, "Error at line {}:\n{}\n", error_line_num, lines);
 
