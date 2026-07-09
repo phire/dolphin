@@ -86,8 +86,7 @@ struct Input : public std::string_view {
 
     constexpr std::expected<std::monostate, parse_error> expect(std::string_view text) {
         if (match(text)) {
-            consume_whitespace();
-            return {};
+            return consume_whitespace().transform([](auto) { return std::monostate{}; });
         }
 
         return std::unexpected(std::make_tuple("Expected token", *this));
@@ -109,16 +108,15 @@ struct Input : public std::string_view {
         }
 
         remove_prefix(len);
-        consume_whitespace();
 
-        return value;
+        return consume_whitespace().transform([value](auto) { return value; });
     }
 
-    constexpr std::string_view consume(std::size_t n) {
+    constexpr std::expected<std::string_view, parse_error> consume(std::size_t n) {
         std::string_view result = substr(0, n);
         remove_prefix(n);
-        consume_whitespace();
-        return result;
+
+        return consume_whitespace().transform([result](auto) { return result; });
     }
 
     constexpr size_t first_non_ident() {
@@ -131,7 +129,7 @@ struct Input : public std::string_view {
 
 private:
 
-    constexpr bool consume_whitespace() {
+    constexpr std::expected<bool, parse_error> consume_whitespace() {
         auto orig_size = size();
         while (!empty()) {
             switch (front()) {
@@ -148,7 +146,9 @@ private:
                             remove_prefix(std::min(newline_pos + 1, size()));
                             continue;
                         } else if ((*this)[1] == '*') {
-                            consume_multiline_comment();
+                            if (auto result = consume_multiline_comment(); !result) {
+                                return std::unexpected(result.error());
+                            }
                             continue;
                         }
                     }
@@ -161,7 +161,8 @@ private:
     }
 
     // Wit allows for nested multiline comments, so we need to deal with that.
-    constexpr void consume_multiline_comment() {
+    constexpr std::expected<void, parse_error> consume_multiline_comment() {
+        auto error_pos = *this;
         remove_prefix(2); // remove starting "/*"
         int depth = 1;
         while (!empty() && depth > 0) {
@@ -175,12 +176,18 @@ private:
                 remove_prefix(close_pos + 2);
                 depth--;
             } else {
+                error_pos = *this;
                 remove_prefix(open_pos + 2);
                 depth++;
             }
         }
 
-        // TODO: error handling for unterminated comments
+        if (depth > 0) {
+            // Rewind to error pos (because some callers ignore the error)
+            *this = error_pos;
+            return std::unexpected(std::make_tuple("Unterminated comment", error_pos));
+        }
+        return {};
     }
 };
 
@@ -207,7 +214,7 @@ constexpr std::expected<std::string, parse_error> identifier(Input& input) {
         return std::unexpected(std::make_tuple("Expected identifier, but found keyword", input));
     }
 
-    return std::string(input.consume(len));
+    return input.consume(len).transform([](auto sv) { return std::string(sv); });
 }
 
 constexpr std::expected<std::string_view, parse_error> keyword(Input& input) {
