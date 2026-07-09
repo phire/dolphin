@@ -10,8 +10,14 @@ add_library(plugin_binding
 )
 target_include_directories(plugin_binding PUBLIC Binding/)
 
-file(READ ${CMAKE_SOURCE_DIR}/wit/dolphin.wit DOLPHIN_WIT_FILE)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/dolphin_wit.h.in ${CMAKE_CURRENT_BINARY_DIR}/dolphin_wit.h)
+# embed dolphin.wit
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dolphin_wit.h
+    COMMAND ${CMAKE_COMMAND} -E bin2c
+        ${CMAKE_SOURCE_DIR}/wit/dolphin.wit
+        ${CMAKE_CURRENT_BINARY_DIR}/dolphin_wit.h
+    DEPENDS ${CMAKE_SOURCE_DIR}/wit/dolphin.wit
+)
 
 add_library(plugins
     BasicGuiModule.cpp
@@ -24,8 +30,11 @@ add_library(plugins
     dolphin_wit.h
 )
 
-target_include_directories(plugins PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-
+target_include_directories(plugins
+PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/wit
+)
 
 target_link_libraries(plugins
 PRIVATE

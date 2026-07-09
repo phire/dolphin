@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <type_traits>
 #include <functional>
+#include <version>
 
 #include "Common/Logging/Log.h"
 
@@ -977,9 +978,14 @@ constexpr std::expected<std::vector<Wit::PackageItem>, parse_error> wit_file(Inp
 
 static constexpr std::string_view get_embedded_wit()
 {
-    return
+    static constexpr char embedded_wit[] = {
+#ifdef __cpp_pp_embed
+    #embed "dolphin.wit"
+#else
         #include "dolphin_wit.h"
-    ;
+#endif
+    };
+    return std::string_view(embedded_wit, sizeof(embedded_wit));
 }
 
 // consteval bool parse_wit_consteval()
