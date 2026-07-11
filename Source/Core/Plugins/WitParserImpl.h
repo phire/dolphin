@@ -517,13 +517,18 @@ constexpr std::expected<Wit::Ty, parse_error> ty(Input& input) {
     ));
 }
 
+// param-list ::= '(' named-type-list ')'
 // named-type-list ::= ϵ
 //                  | named-type ( ',' named-type )*
 // named-type ::= id ':' ty
-constexpr std::expected<std::vector<Wit::NamedType>, parse_error> named_type_list(Input& input) {
+constexpr std::expected<std::vector<Wit::NamedType>, parse_error> param_list(Input& input) {
     std::vector<Wit::NamedType> types;
 
     TRY_OR_RETURN(input.expect("("));
+    if (input.match(")")) {
+        // ϵ (Empty list)
+        return types;
+    }
     do {
         auto name = TRY_OR_RETURN(identifier(input));
         TRY_OR_RETURN(input.expect(":"));
@@ -542,7 +547,7 @@ constexpr std::expected<Wit::FuncType, parse_error> func_type(Input& input) {
 
     TRY_OR_RETURN(input.expect("func"));
 
-    func_type.params = TRY_OR_RETURN(named_type_list(input));
+    func_type.params = TRY_OR_RETURN(param_list(input));
     if (input.match("->")) {
         func_type.results = {{TRY_OR_RETURN(ty(input))}};
     }
@@ -586,7 +591,7 @@ constexpr std::expected<std::optional<Wit::Resource>, parse_error> resource_item
             resource.methods.push_back(std::move(*method));
         } else if (input.match("constructor")) {
             Wit::FuncType ty;
-            ty.params = TRY_OR_RETURN(named_type_list(input));
+            ty.params = TRY_OR_RETURN(param_list(input));
             ty.results = {Wit::Ty{Wit::Ty::Kind::Id, resource.name}};
             resource.methods.push_back(
                 Wit::Func{resource.gate, "", std::move(ty)});
@@ -707,7 +712,6 @@ constexpr std::expected<std::optional<Wit::TypeAlias>, parse_error> type_item(In
 
     if (!input.match("type"))
         return std::nullopt;
-
 
 
     type.gate = std::move(gate);
