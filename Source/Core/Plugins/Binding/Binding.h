@@ -112,154 +112,48 @@ struct FnTraits<R(C::*)(Args...)> : public FnTraitsBase<R, Args...> {
   };
 };
 
-template<auto f>
-struct Wrapped {
-  using Traits = FnTraits<decltype(f)>;
-  //using Invoker = typename Traits::template Invoker<f>;
-  static constexpr std::size_t ArgCount = Traits::ArgCount;
 
-  Wrapped(std::string_view name) : m_name(name) {
-    // m_cpp_ptr = reinterpret_cast<void*>(f);
-    // m_raw_ptr = reinterpret_cast<void*>(Invoker::wrapped);
-  }
 
-  void* GetWrapped() const {
-    using Invoker = typename Traits::template Invoker<f>;
-    return reinterpret_cast<void*>(Invoker::wrapped);
-  }
-
-  std::string_view m_name;
-
-  // void* m_cpp_ptr;
-  // void* m_raw_ptr;
-};
-
-template<auto f>
-auto wrap(std::string_view name) {
-  //static_assert(!Wrapped<f>::Traits::IsMethod, "Cannot wrap a method with this function");
-  return Wrapped<f>(name);
 }
 
-struct ArgDesc {
-  std::string_view GetName() const { return m_name; }
-  std::string_view GetDescription() const { return m_description; }
-
-  ArgDesc(const char* name, const char* description) : m_name(name), m_description(description) {}
-  ArgDesc(const char* name) : m_name(name) {}
-  ArgDesc() = default;
-private:
-  std::string_view m_name = std::string_view();
-  std::string_view m_description = std::string_view();
+template<size_t Footprint>
+struct cxstring
+{
+    char data[Footprint];
+    constexpr size_t size() const { return Footprint - 1; }
+    constexpr cxstring(const char (&init)[Footprint])
+    { std::copy_n(init, Footprint, data); }
 };
 
-struct TypedArgDesc : public ArgDesc {
-  TypedArgDesc(ArgDesc&& desc, wasmtime::component::ValType kind) : ArgDesc(std::move(desc)), m_kind(kind) {}
-
-private:
-  wasmtime::component::ValType m_kind;
+template<auto str>
+struct type_string
+{
+    using type_string_tag = void;
+    static constexpr const char* data()
+    {
+         return str.data;
+    }
+    static constexpr size_t size()
+    {
+        return str.size();
+    }
+    static constexpr std::string_view view()
+    {
+        return std::string_view{data(), size()};
+    }
 };
 
-template<std::size_t N>
-struct Sig : std::array<ArgDesc, N> {
-  using std::array<ArgDesc, N>::array;
-  Sig(const ArgDesc (&args)[N]) {
-    std::copy(std::begin(args), std::end(args), this->begin());
-  }
-};
-
-template <std::size_t N>
-Sig(const ArgDesc (&)[N]) -> Sig<N>;
-
-class MethodBinding {
-public:
-  template<typename T, typename W, std::size_t N>
-  MethodBinding(T& resource, W& wrapped, std::string_view name, Sig<N> arg_names) : m_name(name)
-  {
-    static_assert(W::ArgCount == N, "Argument count mismatch");
-  }
-
-  std::string m_name;
-  std::string m_description;
-  std::vector<ArgDesc> m_args;
-  //void* m_cpp_ptr = nullptr;
-  void* m_wrapped_ptr = nullptr;
-};
-
-template<class T>
-struct Resource {
-
-  Resource(std::string_view name, std::string_view description) : m_name(name), m_description(description) {}
-
-  template<typename W, std::size_t N>
-  void add(W &&wrapped, Sig<N> arg_names) {
-    m_methods.push_back(MethodBinding(*this, wrapped, "", std::move(arg_names)));
-  }
-
-  std::vector<MethodBinding> m_methods;
-
-  std::string_view m_name;
-  std::string_view m_description;
-};
-
-class ResourceBinding {
-public:
-  ResourceBinding() = default;
-  template<typename T>
-  ResourceBinding(T&& resource) : m_name(resource.m_name), m_description(resource.m_description), m_methods(std::move(resource.m_methods)) {}
-
-  std::string m_name;
-  std::string m_description;
-  std::vector<MethodBinding> m_methods;
-};
-
-class FunctionBinding {
-public:
-
-  template<typename T, std::size_t N>
-  FunctionBinding(T& wrapped, std::string_view name, Sig<N> arg_names) : m_name(name)
-  {
-    static_assert(T::Traits::ArgCount == N, "Argument count mismatch");
-
-    m_wrapped_ptr = wrapped.GetWrapped();
-    // for (std::size_t i = 0; i < T::Traits::ArgCount; ++i) {
-    //   m_args.push_back(TypedArgDesc(arg_names[i], T::Traits::ArgTypes[i]));
-    // }
-    std::copy(arg_names.begin(), arg_names.end(), std::back_inserter(m_args));
-  }
-
-  std::string m_name;
-  std::string m_description;
-  std::vector<ArgDesc> m_args;
-  //void* m_cpp_ptr = nullptr;
-  void* m_wrapped_ptr = nullptr;
-private:
-};
-
-
-template<auto f, std::size_t N>
-FunctionBinding wrap_fn(std::string_view name, Sig<N> arg_names) {
-  Wrapped<f> wrapped(name);
-
-  return FunctionBinding(wrapped, name, std::move(arg_names));
+template<cxstring str>
+constexpr auto operator"" _t()
+{
+    return type_string<str>{};
 }
 
-template<auto& f, std::size_t N>
-FunctionBinding wrap_fn(std::string_view name, const ArgDesc (&arg_names)[N]) {
-  return wrap_fn<&f>(name, Sig<N>(arg_names));
-}
-
-class ComponentBinding {
-public:
-  ComponentBinding() = default;
-  ComponentBinding(const char* name, const char* description) : m_name(name), m_description(description) {}
-
-  void add(FunctionBinding&& binding) {
-    m_functions.push_back(std::move(binding));
-  }
-
-  std::string m_name;
-  std::string m_description;
-  std::vector<FunctionBinding> m_functions;
+template <auto f, auto name>
+struct Method {
+  using name_t = decltype(name);
+  using Traits = Plugin::FnTraits<decltype(f)>;
+    static constexpr std::string_view binding_name() {
+        return name.view();
+    }
 };
-
-}

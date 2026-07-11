@@ -281,7 +281,7 @@ void PowerPCManager::Init(CPUCore cpu_core)
   m_ppc_state.iCache.Init(memory);
   m_ppc_state.dCache.Init(memory);
 
-  CpuApi::Init();
+  // CpuApi::Init();
 }
 
 void PowerPCManager::Reset()
@@ -316,7 +316,7 @@ void PowerPCManager::ScheduleInvalidateCacheThreadSafe(u32 address)
 
 void PowerPCManager::Shutdown()
 {
-  CpuApi::Shutdown();
+  // CpuApi::Shutdown();
   CPUThreadConfigCallback::RemoveConfigChangedCallback(m_registered_config_callback_id);
   InjectExternalCPUCore(nullptr);
   m_system.GetJitInterface().Shutdown();

@@ -6,7 +6,7 @@ world guest {
 
 interface emu {
     /// Allows accessing emulated CPU memory
-    resource Cpu {
+    resource cpu {
         /// Reads a u8 from emulated CPU memory
         read-u8: func(address: u32) -> u8;
 
@@ -16,14 +16,14 @@ interface emu {
         /// <And so-on with the doc comments>
         read-u32: func(address: u32) -> u32;
         read-u64: func(address: u32) -> u64;
-        read-float: func(address: u32) -> float;
-        read-double: func(address: u32) -> double;
+        read-float: func(address: u32) -> f32;
+        read-double: func(address: u32) -> f64;
 
         write-u8: func(address: u32, val: u8);
         write-u16: func(address: u32, val: u16);
         write-u32: func(address: u32, val: u32);
         write-u64: func(address: u32, val: u64);
-        write-float: func(address: u32, val: float);
-        write-double: func(address: u32, val: double);
+        write-float: func(address: u32, val: f32);
+        write-double: func(address: u32, val: f64);
     }
 }

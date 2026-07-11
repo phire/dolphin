@@ -28,6 +28,7 @@ add_library(plugins
     PluginHost.cpp
     WitParser.cpp
     dolphin_wit.h
+    WitParserImpl.h
 )
 
 target_include_directories(plugins
