@@ -44,4 +44,6 @@ PRIVATE
     plugin_abi
     wasmtime
     fmt::fmt
+    lexy
+    lexy_ext
 )

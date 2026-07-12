@@ -137,3 +137,6 @@
 [submodule "Externals/wasmtime"]
 	path = Externals/wasmtime
 	url = git@github.com:bytecodealliance/wasmtime.git
+[submodule "Externals/lexy"]
+	path = Externals/lexy
+	url = git@github.com:foonathan/lexy.git

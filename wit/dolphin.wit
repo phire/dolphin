@@ -1,8 +1,8 @@
 package dolphin-emu:dolphin@0.0.1;
 
-world guest {
-    import emu;
-}
+//world guest {
+//    import emu;
+//}
 
 interface emu {
     /// Allows accessing emulated CPU memory

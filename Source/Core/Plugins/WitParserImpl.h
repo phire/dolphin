@@ -15,6 +15,7 @@
 #include "Common/Logging/Log.h"
 
 #include "Binding/Binding.h"
+
 struct Token {
     enum class Type {
         Whitespace,
@@ -195,6 +196,44 @@ private:
         return {};
     }
 };
+
+// template<typename Parser, typename Until>
+// struct RepeatUntil {
+//     Parser parser;
+//     Until until;
+//     RepeatUntil(Parser p, Until u) : parser(p), until(u) {}
+
+//     template<typename Tuple, typename Result = decltype(std::tuple_cat(Tuple(), std::make_tuple(*std::declval<std::expected<typename std::invoke_result_t<Parser, Input&>::value_type, parse_error>>())))>
+//     constexpr std::expected<Result, parse_error> operator()(Tuple prev, Input& input) {
+//         auto result = parser(input);
+
+//         if (result.has_value()) {
+//             auto tuple = std::tuple_cat(prev, std::make_tuple(*result));
+//             if (until(input)) {
+//                 return std::expected<decltype(tuple)>(std::move(tuple));
+//             } else {
+//                 return operator()(tuple, input);
+//             }
+//         }
+//         return std::unexpected(result.error());
+//     }
+// };
+
+// constexpr auto repeat(Input& input, auto parser, auto until) {
+//     // auto iter = [&]<typename Tuple, typename Result>(Tuple prev) -> std::expected<Result, parse_error> {
+//     //     auto result = parser(input);
+//     //     if (result.has_value()) {
+//     //         if (until(input)) {
+//     //             return std::expected(std::tuple_cat(prev, std::make_tuple(*result)));
+//     //         } else {
+//     //             return iter(std::tuple_cat(prev, std::make_tuple(*result)));
+//     //         }
+//     //     }
+//     //     return std::unexpected(result.error());
+//     // };
+//     auto iter = RepeatUntil(parser, until);
+//     return iter(std::tuple<>(), input);
+// }
 
 template<typename T>
 constexpr std::expected<T, parse_error> wrapped(Input& input, std::string_view open, std::expected<T, parse_error>(parse_func)(Input&), std::string_view close) {
@@ -962,22 +1001,25 @@ constexpr std::expected<std::optional<Wit::Nested>, parse_error> nested_package_
 
 
 // wit-file ::= (package-decl ';')? (package-items | nested-package-definition)*
+//template<typename Result>
 constexpr std::expected<std::vector<Wit::PackageItem>, parse_error> wit_file(Input& input) {
     TRY_OR_RETURN(package_decl(input));
     TRY_OR_RETURN(input.expect(";"));
 
     std::vector<Wit::PackageItem> items;
 
+    // return repeat(input, package_items, [](Input& input) { return input.empty(); });
+
     while (!input.empty()) {
-        if (auto nested = TRY_OR_RETURN(nested_package_definition(input))) {
-            // Nested package blocks currently flatten into top-level items.
-            for (auto& nested_item : nested->items) {
-                items.push_back(std::move(nested_item));
-            }
-        }
-        else {
+        // if (auto nested = TRY_OR_RETURN(nested_package_definition(input))) {
+        //     // Nested package blocks currently flatten into top-level items.
+        //     for (auto& nested_item : nested->items) {
+        //         items.push_back(std::move(nested_item));
+        //     }
+        // }
+        // else {
             items.push_back(TRY_OR_RETURN(package_items(input)));
-        }
+        // }
     }
 
     return items;
@@ -1005,6 +1047,7 @@ void print_error(parse_error error, const std::string_view input) {
 }
 
 
+
 static constexpr std::string_view get_embedded_wit()
 {
     static constexpr char embedded_wit[] = {
@@ -1017,26 +1060,26 @@ static constexpr std::string_view get_embedded_wit()
     return std::string_view(embedded_wit, sizeof(embedded_wit));
 }
 
-static consteval std::optional<std::vector<Wit::PackageItem>> parse_embedded_wit() {
-    Input input(get_embedded_wit());
-    auto result = wit_file(input);
-    if (input.empty() && result.has_value()) {
-        return { result.value() };
-    }
-    return std::nullopt;
-}
+// static consteval std::optional<std::vector<Wit::PackageItem>> parse_embedded_wit() {
+//     Input input(get_embedded_wit());
+//     auto result = wit_file(input);
+//     if (input.empty() && result.has_value()) {
+//         return { result.value() };
+//     }
+//     return std::nullopt;
+// }
 // static_assert(parse_embedded_wit().has_value(), "Failed to parse dolphin.wit");
 
-static consteval std::vector<Wit::PackageItem> parse_wit() {
-    auto parser =  [] consteval -> std::optional<std::vector<Wit::PackageItem>> {
-        Input input(get_embedded_wit());
-        auto result = wit_file(input);
-        if (input.empty() && result.has_value()) {
-            return { result.value() };
-        }
-        return std::nullopt;
-    };
+// static consteval std::vector<Wit::PackageItem> parse_wit() {
+//     auto parser =  [] consteval -> std::optional<std::vector<Wit::PackageItem>> {
+//         Input input(get_embedded_wit());
+//         auto result = wit_file(input);
+//         if (input.empty() && result.has_value()) {
+//             return { result.value() };
+//         }
+//         return std::nullopt;
+//     };
 
-    static_assert(parser().has_value(), "Failed to parse dolphin.wit");
-    return parser().value();
-}
+//     static_assert(parser().has_value(), "Failed to parse dolphin.wit");
+//     return parser().value();
+// }

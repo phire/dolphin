@@ -768,6 +768,8 @@ add_subdirectory(Externals/watcher)
 
 add_subdirectory(Externals/wasmtime/crates/c-api)
 
+add_subdirectory(Externals/lexy)
+
 
 # Any other platform or BSD is currently unsupported by cpp-ipc
 if(WIN32 OR LINUX OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "QNX")
