@@ -16,19 +16,19 @@
 
 #include "Binding/Binding.h"
 
-struct Token {
-    enum class Type {
-        Whitespace,
-        Operator,
-        Keyword,
-        Integer,
-        Identifier,
-        End,
-    };
+// struct Token {
+//     enum class Type {
+//         Whitespace,
+//         Operator,
+//         Keyword,
+//         Integer,
+//         Identifier,
+//         End,
+//     };
 
-    Type type;
-    std::string_view text;
-};
+//     Type type;
+//     std::string_view text;
+// };
 
 static constexpr std::string_view keywords[] = {
     "as",        "async",     "bool",      "borrow",    "char",      "constructor",

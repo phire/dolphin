@@ -26,6 +26,8 @@
 #include <lexy/action/validate.hpp>
 #include <lexy_ext/report_error.hpp>
 
+#include "Common/SmallVector.h"
+
 
 static uint64_t Module_id = 0x1000;
 static std::vector<Plugins::PluginFiles> plugin_entries;
@@ -82,28 +84,54 @@ struct FixedStr {
     }
 };
 
+template<typename T>
+struct FixedType {
+    using Type = T;
+
+    template<typename U>
+    constexpr auto is_same(U u) const {
+        return std::is_same_v<Type, U>;
+    }
+};
+
+template<class>
+inline constexpr bool always_false_v = false;
+
+struct Visitor {
+    template<typename T>
+    constexpr auto operator()(const T&) const { return FixedType<typename T::type>{}; }
+    template<typename T>
+    constexpr auto operator()(const WitLexy::ListTypeT<T>& list_type) const {
+        auto element_type = make_fixedtype(list_type->element_type.get());
+        return FixedType<std::vector<typename decltype(element_type)::Type>>{};
+    }
+};
+
+constexpr auto make_fixedtype(WitLexy::Type type) {
+
+    return std::visit(Visitor{}, type);
+}
+
 struct FixNamedType {
-    FixedStr name  = {};
-    Wit::Ty::Kind kind = Wit::Ty::Kind::Ignore;
-    Wit::Ty ty = {};
+    FixedStr name;
+    const WitLexy::Type* type;
 
     constexpr FixNamedType() = default;
-    constexpr FixNamedType(const Wit::NamedType& other) : name(other.name), kind(other.type.kind), ty(other.type) {}
+    constexpr FixNamedType(const WitLexy::NamedType& other) : name(other.id), type(&other.type) {}
 };
 
 struct FixedLenFunc {
-    bool async = false;
-    bool static_ = false;
-    bool constructor = false;
+    // bool async = false;
+    // bool static_ = false;
+    // bool constructor = false;
     FixedStr name = {};
-    std::array<FixNamedType, 20> args;
-    size_t arg_count = 0;
+    Common::SmallVector<FixNamedType, 20> args = {};
     // std::array<Wit::Ty, 4> results;
 };
 
 struct FixedLenResource {
     FixedStr name;
-    std::array<FixedLenFunc, 20> methods;
+    Common::SmallVector<FixedLenFunc, 20> methods = {};
 };
 
 template<std::size_t ArgPos, Wit::Ty::Kind kind, typename T>
@@ -122,87 +150,91 @@ void Plugins::Init()
 
     static constexpr auto file = get_embedded_wit();
     auto literal = lexy::string_input(file);
-
-
     auto result = lexy::validate<WitLexy::witfile>(literal, lexy_ext::report_error);
-
     fmt::print("Parsed dolphin.wit with lexy: {}\n", result.is_success());
 
     auto wit = lexy::parse<WitLexy::witfile>(literal, lexy_ext::report_error);
+    fmt::print("{} {}\n", result.is_success(), wit.has_value());
 
 
-    // auto check = [] constexpr -> std::string {
 
-    //     static constexpr auto cpu_resource = [] constexpr -> FixedLenResource {
-    //         auto items = parse_wit();
-    //         auto emu_interface = std::find_if(items.begin(), items.end(), [](const auto& item) constexpr {
-    //             return std::holds_alternative<Wit::Interface>(item) && std::get<Wit::Interface>(item).name == "emu";
-    //         });
-    //         // if (emu_interface == items.end()) {
-    //         //     return "Error: emu interface not found in dolphin.wit\n";
-    //         // }
-    //         auto emu_items = std::get<Wit::Interface>(*emu_interface).items;
-    //         auto cpu_resource_v = std::ranges::find_if(emu_items, [](const auto& item) constexpr {
-    //             return std::holds_alternative<Wit::Resource>(item) && std::get<Wit::Resource>(item).name == "cpu";
-    //         });
-    //         // if (cpu_resource_v == emu_items.end()) {
-    //         //     return "Error: cpu resource not found in emu interface\n";
-    //         // }
 
-    //         FixedLenResource res;
-    //         size_t i = 0;
-    //         auto cpu_resource = std::get<Wit::Resource>(*cpu_resource_v);
-    //         res.name = FixedStr(cpu_resource.name);
-    //         for (const auto& method : cpu_resource.methods) {
-    //             auto& m = res.methods[i++];
-    //             m.name = FixedStr(method.name);
-    //             m.async = method.ty.async;
-    //             m.static_ = method.ty.static_;
-    //             m.constructor = method.ty.constructor;
-    //             m.arg_count = method.ty.params.size();
-    //             size_t j = 0;
-    //             for (const auto& arg : method.ty.params) {
-    //                 m.args[j++] = FixNamedType(arg);
-    //                 if (j >= m.args.size()) {
-    //                     break;
-    //                 }
-    //             }
-    //             j = 0;
-    //             // for (const auto& result : method.ty.results) {
-    //             //     m.results[j++] = result;
-    //             //     if (j >= m.results.size()) {
-    //             //         break;
-    //             //     }
-    //             // }
-    //             if (i >= res.methods.size()) {
-    //                 break;
-    //             }
-    //         }
+    auto check = [] constexpr -> std::string {
 
-    //         return res;
-    //     }();
+        static constexpr auto cpu_resource = [] consteval -> FixedLenResource {
+            static constexpr auto file = get_embedded_wit();
+            auto literal = lexy::string_input(file);
+            auto wit = lexy::parse<WitLexy::witfile>(literal, lexy::callback<void>([](auto, auto) constexpr {}) );
 
-    //     auto binder = [&](auto method) constexpr {
-    //         using Traits = decltype(method)::Traits;
+            auto& emu_interface = wit.value().interfaces[0];
 
-    //         static constexpr auto def = [&] consteval -> std::optional<FixedLenFunc> {
-    //             auto def = std::ranges::find_if(cpu_resource.methods, [&](const auto& m) constexpr { return m.name.view() == method.binding_name(); });
-    //             return def == cpu_resource.methods.end() ? std::nullopt : std::make_optional(*def);
-    //         }();
-    //         static_assert(def.has_value(), "Method not found in dolphin.wit");
+            // auto emu_interface = std::find_if(items.begin(), items.end(), [](const auto& item) constexpr {
+            //     return std::holds_alternative<WitLexy::Interface>(item) && std::get<WitLexy::Interface>(item).name == "emu";
+            // });
+            // if (emu_interface == items.end()) {
+            //     return "Error: emu interface not found in dolphin.wit\n";
+            // }
+            // auto emu_items = std::get<WitLexy::Interface>(*emu_interface).items;
+            // auto cpu_resource_v = std::ranges::find_if(emu_items, [](const auto& item) constexpr {
+            //     return std::holds_alternative<WitLexy::Resource>(item) && std::get<WitLexy::Resource>(item).name == "cpu";
+            // });
+            // if (cpu_resource_v == emu_items.end()) {
+            //     return "Error: cpu resource not found in emu interface\n";
+            // }
+            auto& cpu_resource = emu_interface.resources[0];
 
-    //         static_assert(def->arg_count == Traits::ArgCount, "Method argument count mismatch with dolphin.wit");
+            FixedLenResource res;
+            // auto cpu_resource = std::get<WitLexy::Resource>(*cpu_resource_v);
+            res.name = FixedStr(cpu_resource.id);
+            // res.methods.emplace_back(FixedStr(cpu_resource.methods[0].id));
+            for (const auto& method : cpu_resource.methods) {
+                auto& m = res.methods.emplace_back(FixedStr(method.id));
 
-    //         [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
-    //             static constexpr auto kinds = std::make_tuple(def->args[Is].kind...);
-    //             (CheckArgType<Is, std::get<Is>(kinds), std::tuple_element_t<Is, typename Traits::ArgTypes>>().check(), ...);
-    //         }(std::make_index_sequence<def->arg_count>{});
+                // m.async = method.ty.async;
+                // m.static_ = method.ty.static_;
+                // m.constructor = method.ty.constructor;
+                for (const auto& arg : method.type.params) {
+                    m.args.push_back(FixNamedType(arg));
+                    if (m.args.size() == m.args.capacity()) {
+                        break;
+                    }
+                }
+                // for (const auto& result : method.type.results) {
+                //     m.results[j++] = result;
+                //     if (j >= m.results.size()) {
+                //         break;
+                //     }
+                // }
 
-    //     };
-    //     CpuApi::CpuMemory::bindings(binder);
+                if (res.methods.size() == res.methods.capacity()) {
+                    break;
+                }
+            }
 
-    //     return "";
-    // };
+            return res;
+        }();
+
+        // auto binder = [&](auto method) constexpr {
+        //     using Traits = decltype(method)::Traits;
+
+        //     static constexpr auto def = [&] consteval -> std::optional<FixedLenFunc> {
+        //         auto def = std::ranges::find_if(cpu_resource.methods, [&](const auto& m) constexpr { return m.name.view() == method.binding_name(); });
+        //         return def == cpu_resource.methods.end() ? std::nullopt : std::make_optional(*def);
+        //     }();
+        //     static_assert(def.has_value(), "Method not found in dolphin.wit");
+
+        //     static_assert(def->arg_count == Traits::ArgCount, "Method argument count mismatch with dolphin.wit");
+
+        //     [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
+        //         static constexpr auto kinds = std::make_tuple(def->args[Is].kind...);
+        //         (CheckArgType<Is, std::get<Is>(kinds), std::tuple_element_t<Is, typename Traits::ArgTypes>>().check(), ...);
+        //     }(std::make_index_sequence<def->arg_count>{});
+
+        // };
+        // CpuApi::CpuMemory::bindings(binder);
+
+        return "";
+    };
 
     // bool bindings_ok = check() == "";
 
