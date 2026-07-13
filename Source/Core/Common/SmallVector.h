@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstddef>
 #include <utility>
+#include <ranges>
 
 #include "Common/TypeUtils.h"
 
@@ -21,82 +22,101 @@ class SmallVector final
 public:
   using value_type = T;
 
-  SmallVector() = default;
-  explicit SmallVector(size_t new_size) { resize(new_size); }
+  constexpr SmallVector() = default;
+  explicit constexpr SmallVector(size_t new_size) { resize(new_size); }
 
-  ~SmallVector() { clear(); }
+  constexpr ~SmallVector() { clear(); }
 
-  SmallVector(const SmallVector& other)
+  constexpr SmallVector(const SmallVector& other)
   {
-    for (auto& value : other)
+    //for (auto& value : other)
+    for (const auto& value : other.view())
       emplace_back(value);
   }
 
-  SmallVector& operator=(const SmallVector& rhs)
+  constexpr SmallVector& operator=(const SmallVector& rhs)
   {
     clear();
-    for (auto& value : rhs)
+    for (const auto& value : rhs.view())
       emplace_back(value);
     return *this;
   }
 
-  SmallVector(SmallVector&& other)
+  constexpr SmallVector(SmallVector&& other)
   {
-    for (auto& value : other)
+    for (auto&& value : other.view())
       emplace_back(std::move(value));
     other.clear();
   }
 
-  SmallVector& operator=(SmallVector&& rhs)
+  constexpr SmallVector& operator=(SmallVector&& rhs)
   {
     clear();
-    for (auto& value : rhs)
+    for (auto&& value : rhs.view())
       emplace_back(std::move(value));
     rhs.clear();
     return *this;
   }
 
-  void push_back(const value_type& x) { emplace_back(x); }
-  void push_back(value_type&& x) { emplace_back(std::move(x)); }
+  constexpr void push_back(const value_type& x) { emplace_back(x); }
+  constexpr void push_back(value_type&& x) { emplace_back(std::move(x)); }
 
   template <typename... Args>
-  value_type& emplace_back(Args&&... args)
+  constexpr value_type& emplace_back(Args&&... args)
   {
     assert(m_size < MaxSize);
     return m_array[m_size++].Construct(std::forward<Args>(args)...);
   }
 
-  void pop_back()
+  constexpr void pop_back()
   {
     assert(m_size > 0);
     m_array[--m_size].Destroy();
   }
 
-  value_type& operator[](size_t i)
+  constexpr value_type& operator[](size_t i)
   {
     assert(i < m_size);
-    return data()[i];
+    //return r[i];
+    return m_array[i].Ref();
   }
-  const value_type& operator[](size_t i) const
+  constexpr const value_type& operator[](size_t i) const
   {
     assert(i < m_size);
-    return data()[i];
+    return m_array[i].Ref();
   }
 
-  auto data() { return m_array.data()->Ptr(); }
-  auto begin() { return data(); }
-  auto end() { return data() + m_size; }
+  // These don't work in constexpr contexts
+  value_type* data() { return m_array.data()->Ptr(); }
+  value_type* begin() { return data(); }
+  value_type* end() { return data() + m_size; }
 
   auto data() const { return m_array.data()->Ptr(); }
-  auto begin() const { return data(); }
-  auto end() const { return data() + m_size; }
+  const value_type* begin() const { return data(); }
+  const value_type* end() const { return data() + m_size; }
 
-  size_t capacity() const { return MaxSize; }
-  size_t size() const { return m_size; }
+  constexpr auto view() const {
+    return std::ranges::views::transform(m_array | std::views::take(m_size), [](const auto& v) constexpr { return v.Ref(); });
+  }
 
-  bool empty() const { return m_size == 0; }
+  constexpr auto view() {
+    return std::ranges::views::transform(m_array | std::views::take(m_size), [](auto& v) constexpr { return v.Ref(); });
+  }
 
-  void resize(size_t new_size)
+  constexpr auto ptr_view() const {
+    return std::ranges::views::transform(m_array | std::views::take(m_size), [](const auto& v) constexpr { return v.Ptr(); });
+  }
+  constexpr auto ptr_view() {
+    return std::ranges::views::transform(m_array | std::views::take(m_size), [](auto& v) constexpr { return v.Ptr(); });
+  }
+
+
+  constexpr size_t capacity() const { return MaxSize; }
+  constexpr size_t size() const { return m_size; }
+
+  constexpr bool empty() const { return m_size == 0; }
+
+  constexpr void resize(size_t new_size)
   {
     assert(new_size <= MaxSize);
 
@@ -107,7 +127,7 @@ public:
       pop_back();
   }
 
-  void clear() { resize(0); }
+  constexpr void clear() { resize(0); }
 
 private:
   std::array<ManuallyConstructedValue<T>, MaxSize> m_array;

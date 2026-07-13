@@ -94,29 +94,29 @@ class ManuallyConstructedValue
 {
 public:
   template <typename... Args>
-  T& Construct(Args&&... args)
+  constexpr T& Construct(Args&&... args)
   {
     static_assert(sizeof(ManuallyConstructedValue) == sizeof(T));
 
 // TODO: Remove placement-new version when we can require Clang 16.
 #if defined(__cpp_aggregate_paren_init) && (__cpp_aggregate_paren_init >= 201902L)
-    return *std::construct_at(&m_value.data, std::forward<Args>(args)...);
+    return *std::construct_at(std::addressof(m_value.data), std::forward<Args>(args)...);
 #else
     return *::new (&m_value.data) T{std::forward<Args>(args)...};
 #endif
   }
 
-  void Destroy() { std::destroy_at(&m_value.data); }
+  constexpr void Destroy() { std::destroy_at(&m_value.data); }
 
-  T* Ptr() { return &m_value.data; }
-  const T* Ptr() const { return &m_value.data; }
-  T& Ref() { return m_value.data; }
-  const T& Ref() const { return m_value.data; }
+  constexpr T* Ptr() { return &m_value.data; }
+  constexpr const T* Ptr() const { return &m_value.data; }
+  constexpr T& Ref() { return m_value.data; }
+  constexpr const T& Ref() const { return m_value.data; }
 
-  T* operator->() { return Ptr(); }
-  const T* operator->() const { return Ptr(); }
-  T& operator*() { return Ref(); }
-  const T& operator*() const { return Ref(); }
+  constexpr T* operator->() { return Ptr(); }
+  constexpr const T* operator->() const { return Ptr(); }
+  constexpr T& operator*() { return Ref(); }
+  constexpr const T& operator*() const { return Ref(); }
 
 private:
   union Value
@@ -124,8 +124,8 @@ private:
     // The union allows this object's automatic construction to be avoided.
     T data;
 
-    Value() {}
-    ~Value() {}
+    constexpr Value() {}
+    constexpr ~Value() {}
 
     Value& operator=(const Value&) = delete;
     Value(const Value&) = delete;
