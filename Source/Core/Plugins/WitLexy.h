@@ -10,6 +10,7 @@
 #include <lexy/callback/constant.hpp>
 #include <lexy/grammar.hpp>
 
+#include "Common/SmallVector.h"
 
 namespace WitLexy
 {
@@ -35,75 +36,36 @@ struct Path {
 };
 
 
-
-template <typename T>
-struct PrimitiveType {
-    using type = T;
-};
-
-using U8_t = PrimitiveType<uint8_t>;
-using U16_t = PrimitiveType<uint16_t>;
-using U32_t = PrimitiveType<uint32_t>;
-using U64_t = PrimitiveType<uint64_t>;
-using S8_t = PrimitiveType<int8_t>;
-using S16_t = PrimitiveType<int16_t>;
-using S32_t = PrimitiveType<int32_t>;
-using S64_t = PrimitiveType<int64_t>;
-using F32_t = PrimitiveType<float>;
-using F64_t = PrimitiveType<double>;
-using Bool_t = PrimitiveType<bool>;
-
-auto constexpr U8 = U8_t{};
-auto constexpr U16 = U16_t{};
-auto constexpr U32 = U32_t{};
-auto constexpr U64 = U64_t{};
-auto constexpr S8 = S8_t{};
-auto constexpr S16 = S16_t{};
-auto constexpr S32 = S32_t{};
-auto constexpr S64 = S64_t{};
-auto constexpr F32 = F32_t{};
-auto constexpr F64 = F64_t{};
-auto constexpr Bool = Bool_t{};
-
-struct CharType {
-    using type = char32_t;
-};
-
-struct StringType {
-    using type = std::string;
-};
-
-template <typename T>
-struct ListTypeT {
-    std::unique_ptr<T> element_type;
-};
-
-template <typename T>
-using TypeV = std::variant<
-    PrimitiveType<uint8_t>,
-    PrimitiveType<uint16_t>,
-    PrimitiveType<uint32_t>,
-    PrimitiveType<uint64_t>,
-    PrimitiveType<int8_t>,
-    PrimitiveType<int16_t>,
-    PrimitiveType<int32_t>,
-    PrimitiveType<int64_t>,
-    PrimitiveType<float>,
-    PrimitiveType<double>,
-    PrimitiveType<bool>,
+enum class TypeKind {
+    U8,
+    U16,
+    U32,
+    U64,
+    S8,
+    S16,
+    S32,
+    S64,
+    F32,
+    F64,
+    Bool,
     CharType,
-    StringType
-    //ListTypeT<T>
->;
-
-// Type level fixed-point operator - https://stackoverflow.com/a/53504373
-template <template<class> class K>
-struct Fix : K<Fix<K>> {
-    using K<Fix<K>>::K;
+    StringType,
+    ListStart,
+    ListEnd,
+    TupleStart,
+    TupleEnd,
 };
 
-using Type = Fix<TypeV>;
-//using ListType = ListTypeT<Type>;
+struct Type {
+    Common::SmallVector<TypeKind, 32> type_tree;
+    constexpr Type() = default;
+    constexpr Type(TypeKind kind) { type_tree.emplace_back(kind); }
+    constexpr Type(std::initializer_list<TypeKind> kinds) {
+        for (auto&& kind : kinds) {
+            type_tree.emplace_back(kind);
+        }
+    }
+};
 
 struct NamedType {
     Ident id;
@@ -242,44 +204,56 @@ struct simple_path {
     static constexpr auto value = lexy::construct<Path>;
 };
 
-template <typename T, typename L>
-struct type_map_t {
-    static constexpr auto rule = [] { return L{}; }();
-    static constexpr auto value = lexy::constant<Type>(Type{T{}}); //lexy::callback<Type>([] constexpr { return Type{T{}}; });
-};
+struct type;
 
-template <typename T, typename L>
-constexpr auto type_map(T, L = {}) {
-    return dsl::p<type_map_t<T, L>>;
+struct list_type {
+    static constexpr auto rule = [] {
+        return dsl::peek(LEXY_LIT("list")) >> LEXY_LIT("list") + dsl::angle_bracketed(dsl::recurse<type>);
+    }();
+
+    static constexpr auto value = lexy::callback<Type>([](Type t) {
+        Type result;
+        result.type_tree.emplace_back(TypeKind::ListStart);
+        for (auto&& kind : t.type_tree.view()) {
+            result.type_tree.emplace_back(kind);
+        }
+        result.type_tree.emplace_back(TypeKind::ListEnd);
+        return result;
+    });
 };
 
 struct type {
-    static constexpr auto rule = [] {
-        return type_map(U8, LEXY_LIT("u8"))
-             | type_map(U16, LEXY_LIT("u16"))
-             | type_map(U32, LEXY_LIT("u32"))
-             | type_map(U64, LEXY_LIT("u64"))
-             | type_map(S8, LEXY_LIT("s8"))
-             | type_map(S16, LEXY_LIT("s16"))
-             | type_map(S32, LEXY_LIT("s32"))
-             | type_map(S64, LEXY_LIT("s64"))
-             | type_map(F32, LEXY_LIT("f32"))
-             | type_map(F64, LEXY_LIT("f64"))
-             | type_map(Bool, LEXY_LIT("bool"))
-            //  | type_map(CharType, LEXY_LIT("char"))
-            //  | type_map(StringType, LEXY_LIT("string"))
+    template<TypeKind t, auto L>
+    struct type_map_t {
+        static constexpr auto rule = [] { return L; }();
+        static constexpr auto value = lexy::constant<Type>(Type(t));
+    };
 
-             ;
+    static constexpr auto rule = [] {
+        return dsl::p<type_map_t<TypeKind::U8, LEXY_LIT("u8")>>
+             | dsl::p<type_map_t<TypeKind::U16, LEXY_LIT("u16")>>
+             | dsl::p<type_map_t<TypeKind::U32, LEXY_LIT("u32")>>
+             | dsl::p<type_map_t<TypeKind::U64, LEXY_LIT("u64")>>
+             | dsl::p<type_map_t<TypeKind::S8, LEXY_LIT("s8")>>
+             | dsl::p<type_map_t<TypeKind::S16, LEXY_LIT("s16")>>
+             | dsl::p<type_map_t<TypeKind::S32, LEXY_LIT("s32")>>
+             | dsl::p<type_map_t<TypeKind::S64, LEXY_LIT("s64")>>
+             | dsl::p<type_map_t<TypeKind::F32, LEXY_LIT("f32")>>
+             | dsl::p<type_map_t<TypeKind::F64, LEXY_LIT("f64")>>
+             | dsl::p<type_map_t<TypeKind::Bool, LEXY_LIT("bool")>>
+             | dsl::p<type_map_t<TypeKind::CharType, LEXY_LIT("char")>>
+             | dsl::p<type_map_t<TypeKind::StringType, LEXY_LIT("string")>>
+             | dsl::p<list_type>
+            ;
 
     }();
 
+    //static constexpr auto value = lexy::forward<Type>;
     static constexpr auto value = lexy::forward<Type>;
 };
 
 struct named_type {
-    static constexpr auto rule = [] {
-        return dsl::p<ident> + dsl::colon + dsl::p<type>;
-    }();
+    static constexpr auto rule = [] { return dsl::p<ident> + dsl::colon + dsl::p<type>; }();
 
     static constexpr auto value = lexy::construct<NamedType>;
 };

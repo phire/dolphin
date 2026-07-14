@@ -84,40 +84,12 @@ struct FixedStr {
     }
 };
 
-template<typename T>
-struct FixedType {
-    using Type = T;
-
-    template<typename U>
-    constexpr auto is_same(U u) const {
-        return std::is_same_v<Type, U>;
-    }
-};
-
-template<class>
-inline constexpr bool always_false_v = false;
-
-struct Visitor {
-    template<typename T>
-    constexpr auto operator()(const T&) const { return FixedType<typename T::type>{}; }
-    template<typename T>
-    constexpr auto operator()(const WitLexy::ListTypeT<T>& list_type) const {
-        auto element_type = make_fixedtype(list_type->element_type.get());
-        return FixedType<std::vector<typename decltype(element_type)::Type>>{};
-    }
-};
-
-constexpr auto make_fixedtype(WitLexy::Type type) {
-
-    return std::visit(Visitor{}, type);
-}
-
 struct FixNamedType {
     FixedStr name;
-    const WitLexy::Type* type;
+    const WitLexy::Type type;
 
     constexpr FixNamedType() = default;
-    constexpr FixNamedType(const WitLexy::NamedType& other) : name(other.id), type(&other.type) {}
+    constexpr FixNamedType(const WitLexy::NamedType& other) : name(other.id), type(other.type) {}
 };
 
 struct FixedLenFunc {
@@ -134,10 +106,116 @@ struct FixedLenResource {
     Common::SmallVector<FixedLenFunc, 20> methods = {};
 };
 
-template<std::size_t ArgPos, Wit::Ty::Kind kind, typename T>
+
+template <typename t>
+struct TypeTree {
+    using Type = t;
+
+    template <typename U>
+    static constexpr void is_same() {
+        static_assert(std::is_same_v<Type, U>, "Type mismatch with dolphin.wit");
+    }
+};
+
+// template<size_t N, auto arr>
+// static constexpr auto typetree();
+
+// template<size_t N, auto arr> requires(N == 1)
+template<WitLexy::TypeKind kind>
+static constexpr auto typetree() {
+    // constexpr auto kind = arr[0];
+    if constexpr (kind == WitLexy::TypeKind::U8) {
+        return TypeTree<uint8_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::U16) {
+        return TypeTree<uint16_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::U32) {
+        return TypeTree<uint32_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::U64) {
+        return TypeTree<uint64_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::S8) {
+        return TypeTree<int8_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::S16) {
+        return TypeTree<int16_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::S32) {
+        return TypeTree<int32_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::S64) {
+        return TypeTree<int64_t>{};
+    } else if constexpr (kind == WitLexy::TypeKind::F32) {
+        return TypeTree<float>{};
+    } else if constexpr (kind == WitLexy::TypeKind::F64) {
+        return TypeTree<double>{};
+    } else if constexpr (kind == WitLexy::TypeKind::Bool) {
+        return TypeTree<bool>{};
+    } else if constexpr (kind == WitLexy::TypeKind::CharType) {
+        return TypeTree<char>{};
+    } else if constexpr (kind == WitLexy::TypeKind::StringType) {
+        return TypeTree<std::string>{};
+    } else {
+        static_assert(false, "Unhandled typetree kind in typetree");
+    }
+
+
+}
+
+// template<>
+// constexpr auto typetree<WitLexy::TypeKind::U8>() { return TypeTree<uint8_t>{}; }
+// template<>
+// constexpr auto typetree<WitLexy::TypeKind::U16>() { return TypeTree<uint16_t>{}; }
+// template<>
+// constexpr auto typetree<WitLexy::TypeKind::U32>() { return TypeTree<uint32_t>{}; }
+// template<>
+// constexpr auto typetree<WitLexy::TypeKind::U64>() { return TypeTree<uint64_t>{}; }
+
+
+
+
+template<WitLexy::TypeKind head, WitLexy::TypeKind... kinds> requires(sizeof...(kinds) > 0)
+static constexpr auto typetree() {
+    constexpr WitLexy::TypeKind kinds_array[] = {kinds...};
+    constexpr auto size = sizeof...(kinds);
+
+    if constexpr (head == WitLexy::TypeKind::ListStart) {
+        auto element_type = [&]<std::size_t... Is>(std::index_sequence<Is...> is) consteval {
+            return typetree<kinds_array[Is]...>();
+        }(std::make_index_sequence<size-1>{});
+
+        return TypeTree<std::vector<typename decltype(element_type)::Type>>();
+    } else {
+        static_assert(false, "Unhandled typetree kind in typetree");
+    }
+}
+
+template<std::size_t ArgPos, auto tt, typename T>
 struct CheckArgType {
     static constexpr void check() {
-        static_assert(Wit::Ty::is_convertible_to<T>(kind), "Method argument type mismatch with dolphin.wit");
+        auto expected_type = [&]<std::size_t... Is>(std::index_sequence<Is...> is) consteval {
+            return typetree<tt[Is]...>();
+        }(std::make_index_sequence<tt.size()>{});
+        // auto expected_type = typetree<tt.size(), tt.data()>();
+        decltype(expected_type)::template is_same<T>();
+        //static_assert(, "Method argument type mismatch with dolphin.wit");
+    }
+};
+
+// template<size_t N>
+// struct ExtractTypeTree {
+//     static constexpr auto operator()(auto& tree) {
+//         std::array<WitLexy::TypeKind, N> arr;
+//         for (size_t i = 0; i < N; ++i) {
+//             arr[i] = tree[i];
+//         }
+//         return arr;
+
+//     }
+// };
+
+template<size_t N>
+struct ExtractTypeTree {
+    static constexpr auto operator()(auto& tree) {
+        auto result = [&]<std::size_t... Is>(std::index_sequence<Is...> is) consteval {
+            return std::array<WitLexy::TypeKind, N>{tree[Is]...};
+        }(std::make_index_sequence<N>{});
+        return result;
     }
 };
 
@@ -156,6 +234,17 @@ void Plugins::Init()
     auto wit = lexy::parse<WitLexy::witfile>(literal, lexy_ext::report_error);
     fmt::print("{} {}\n", result.is_success(), wit.has_value());
 
+    for (auto method : wit.value().interfaces[0].resources[0].methods) {
+        fmt::print("Method: {}\n", method.id);
+        for (auto arg : method.type.params) {
+            fmt::print("  Arg: {} Type: ", arg.id);
+            for (auto kind : arg.type.type_tree) {
+                fmt::print("{} ", static_cast<int>(kind));
+            }
+            fmt::print("\n");
+        }
+    }
+
 
 
 
@@ -165,6 +254,13 @@ void Plugins::Init()
             static constexpr auto file = get_embedded_wit();
             auto literal = lexy::string_input(file);
             auto wit = lexy::parse<WitLexy::witfile>(literal, lexy::callback<void>([](auto, auto) constexpr {}) );
+            // static_assert(wit.is_success(), "Failed to parse dolphin.wit");
+
+            FixedLenResource res;
+
+            // if (!wit.is_success()) {
+            //     return res;
+            // }
 
             auto& emu_interface = wit.value().interfaces[0];
 
@@ -183,7 +279,7 @@ void Plugins::Init()
             // }
             auto& cpu_resource = emu_interface.resources[0];
 
-            FixedLenResource res;
+
             // auto cpu_resource = std::get<WitLexy::Resource>(*cpu_resource_v);
             res.name = FixedStr(cpu_resource.id);
             // res.methods.emplace_back(FixedStr(cpu_resource.methods[0].id));
@@ -214,24 +310,24 @@ void Plugins::Init()
             return res;
         }();
 
-        // auto binder = [&](auto method) constexpr {
-        //     using Traits = decltype(method)::Traits;
+        auto binder = [&](auto method) constexpr {
+            using Traits = decltype(method)::Traits;
 
-        //     static constexpr auto def = [&] consteval -> std::optional<FixedLenFunc> {
-        //         auto def = std::ranges::find_if(cpu_resource.methods, [&](const auto& m) constexpr { return m.name.view() == method.binding_name(); });
-        //         return def == cpu_resource.methods.end() ? std::nullopt : std::make_optional(*def);
-        //     }();
-        //     static_assert(def.has_value(), "Method not found in dolphin.wit");
+            static constexpr auto def = [&] consteval -> std::optional<FixedLenFunc> {
+                auto view = cpu_resource.methods.view();
+                auto def = std::ranges::find_if(view, [&](const auto& m) constexpr { return m.name.view() == method.binding_name(); });
+                return def == view.end() ? std::nullopt : std::make_optional(*def);
+            }();
+            static_assert(def.has_value(), "Method not found in dolphin.wit");
 
-        //     static_assert(def->arg_count == Traits::ArgCount, "Method argument count mismatch with dolphin.wit");
+            static_assert(def->args.size() == Traits::ArgCount, "Method argument count mismatch with dolphin.wit");
 
-        //     [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
-        //         static constexpr auto kinds = std::make_tuple(def->args[Is].kind...);
-        //         (CheckArgType<Is, std::get<Is>(kinds), std::tuple_element_t<Is, typename Traits::ArgTypes>>().check(), ...);
-        //     }(std::make_index_sequence<def->arg_count>{});
+            [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
+                (CheckArgType<Is, ExtractTypeTree<def->args[Is].type.type_tree.size()>{}(def->args[Is].type.type_tree), std::tuple_element_t<Is, typename Traits::ArgTypes>>().check(), ...);
+            }(std::make_index_sequence<def->args.size()>{});
 
-        // };
-        // CpuApi::CpuMemory::bindings(binder);
+        };
+        CpuApi::CpuMemory::bindings(binder);
 
         return "";
     };
