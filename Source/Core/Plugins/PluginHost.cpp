@@ -213,7 +213,11 @@ static consteval auto parsed_wit() {
 
 static consteval size_t num_methods() {
 
-    return parsed_wit().value().interfaces[0].resources[0].methods.size();
+    auto wit = parsed_wit();
+    assert(wit.has_value());
+    assert(wit.is_success());
+
+    return wit.value().interfaces[0].resources[0].methods.size();
 }
 
 template<std::size_t N>
@@ -224,40 +228,46 @@ static consteval std::array<size_t, N> method_param_counts() {
     }(std::make_index_sequence<N>{});
 }
 
-template<std::size_t N, std::size_t I>
-static consteval auto get_params() {
-    auto wit = parsed_wit();
-    auto params = wit.value().interfaces[0].resources[0].methods[I].type.params;
-    static constexpr auto param_sizes = [&]<std::size_t... Is>(std::index_sequence<Is...> is) consteval {
-        auto wit = parsed_wit();
-        auto params = wit.value().interfaces[0].resources[0].methods[I].type.params;
-        return std::array<size_t, N>{params[Is].type.type_tree.size()...};
-    }(std::make_index_sequence<N>{});
+//template<auto array>
+static constexpr auto get_params() {
 
-    return [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
-        // auto params = wit.value().interfaces[0].resources[0].methods[I].type.params;
-        auto copy_typetree = [&]<size_t IIs, size_t... Js>(std::integral_constant<size_t, IIs>, std::index_sequence<Js...> js) consteval {
-            return std::make_tuple(params[IIs].id, static_cast<WitLexy::TypeKind>(params[IIs].type.type_tree[Js])...);
+    static constexpr auto param_counts = method_param_counts<num_methods()>();
+
+
+    static constexpr auto param_sizes = [&]<std::size_t... Ms>(std::index_sequence<Ms...> ) constexpr {
+        auto wit = parsed_wit();
+
+        auto per_method =[&]<std::size_t... Ps>(std::index_sequence<Ps...>, auto ms) consteval {
+            auto params = wit.value().interfaces[0].resources[0].methods[ms()].type.params;
+            return std::array<size_t, param_counts[ms()]>{params[Ps].type.type_tree.size()...};
         };
 
-        return std::make_tuple(
-            copy_typetree(
-                std::integral_constant<size_t, Is>{},
-                std::make_index_sequence<param_sizes[Is]>{}
-            )
-            ...
-        );
-    }(std::make_index_sequence<N>{});
+        return std::make_tuple(per_method(std::make_index_sequence<param_counts[Ms]>{}, std::integral_constant<size_t, Ms>{})... );
+    }(std::make_index_sequence<param_counts.size()>{});
+
+    return [&]<std::size_t... Ms>(std::index_sequence<Ms...>) constexpr {
+        auto wit = parsed_wit();
+
+
+        auto per_method = [&]<std::size_t... Ps>(std::index_sequence<Ps...> is, auto ms) constexpr {
+            auto params = wit.value().interfaces[0].resources[0].methods[ms()].type.params;
+            static constexpr auto sizes = std::get<ms()>(param_sizes);
+
+            auto copy_typetree = [&]<size_t IIs, size_t... Js>(std::integral_constant<size_t, IIs>, std::index_sequence<Js...> js) consteval {
+                return std::make_tuple(params[IIs].id, static_cast<WitLexy::TypeKind>(params[IIs].type.type_tree[Js])...);
+            };
+
+            return std::make_tuple(
+                copy_typetree(
+                    std::integral_constant<size_t, Ps>{},
+                    std::make_index_sequence<sizes[Ps]>{}
+                )
+                ...
+            );
+        };
+        return std::make_tuple(per_method(std::make_index_sequence<param_counts[Ms]>{}, std::integral_constant<size_t, Ms>{})...);
+    }(std::make_index_sequence<param_counts.size()>{});
 }
-
-// template<auto data>
-// static consteval auto get_typetree() {
-//     auto wit = parsed_wit();
-//     return [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
-//         return typetree<std::get<Is>(data)...>();
-//     }(std::make_index_sequence<std::tuple_size_v<decltype(data)>>{});
-// }
-
 
 void Plugins::Init()
 {
@@ -295,15 +305,14 @@ void Plugins::Init()
             //     return res;
             // }
 
-            auto methods = [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
-                static constexpr auto param_counts = method_param_counts<sizeof...(Is)>();
-                static constexpr auto method_params = std::make_tuple(get_params<param_counts[Is], Is>()...);
+            static constexpr auto method_params = get_params();
+            using MethodParams = decltype(method_params);
 
+            auto methods = [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
                 auto typefn = [&]<size_t IIS, std::size_t... Js>(std::index_sequence<Js...>, std::integral_constant<std::size_t, IIS>) constexpr {
                         static constexpr auto params = std::get<IIS>(method_params);
                         auto paramfn = [&]<size_t JJs, size_t... Ks>(std::integral_constant<std::size_t, JJs>,  std::index_sequence<Ks...>) constexpr {
                             static constexpr auto param = std::get<JJs>(params);
-                            //return NamedTypeTree<std::tuple_element_t<0, decltype(param)>>(typetree<*(&std::get<Ks+1>(param))...>>());
                             return typetree<std::get<Ks+1>(param)...>().named(std::get<0>(param));
                         };
 
@@ -320,12 +329,13 @@ void Plugins::Init()
                     };
                 return std::make_tuple(
                     typefn(
-                        std::make_index_sequence<param_counts[Is]>{},
+                        std::make_index_sequence<std::tuple_size_v<std::tuple_element_t<Is, MethodParams>>>{},
                         std::integral_constant<std::size_t, Is>{}
                     )
                 ...);
 
-            }(std::make_index_sequence<num_methods()>{});
+
+            }(std::make_index_sequence<std::tuple_size_v<MethodParams>>{});
 
             return res;
         }();
