@@ -178,44 +178,37 @@ static constexpr auto typetree() {
     }
 }
 
-template<std::size_t ArgPos, auto tt, typename T>
+template<typename ExpectedType, typename BoundType, size_t ArgPos>
 struct CheckArgType {
     static constexpr void check() {
-        auto expected_type = [&]<std::size_t... Is>(std::index_sequence<Is...> is) consteval {
-            return typetree<tt[Is]...>();
-        }(std::make_index_sequence<tt.size()>{});
-        // auto expected_type = typetree<tt.size(), tt.data()>();
-        decltype(expected_type)::template is_same<T>();
-        //static_assert(, "Method argument type mismatch with dolphin.wit");
+        ExpectedType::template is_same<BoundType>();
     }
 };
 
 
-// void printTypeV(auto& type) {
-//     std::visit([](auto&& arg) constexpr {
-//         using T = std::decay_t<decltype(arg)>;
-//         if constexpr (std::is_same_v<T, WitLexy::TypeKind>) {
-//             fmt::print("{} ", static_cast<int>(arg));
-//         } else if constexpr (std::is_same_v<T, std::unique_ptr<WitLexy::ListType>>) {
-//             fmt::print("ListType: ");
-//             printTypeV(arg->element_type);
-//         } else {
-//             static_assert(false, "fmtTypeV");
-//         }
-//     }, type);
-// }
+template<typename T, typename StrT>
+struct FixedMethod {
+    using ArgTypes = T;
+    static constexpr std::size_t ArgCount = std::tuple_size_v<T>;
+    using IdT = StrT;
+};
 
 static consteval auto parsed_wit() {
     static constexpr auto file = get_embedded_wit();
     static constexpr auto literal = lexy::string_input(file);
-    return lexy::parse<WitLexy::witfile>(literal, lexy::callback<void>([](auto, auto) constexpr {}) );
+    return lexy::parse<WitLexy::witfile>(literal, lexy::callback<void>([](auto, auto) constexpr {
+    }) );
 }
 
-static consteval size_t num_methods() {
+static consteval ssize_t num_methods() {
 
     auto wit = parsed_wit();
-    assert(wit.has_value());
-    assert(wit.is_success());
+    // assert(wit.has_value());
+    // assert(wit.is_success());
+
+    if (!wit.has_value() || !wit.is_success()) {
+        return -1;
+    }
 
     return wit.value().interfaces[0].resources[0].methods.size();
 }
@@ -231,7 +224,10 @@ static consteval std::array<size_t, N> method_param_counts() {
 //template<auto array>
 static constexpr auto get_params() {
 
-    static constexpr auto param_counts = method_param_counts<num_methods()>();
+    static constexpr ssize_t methods = num_methods();
+    static_assert(methods >= 0, "Failed to parse dolphin.wit");
+
+    static constexpr auto param_counts = method_param_counts<methods>();
 
 
     static constexpr auto param_sizes = [&]<std::size_t... Ms>(std::index_sequence<Ms...> ) constexpr {
@@ -245,25 +241,26 @@ static constexpr auto get_params() {
         return std::make_tuple(per_method(std::make_index_sequence<param_counts[Ms]>{}, std::integral_constant<size_t, Ms>{})... );
     }(std::make_index_sequence<param_counts.size()>{});
 
-    return [&]<std::size_t... Ms>(std::index_sequence<Ms...>) constexpr {
+    return [&]<std::size_t... Ms>(std::index_sequence<Ms...>) consteval {
         auto wit = parsed_wit();
 
-
         auto per_method = [&]<std::size_t... Ps>(std::index_sequence<Ps...> is, auto ms) constexpr {
-            auto params = wit.value().interfaces[0].resources[0].methods[ms()].type.params;
+            auto method = wit.value().interfaces[0].resources[0].methods[ms()];
+            auto params = method.type.params;
             static constexpr auto sizes = std::get<ms()>(param_sizes);
 
-            auto copy_typetree = [&]<size_t IIs, size_t... Js>(std::integral_constant<size_t, IIs>, std::index_sequence<Js...> js) consteval {
-                return std::make_tuple(params[IIs].id, static_cast<WitLexy::TypeKind>(params[IIs].type.type_tree[Js])...);
+            auto copy_typetree = [&]<size_t... Js>(std::index_sequence<Js...> js, auto ps) consteval {
+                return std::make_tuple(params[ps()].id, static_cast<WitLexy::TypeKind>(params[ps()].type.type_tree[Js])...);
             };
 
-            return std::make_tuple(
+            auto arg_tuple = std::make_tuple(
                 copy_typetree(
-                    std::integral_constant<size_t, Ps>{},
-                    std::make_index_sequence<sizes[Ps]>{}
-                )
-                ...
+                    std::make_index_sequence<sizes[Ps]>{},
+                    std::integral_constant<size_t, Ps>{}
+                )...
             );
+            return std::make_tuple(method.id, arg_tuple);
+
         };
         return std::make_tuple(per_method(std::make_index_sequence<param_counts[Ms]>{}, std::integral_constant<size_t, Ms>{})...);
     }(std::make_index_sequence<param_counts.size()>{});
@@ -295,28 +292,29 @@ void Plugins::Init()
 
     auto check = [] constexpr -> std::string {
 
-        static constexpr auto cpu_resource = [] consteval -> FixedLenResource {
+        static constexpr auto methods = [] consteval {
             auto wit = parsed_wit();
-            // static_assert(wit.is_success(), "Failed to parse dolphin.wit");
-
-            FixedLenResource res;
-
-            // if (!wit.is_success()) {
-            //     return res;
-            // }
-
             static constexpr auto method_params = get_params();
-            using MethodParams = decltype(method_params);
 
-            auto methods = [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
+            return [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
+
                 auto typefn = [&]<size_t IIS, std::size_t... Js>(std::index_sequence<Js...>, std::integral_constant<std::size_t, IIS>) constexpr {
-                        static constexpr auto params = std::get<IIS>(method_params);
+                        static constexpr auto id_string = std::get<0>(std::get<IIS>(method_params));
+                        static constexpr auto params = std::get<1>(std::get<IIS>(method_params));
+
                         auto paramfn = [&]<size_t JJs, size_t... Ks>(std::integral_constant<std::size_t, JJs>,  std::index_sequence<Ks...>) constexpr {
                             static constexpr auto param = std::get<JJs>(params);
-                            return typetree<std::get<Ks+1>(param)...>().named(std::get<0>(param));
+                            static constexpr auto name = std::get<0>(param);
+                            static constexpr size_t sz = name.size() + 1;
+                            auto name_t = type_string<cxstring<sz>(name)>{};
+
+                            return typetree<std::get<Ks+1>(param)...>().named(name_t);
                         };
 
-                        return std::make_tuple(
+
+                        auto id_typestring = type_string<cxstring<id_string.size()+1>(id_string)>{};
+
+                        auto params_tuple = std::make_tuple(
                             paramfn(
                                 std::integral_constant<std::size_t, Js>{},
                                 std::make_index_sequence<
@@ -326,43 +324,52 @@ void Plugins::Init()
                                 >{}
                             )...
                         );
+                        return FixedMethod<decltype(params_tuple), decltype(id_typestring)>{};
                     };
+
+                static constexpr size_t param_counts[] = {std::tuple_size_v<std::tuple_element_t<1, std::tuple_element_t<Is, decltype(method_params)>>>...};
+
                 return std::make_tuple(
                     typefn(
-                        std::make_index_sequence<std::tuple_size_v<std::tuple_element_t<Is, MethodParams>>>{},
+                        std::make_index_sequence<param_counts[Is]>{},
                         std::integral_constant<std::size_t, Is>{}
                     )
                 ...);
 
 
-            }(std::make_index_sequence<std::tuple_size_v<MethodParams>>{});
-
-            return res;
+            }(std::make_index_sequence<std::tuple_size_v<decltype(method_params)>>{});
         }();
 
-        // auto binder = [&](auto method) constexpr {
-        //     using Traits = decltype(method)::Traits;
+        static constexpr auto num_methods = std::tuple_size_v<decltype(methods)>;
 
-        //     static constexpr auto def = [&] consteval -> std::optional<FixedLenFunc> {
-        //         auto view = cpu_resource.methods.view();
-        //         auto def = std::ranges::find_if(view, [&](const auto& m) constexpr { return m.name.view() == method.binding_name(); });
-        //         return def == view.end() ? std::nullopt : std::make_optional(*def);
-        //     }();
-        //     static_assert(def.has_value(), "Method not found in dolphin.wit");
+        auto binder = [&](auto method) constexpr {
+            auto check = [&]<typename T>(T method_type) constexpr {
+                if constexpr (method.binding_name() == T::IdT::view()) {
+                     using Traits = decltype(method)::Traits;
 
-        //     static_assert(def->args.size() == Traits::ArgCount, "Method argument count mismatch with dolphin.wit");
+                    static_assert(T::ArgCount == Traits::ArgCount, "Method argument count mismatch with dolphin.wit");
 
-        //     [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
-        //         (CheckArgType<Is, ExtractTypeTree<def->args[Is].type.type_tree.size()>{}(def->args[Is].type.type_tree), std::tuple_element_t<Is, typename Traits::ArgTypes>>().check(), ...);
-        //     }(std::make_index_sequence<def->args.size()>{});
+                    [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
+                        (CheckArgType<std::tuple_element_t<Is, typename T::ArgTypes>, std::tuple_element_t<Is, typename Traits::ArgTypes>, Is>{}.check(), ...);
+                    }(std::make_index_sequence<T::ArgCount>{});
+                    return 1;
+                } else {
+                    return 0;
+                }
+            };
 
-        // };
-        // CpuApi::CpuMemory::bindings(binder);
+            if constexpr (num_methods > 0) {
+                [&] <size_t... Ms>(std::index_sequence<Ms...>) constexpr {
+                    static constexpr size_t num_matches = (check(std::get<Ms>(methods)) + ... + 0);
+                    static_assert(num_matches > 0, "Method not found in dolphin.wit");
+                    static_assert(num_matches <= 1, "Method found multiple times");
+                }(std::make_index_sequence<num_methods>());
+            }
+        };
+        CpuApi::CpuMemory::bindings(binder);
 
         return "";
-    };
-
-    // bool bindings_ok = check() == "";
+    }();
 
     // if (!bindings_ok) {
     //     fmt::print(stderr, "Error: Failed to check bindings\n");

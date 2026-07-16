@@ -123,6 +123,15 @@ struct cxstring
     constexpr size_t size() const { return Footprint - 1; }
     constexpr cxstring(const char (&init)[Footprint])
     { std::copy_n(init, Footprint, data); }
+    constexpr cxstring(const std::string_view& str)
+    {
+        size_t i = 0;
+        for (; i < str.size() && i < Footprint - 1; ++i) {
+            data[i] = str[i];
+        }
+        data[i] = '\0';
+    }
+
 };
 
 template<auto str>
@@ -149,7 +158,7 @@ constexpr auto operator"" _t()
     return type_string<str>{};
 }
 
-constexpr auto empty_type_string_v = ""_t;
+constexpr auto empty_type_string_v = type_string<cxstring("")>{};
 using empty_type_string = decltype(empty_type_string_v);
 
 template <auto f, auto name>
