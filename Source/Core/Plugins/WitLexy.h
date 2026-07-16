@@ -67,14 +67,30 @@ struct Type {
     }
 };
 
+struct ListType;
+struct TupleType;
+
+// using TypeV = std::variant<TypeKind>; //, std::unique_ptr<ListType>>;//, std::unique_ptr<TupleType>>;
+
+// struct ListType {
+//     TypeV element_type;
+// };
+
+// struct TupleType {
+//     std::vector<Type> element_types;
+// };
+
 struct NamedType {
     Ident id;
     Type type;
+    constexpr NamedType(Ident&& id_, Type&& type_) : id(std::move(id_)), type(std::move(type_)) {}
+
 };
 
 struct ParamList : public std::vector<NamedType> {};
 
 struct FuncType {
+    size_t num_params;
     ParamList params;
     std::optional<Type> result;
 };
@@ -82,16 +98,20 @@ struct FuncType {
 struct Method {
     Ident id;
     FuncType type;
+    constexpr Method(Ident id_, std::vector<NamedType> &&params) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, std::nullopt}) {}
+    constexpr Method(Ident id_, std::vector<NamedType> &&params, std::optional<Type> &&result) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, std::move(result)}) {}
 };
 
 struct Resource {
     Ident id;
     std::vector<Method> methods;
+    constexpr Resource(Ident id_, std::vector<Method> &&methods_) : id(std::move(id_)), methods(std::move(methods_)) {}
 };
 
 struct Interface {
     Ident id;
     std::vector<Resource> resources;
+    constexpr Interface(Ident id_, std::vector<Resource> &&resources_) : id(std::move(id_)), resources(std::move(resources_)) {}
 };
 
 struct PackageDecl {
@@ -101,6 +121,7 @@ struct PackageDecl {
 struct WitFile {
     Path package_decl;
     std::vector<Interface> interfaces;
+    constexpr WitFile(Path package_decl_, std::vector<Interface> &&interfaces_) : package_decl(std::move(package_decl_)), interfaces(std::move(interfaces_)) {}
 };
 
 namespace dsl = lexy::dsl;
@@ -211,7 +232,8 @@ struct list_type {
         return dsl::peek(LEXY_LIT("list")) >> LEXY_LIT("list") + dsl::angle_bracketed(dsl::recurse<type>);
     }();
 
-    static constexpr auto value = lexy::callback<Type>([](Type t) {
+    static constexpr auto value = lexy::callback<Type>([] (Type&& t) constexpr {
+        //return std::make_unique<ListType>(ListType{std::move(t)});
         Type result;
         result.type_tree.emplace_back(TypeKind::ListStart);
         for (auto&& kind : t.type_tree.view()) {
@@ -226,6 +248,7 @@ struct type {
     template<TypeKind t, auto L>
     struct type_map_t {
         static constexpr auto rule = [] { return L; }();
+        //static constexpr auto value = lexy::callback<TypeV>([]() { return TypeV{t}; });
         static constexpr auto value = lexy::constant<Type>(Type(t));
     };
 
@@ -243,7 +266,7 @@ struct type {
              | dsl::p<type_map_t<TypeKind::Bool, LEXY_LIT("bool")>>
              | dsl::p<type_map_t<TypeKind::CharType, LEXY_LIT("char")>>
              | dsl::p<type_map_t<TypeKind::StringType, LEXY_LIT("string")>>
-             | dsl::p<list_type>
+             //| dsl::p<list_type>
             ;
 
     }();

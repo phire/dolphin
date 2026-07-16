@@ -149,6 +149,9 @@ constexpr auto operator"" _t()
     return type_string<str>{};
 }
 
+constexpr auto empty_type_string_v = ""_t;
+using empty_type_string = decltype(empty_type_string_v);
+
 template <auto f, auto name>
 struct Method {
   using name_t = decltype(name);
