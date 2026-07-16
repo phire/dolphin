@@ -201,11 +201,7 @@ static consteval auto parsed_wit() {
 }
 
 static consteval ssize_t num_methods() {
-
     auto wit = parsed_wit();
-    // assert(wit.has_value());
-    // assert(wit.is_success());
-
     if (!wit.has_value() || !wit.is_success()) {
         return -1;
     }
@@ -221,8 +217,7 @@ static consteval std::array<size_t, N> method_param_counts() {
     }(std::make_index_sequence<N>{});
 }
 
-//template<auto array>
-static constexpr auto get_params() {
+static consteval auto get_params() {
 
     static constexpr ssize_t methods = num_methods();
     static_assert(methods >= 0, "Failed to parse dolphin.wit");
@@ -293,7 +288,6 @@ void Plugins::Init()
     auto check = [] constexpr -> std::string {
 
         static constexpr auto methods = [] consteval {
-            auto wit = parsed_wit();
             static constexpr auto method_params = get_params();
 
             return [&]<std::size_t... Is>(std::index_sequence<Is...> is) constexpr {
@@ -340,9 +334,8 @@ void Plugins::Init()
             }(std::make_index_sequence<std::tuple_size_v<decltype(method_params)>>{});
         }();
 
-        static constexpr auto num_methods = std::tuple_size_v<decltype(methods)>;
-
         auto binder = [&](auto method) constexpr {
+            static constexpr auto num_methods = std::tuple_size_v<decltype(methods)>;
             auto check = [&]<typename T>(T method_type) constexpr {
                 if constexpr (method.binding_name() == T::IdT::view()) {
                      using Traits = decltype(method)::Traits;
@@ -370,14 +363,6 @@ void Plugins::Init()
 
         return "";
     }();
-
-    // if (!bindings_ok) {
-    //     fmt::print(stderr, "Error: Failed to check bindings\n");
-    // } else {
-    //     fmt::print("Bindings check passed!\n");
-    // }
-
-    //auto items = parse_wit();
 
     fmt::print("Compiling module\n");
 
