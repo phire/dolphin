@@ -102,33 +102,6 @@ struct TypeTree {
 
 };
 
-struct FixNamedType {
-    FixedStr name;
-    // const TypeTree type;
-
-    constexpr FixNamedType() = default;
-    constexpr FixNamedType(const WitLexy::NamedType& other) : name(other.id) {}
-};
-
-struct FixedLenFunc {
-    // bool async = false;
-    // bool static_ = false;
-    // bool constructor = false;
-    FixedStr name = {};
-    Common::SmallVector<FixNamedType, 20> args = {};
-    // std::array<Wit::Ty, 4> results;
-};
-
-struct FixedLenResource {
-    FixedStr name;
-    Common::SmallVector<FixedLenFunc, 20> methods = {};
-};
-
-
-
-// template<size_t N, auto arr>
-// static constexpr auto typetree();
-
 template<const WitLexy::TypeKind kind>
 static constexpr auto typetree() {
     if constexpr (kind == WitLexy::TypeKind::U8) {
@@ -268,13 +241,11 @@ void Plugins::Init()
     // InitBasicGuiModule();
     // InitCPUModule();
 
-    static constexpr auto file = get_embedded_wit();
+    auto file = get_embedded_wit();
     auto literal = lexy::string_input(file);
-    auto result = lexy::validate<WitLexy::witfile>(literal, lexy_ext::report_error);
-    fmt::print("Parsed dolphin.wit with lexy: {}\n", result.is_success());
 
     auto wit = lexy::parse<WitLexy::witfile>(literal, lexy_ext::report_error);
-    fmt::print("{} {}\n", result.is_success(), wit.has_value());
+    fmt::print("{} {}\n", wit.is_success(), wit.has_value());
 
     for (auto& method : wit.value().interfaces[0].resources[0].methods) {
         fmt::print("Method: {}\n", method.id);
