@@ -73,73 +73,66 @@ struct FnTraitsBase {
   }
 };
 
-template<typename>
+template<auto, typename>
 struct FnTraits;
 
-template<typename R, typename... Args>
-struct FnTraits<R(*)(Args...)> : public FnTraitsBase<R, Args...> {
+template<auto f, typename R, typename... Args>
+struct FnTraits<f, R(*)(Args...)> : public FnTraitsBase<R, Args...> {
   using unwrap_args = FnTraitsBase<R, Args...>::unwrap_args;
 
-  template<auto f>
-  struct Invoker {
-    static std::monostate wrapped(Context cx, const FuncType& ty, std::span<Val> params, std::span<Val> results) {
+  static std::monostate wrapped(Context cx, const FuncType& ty, std::span<Val> params, std::span<Val> results) {
+    if constexpr (!std::is_void_v<R>) {
+      // Call the original function with the unwrapped args
+      auto result = std::apply(f, unwrap_args(params, cx));
 
-      if constexpr (!std::is_void_v<R>) {
-        // Call the original function with the unwrapped args
-        auto result = std::apply(f, unwrap_args(params, cx));
-
-        // And store the result into the results list
-        results[0] = Val(result);
-      } else {
-        // Special case for void functions, since void is weird.
-        std::apply(f, unwrap_args(params, cx));
-      }
-
-      return std::monostate();
+      // And store the result into the results list
+      results[0] = Val(result);
+    } else {
+      // Special case for void functions, since void is weird.
+      std::apply(f, unwrap_args(params, cx));
     }
-  };
+
+    return std::monostate();
+  }
 };
 
-template<typename R, typename C, typename... Args>
-struct FnTraits<R(C::*)(Args...)> : public FnTraitsBase<R, Args...> {
+template<auto f, typename R, typename C, typename... Args>
+struct FnTraits<f, R(C::*)(Args...)> : public FnTraitsBase<R, Args...> {
   using ClassType = C;
 
-  template<auto f>
-  struct Invoker {
-    static std::monostate wrapped(Context cx, const FuncType& ty, std::span<Val> params, std::span<Val> results) {
-      C* this_ptr = nullptr;
+  static std::monostate wrapped(Context cx, const FuncType& ty, std::span<Val> params, std::span<Val> results) {
+    C* this_ptr = nullptr;
 
-      if constexpr (std::is_constructible_v<C, Core::System&>) {
-        auto res = params[0].get_resource().to_host(cx);
-        assert(res.unwrap().rep() == 0x12);
+    if constexpr (std::is_constructible_v<C, Core::System&>) {
+      auto res = params[0].get_resource().to_host(cx);
+      assert(res.unwrap().rep() == 0x12);
 
-        // TODO: support getting the system from... somewhere else. thread local storage? Encoded into
-        // the 32-bit resource representation?
-        auto& system = Core::System::GetInstance();
-        C obj(system);
-        this_ptr = &obj;
-      } else {
-        static_assert(false, "Unsupported class type for method binding");
-      }
-
-      params = params.subspan(1);
-      auto args_tuple = FnTraitsBase<R, Args...>::unwrap_args(params, cx);
-      auto this_tuple = std::tuple_cat(std::make_tuple(this_ptr), args_tuple);
-
-      if constexpr (!std::is_void_v<R>) {
-        // Call the original function with the unwrapped args
-        auto result = std::apply(f, this_tuple);
-
-        // And store the result into the results list
-        results[0] = Val(result);
-      } else {
-        // Special case for void functions, since void is weird.
-        std::apply(f, this_tuple);
-      }
-
-      return std::monostate();
+      // TODO: support getting the system from... somewhere else. thread local storage? Encoded into
+      // the 32-bit resource representation?
+      auto& system = Core::System::GetInstance();
+      C obj(system);
+      this_ptr = &obj;
+    } else {
+      static_assert(false, "Unsupported class type for method binding");
     }
-  };
+
+    params = params.subspan(1);
+    auto args_tuple = FnTraitsBase<R, Args...>::unwrap_args(params, cx);
+    auto this_tuple = std::tuple_cat(std::make_tuple(this_ptr), args_tuple);
+
+    if constexpr (!std::is_void_v<R>) {
+      // Call the original function with the unwrapped args
+      auto result = std::apply(f, this_tuple);
+
+      // And store the result into the results list
+      results[0] = Val(result);
+    } else {
+      // Special case for void functions, since void is weird.
+      std::apply(f, this_tuple);
+    }
+
+    return std::monostate();
+  }
 
 };
 
@@ -193,13 +186,13 @@ using empty_type_string = decltype(empty_type_string_v);
 template <auto f, auto name>
 struct Method {
   using name_t = decltype(name);
-  using Traits = Plugin::FnTraits<decltype(f)>;
+  using Traits = Plugin::FnTraits<f, decltype(f)>;
   static constexpr std::string_view binding_name() {
       return name.view();
   }
 
   static constexpr bool is_method = true;
-  static constexpr auto wrapped_fn = &Traits::template Invoker<f>::wrapped;
+  static constexpr auto wrapped_fn = &Traits::wrapped;
 
   static constexpr auto fn_ptr = f;
 
