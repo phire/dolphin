@@ -10,13 +10,66 @@ add_library(plugin_binding
 )
 target_include_directories(plugin_binding PUBLIC Binding/)
 
+set(DOLPHIN_WIT ${CMAKE_SOURCE_DIR}/wit/dolphin.wit)
+
 # embed dolphin.wit
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dolphin_wit.h
     COMMAND ${CMAKE_COMMAND} -E bin2c
-        ${CMAKE_SOURCE_DIR}/wit/dolphin.wit
+        ${DOLPHIN_WIT}
         ${CMAKE_CURRENT_BINARY_DIR}/dolphin_wit.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/wit/dolphin.wit
+    DEPENDS ${DOLPHIN_WIT}
+)
+
+add_library(bindingCheck STATIC
+    BindingCheck.cpp
+    BindingCheck.h
+    ${CMAKE_CURRENT_BINARY_DIR}/dolphin_wit.h
+)
+
+add_compile_definitions("DOLPHIN_WIT_PATH=\"${DOLPHIN_WIT}\"")
+
+target_link_libraries(bindingCheck
+PUBLIC
+    plugin_binding
+PRIVATE
+    fmt::fmt
+    lexy
+    lexy_ext
+)
+
+
+target_include_directories(bindingCheck
+PUBLIC
+    # We only need wasmtime's headers for this.
+    #"$<TARGET_PROPERTY:wasmtime,INTERFACE_INCLUDE_DIRECTORIES>"
+PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/wit
+)
+
+target_include_directories(bindingCheck
+SYSTEM PUBLIC
+    # We only need wasmtime's headers for this.
+    "$<TARGET_PROPERTY:wasmtime,INTERFACE_INCLUDE_DIRECTORIES>"
+)
+
+add_executable(bindingCheckTool
+    BindingCheckTool.cpp
+)
+
+
+target_link_libraries(bindingCheckTool
+PRIVATE
+    fmt::fmt
+    bindingCheck
+)
+
+add_custom_command(
+    COMMENT "Checking exported bindings against dolphin.wit"
+    OUTPUT binding_check_stamp.h
+    COMMAND bindingCheckTool
+    DEPENDS bindingCheckTool
 )
 
 add_library(plugins
@@ -29,6 +82,7 @@ add_library(plugins
     WitParser.cpp
     dolphin_wit.h
     WitParserImpl.h
+    ${CMAKE_CURRENT_BINARY_DIR}/binding_check_stamp.h
 )
 
 target_include_directories(plugins

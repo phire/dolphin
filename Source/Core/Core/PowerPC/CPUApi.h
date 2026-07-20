@@ -5,9 +5,6 @@
 
 #include "Common/CommonTypes.h"
 
-#include <BasicTypes.h>
-#include <export.h>
-
 #include <functional>
 #include <vector>
 
@@ -84,10 +81,10 @@ namespace CpuApi {
 //     Core::System::GetInstance().GetCoreTiming().ScheduleAnonymousEvent(CyclesIntoFuture, BreakOnCycleEvent, Userdata);
 //   }
 
-  CpuMemory(Core::CPUThreadGuard& guard) : m_cpu_guard(guard) {}
-  Core::CPUThreadGuard& m_cpu_guard;
+  CpuMemory(Core::System& system) : m_cpu_guard(system) {}
+  Core::CPUThreadGuard m_cpu_guard;
 
-  static consteval void bindings(auto bind) {
+  static void constexpr bindings(auto bind) {
     bind(Method<&CpuMemory::ReadU8, "read-u8"_t>{});
     bind(Method<&CpuMemory::ReadU16, "read-u16"_t>{});
     bind(Method<&CpuMemory::ReadU32, "read-u32"_t>{});

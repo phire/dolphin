@@ -64,15 +64,6 @@ static void InitCallback(Core::System& system, u64 userdata, s64 cycles_late) {
   s_initialized = true;
 }
 
-ZAP_IGNORE void Init() {
-  Core::System::GetInstance().GetCoreTiming().ScheduleAnonymousEvent(0, &InitCallback, 0);
-}
-
-ZAP_IGNORE void Shutdown() {
-  s_initialized = false;
-}
-
-
 static void BreakOnCycleEvent(Core::System& system, u64 userdata, s64 cyclesLate) {
   auto callback = std::bit_cast<Functor<void (Core::System&, CpuApi::CpuMemory*, u64)>>(userdata);
   auto guard = Core::CPUThreadGuard(system);

@@ -10,6 +10,9 @@
 #include <lexy/callback/constant.hpp>
 #include <lexy/grammar.hpp>
 
+#include <vector>
+#include <string>
+
 #include "Common/SmallVector.h"
 
 namespace WitLexy
