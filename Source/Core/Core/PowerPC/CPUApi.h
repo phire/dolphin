@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Common/CommonTypes.h"
+#include "Core/Core.h"
 
 #include <functional>
 #include <vector>
@@ -11,6 +12,7 @@
 
 #include "Core/PowerPC/MMU.h"
 #include "Binding.h"
+
 
 
 namespace CpuApi {

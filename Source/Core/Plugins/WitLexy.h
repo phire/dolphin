@@ -10,122 +10,16 @@
 #include <lexy/callback/constant.hpp>
 #include <lexy/grammar.hpp>
 
-#include <vector>
-#include <string>
+#include "WitFile.h"
+
 
 #include "Common/SmallVector.h"
 
 namespace WitLexy
 {
+namespace grammar
+{
 
-struct SemVer {
-    unsigned major;
-    unsigned minor;
-    unsigned patch;
-};
-
-using Ident = std::string_view;
-
-struct Path {
-    std::vector<std::string> namespaces;
-    std::vector<std::string> path;
-    std::string name;
-    std::optional<SemVer> version;
-
-    constexpr Path() = default;
-    constexpr Path(std::string name_) : name(std::move(name_)) {}
-    constexpr Path(std::vector<std::string> ns, std::vector<std::string> p, std::string n)       : namespaces(std::move(ns)), path(std::move(p)), name(std::move(n)) {}
-    constexpr Path(std::vector<std::string> ns, std::vector<std::string> p, std::string_view n, std::optional<SemVer> v) : namespaces(std::move(ns)), path(std::move(p)), name(std::move(n)), version(v) {}
-};
-
-
-enum class TypeKind {
-    U8,
-    U16,
-    U32,
-    U64,
-    S8,
-    S16,
-    S32,
-    S64,
-    F32,
-    F64,
-    Bool,
-    CharType,
-    StringType,
-    ListStart,
-    ListEnd,
-    TupleStart,
-    TupleEnd,
-};
-
-struct Type {
-    Common::SmallVector<TypeKind, 32> type_tree;
-    constexpr Type() = default;
-    constexpr Type(TypeKind kind) { type_tree.emplace_back(kind); }
-    constexpr Type(std::initializer_list<TypeKind> kinds) {
-        for (auto&& kind : kinds) {
-            type_tree.emplace_back(kind);
-        }
-    }
-};
-
-struct ListType;
-struct TupleType;
-
-// using TypeV = std::variant<TypeKind>; //, std::unique_ptr<ListType>>;//, std::unique_ptr<TupleType>>;
-
-// struct ListType {
-//     TypeV element_type;
-// };
-
-// struct TupleType {
-//     std::vector<Type> element_types;
-// };
-
-struct NamedType {
-    Ident id;
-    Type type;
-    constexpr NamedType(Ident&& id_, Type&& type_) : id(std::move(id_)), type(std::move(type_)) {}
-
-};
-
-struct ParamList : public std::vector<NamedType> {};
-
-struct FuncType {
-    size_t num_params;
-    ParamList params;
-    std::optional<Type> result;
-};
-
-struct Method {
-    Ident id;
-    FuncType type;
-    constexpr Method(Ident id_, std::vector<NamedType> &&params) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, std::nullopt}) {}
-    constexpr Method(Ident id_, std::vector<NamedType> &&params, std::optional<Type> &&result) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, std::move(result)}) {}
-};
-
-struct Resource {
-    Ident id;
-    std::vector<Method> methods;
-    constexpr Resource(Ident id_, std::vector<Method> &&methods_) : id(std::move(id_)), methods(std::move(methods_)) {}
-};
-
-struct Interface {
-    Ident id;
-    std::vector<Resource> resources;
-    constexpr Interface(Ident id_, std::vector<Resource> &&resources_) : id(std::move(id_)), resources(std::move(resources_)) {}
-};
-
-struct PackageDecl {
-    Path path;
-};
-
-struct WitFile {
-    Path package_decl;
-    std::vector<Interface> interfaces;
-    constexpr WitFile(Path package_decl_, std::vector<Interface> &&interfaces_) : package_decl(std::move(package_decl_)), interfaces(std::move(interfaces_)) {}
-};
 
 namespace dsl = lexy::dsl;
 
@@ -359,4 +253,5 @@ struct witfile {
     static constexpr auto value = lexy::construct<WitFile>;
 
 };
-}
+} // namespace grammar
+} // namespace WitLexy

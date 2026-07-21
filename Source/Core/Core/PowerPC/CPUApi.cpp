@@ -33,10 +33,6 @@ static u64 CurrentHandle = 0;
 static bool s_initialized = false;
 static std::vector<Functor<void (Core::System&, CpuMemory*, u64)>> BreakOnRun;
 
-using namespace Plugin;
-
-
-
 void Cpu_BreakOnRun(Functor<void (Core::System&, CpuMemory*, u64)> callback) {
   // TODO: Should this be callable from threads other than CPU?
   //       Currenty it's not

@@ -1,9 +1,13 @@
 
+
 #include "Common/Logging/Log.h"
 #include "Plugins/WitLexy.h"
 
 #include "Binding.h"
 #include "BindingCheck.h"
+#include "FnTraits.h"
+
+
 #include "Plugins/WitLexy.h"
 
 
@@ -13,6 +17,7 @@
 #include <lexy_ext/report_error.hpp>
 
 #include <source_location>
+#include <ranges>
 
 
 // Custom formatter for source_location, prints file:line:column which many IDEs will extract.
@@ -109,8 +114,8 @@ static constexpr auto typetree() {
 struct MethodBinding {
     std::string_view name;
     std::source_location binding_location;
-    std::type_info const* return_type;
-    std::vector<std::type_info const*> arg_types;
+    TypeInfo return_type;
+    std::vector<TypeInfo> arg_types;
 };
 
 
@@ -132,7 +137,6 @@ static constexpr BindingCounts s_counts = []() constexpr {
 }();
 
 
-using WasmtimeFn = std::monostate(*)(wasmtime::Store::Context cx, const wasmtime::FuncType& ty, std::span<wasmtime::component::Val> params, std::span<wasmtime::component::Val> results);
 
 constexpr std::array<WasmtimeFn, s_counts.methods> s_methods = []() consteval {
     std::array<WasmtimeFn, s_counts.methods> methods{};
@@ -140,7 +144,7 @@ constexpr std::array<WasmtimeFn, s_counts.methods> s_methods = []() consteval {
     dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
         if constexpr (item.is_method) {
             using Traits = decltype(item)::Traits;
-            methods[index++] = item.wrapped_fn;
+            methods[index++] = Traits::wrapped;
         } else {
             static_assert(false, "Unhandled type in binder");
         }
@@ -224,10 +228,29 @@ void error_reporter(const auto& context, const lexy::error<Reader, Tag>& error) 
 
 }
 
+template <>
+struct fmt::formatter<TypeInfo>
+{
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+
+    template <typename FormatContext>
+    auto format(const TypeInfo& type_info, FormatContext& ctx) const {
+        if (type_info.type_tree.size() == 1) {
+            return fmt::format_to(ctx.out(), "{:n}", type_info.type_tree[0]);
+        }
+
+        fmt::format_to(ctx.out(), "[{:n}", type_info.type_tree[0]);
+        for (auto kind : type_info.type_tree | std::views::drop(1)) {
+            fmt::format_to(ctx.out(), ", {:n}", kind);
+        }
+        fmt::format_to(ctx.out(), "]");
+        return ctx.out();
+    }
+};
+
 bool check_bindings() {
     auto literal = lexy::string_input(get_embedded_wit());
-    // auto report_error = lexy_ext::report_error.path(DOLPHIN_WIT_PATH);
-    auto result = lexy::parse<WitLexy::witfile>(literal, lexy::callback<void>([](auto context, auto error) {
+    auto result = lexy::parse<WitLexy::grammar::witfile>(literal, lexy::callback<void>([](auto context, auto error) {
         error_reporter(context, error);
     }));
 
@@ -245,7 +268,7 @@ bool check_bindings() {
     dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
         if constexpr (item.is_method) {
             using Traits = decltype(item)::Traits;
-            methods[index++] = {item.binding_name(), loc, &typeid(typename Traits::ReturnType), Traits::arg_types()};
+            methods[index++] = {item.binding_name(), loc, {ToTypeTree<typename Traits::ReturnType>()}, Traits::arg_types()};
         } else {
             static_assert(false, "Unhandled type in binder");
         }
@@ -260,12 +283,12 @@ bool check_bindings() {
             continue;
         }
 
-        fmt::print(stderr, "{} : {}(", method.name, method.return_type->name());
+        fmt::print(stderr, "{} : {}(", method.name, method.return_type);
         for (size_t i = 0; i < method.arg_types.size(); ++i) {
             if (i > 0) {
                 fmt::print(stderr, ", ");
             }
-            fmt::print(stderr, "{}", method.arg_types[i]->name());
+            fmt::print(stderr, "{}", method.arg_types[i]);
         }
         fmt::print(stderr, ")\n");
     }
