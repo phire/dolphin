@@ -6,25 +6,19 @@
 #include "Common/CommonTypes.h"
 #include "Core/Core.h"
 
-#include <functional>
-#include <vector>
-
-
 #include "Core/PowerPC/MMU.h"
 #include "Binding.h"
-
-
 
 namespace CpuApi {
 
     struct CpuMemory {
 
-  u32 ReadU8(u32 address)
+  u8 ReadU8(u32 address)
   {
     return PowerPC::MMU::HostRead<u8>(m_cpu_guard, address);
   }
 
-  u32 ReadU16(u32 address)
+  u16 ReadU16(u32 address)
   {
     return PowerPC::MMU::HostRead<u16>(m_cpu_guard, address);
   }

@@ -133,7 +133,7 @@ struct list_type {
         //return std::make_unique<ListType>(ListType{std::move(t)});
         Type result;
         result.type_tree.emplace_back(TypeKind::ListStart);
-        for (auto&& kind : t.type_tree.view()) {
+        for (auto&& kind : t.type_tree) {
             result.type_tree.emplace_back(kind);
         }
         result.type_tree.emplace_back(TypeKind::ListEnd);
@@ -145,8 +145,8 @@ struct type {
     template<TypeKind t, auto L>
     struct type_map_t {
         static constexpr auto rule = [] { return L; }();
-        //static constexpr auto value = lexy::callback<TypeV>([]() { return TypeV{t}; });
-        static constexpr auto value = lexy::constant<Type>(Type(t));
+        static constexpr auto value = lexy::callback<Type>([]() { return Type({t}); });
+        // static constexpr auto value = lexy::constant<Type>(Type(t));
     };
 
     static constexpr auto rule = [] {

@@ -88,12 +88,6 @@ std::vector<TypeKind> ToTypeTree() {
     }
 }
 
-
-struct TypeInfo {
-    std::vector<TypeKind> type_tree;
-};
-
-
 template<typename R, typename... Args>
 struct FnTraitsBase {
   // Get nice error messages if the arguments are not bindable
@@ -113,7 +107,7 @@ struct FnTraitsBase {
   }
 
   static auto arg_types() {
-    return std::vector<TypeInfo>{TypeInfo{ToTypeTree<Args>()}...};
+    return std::vector<WitLexy::Type>{WitLexy::Type{ToTypeTree<Args>()}...};
   }
 };
 

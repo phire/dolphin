@@ -4,7 +4,6 @@
 #include <string>
 #include <optional>
 
-#include "Common/SmallVector.h"
 #include "Common/EnumFormatter.h"
 
 namespace WitLexy
@@ -52,14 +51,7 @@ enum class TypeKind {
 };
 
 struct Type {
-    Common::SmallVector<TypeKind, 32> type_tree;
-    constexpr Type() = default;
-    constexpr Type(TypeKind kind) { type_tree.emplace_back(kind); }
-    constexpr Type(std::initializer_list<TypeKind> kinds) {
-        for (auto&& kind : kinds) {
-            type_tree.emplace_back(kind);
-        }
-    }
+    std::vector<TypeKind> type_tree;
 };
 
 struct NamedType {
@@ -73,14 +65,14 @@ struct ParamList : public std::vector<NamedType> {};
 struct FuncType {
     size_t num_params;
     ParamList params;
-    std::optional<Type> result;
+    Type result;
 };
 
 struct Method {
     Ident id;
     FuncType type;
-    constexpr Method(Ident id_, std::vector<NamedType> &&params) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, std::nullopt}) {}
-    constexpr Method(Ident id_, std::vector<NamedType> &&params, std::optional<Type> &&result) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, std::move(result)}) {}
+    // constexpr Method(Ident id_, std::vector<NamedType> &&params) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, Type({TypeKind::Void})}) {}
+    constexpr Method(Ident id_, std::vector<NamedType> &&params, std::optional<Type> &&result) : id(std::move(id_)), type(FuncType{params.size(), {std::move(params)}, result.value_or(Type({TypeKind::Void}))}) {}
 };
 
 struct Resource {

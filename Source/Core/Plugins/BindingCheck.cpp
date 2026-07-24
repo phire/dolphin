@@ -114,11 +114,9 @@ static constexpr auto typetree() {
 struct MethodBinding {
     std::string_view name;
     std::source_location binding_location;
-    TypeInfo return_type;
-    std::vector<TypeInfo> arg_types;
+    WitLexy::Type return_type;
+    std::vector<WitLexy::Type> arg_types;
 };
-
-
 
 struct BindingCounts {
     size_t methods = 0;
@@ -229,12 +227,12 @@ void error_reporter(const auto& context, const lexy::error<Reader, Tag>& error) 
 }
 
 template <>
-struct fmt::formatter<TypeInfo>
+struct fmt::formatter<WitLexy::Type>
 {
     constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
 
     template <typename FormatContext>
-    auto format(const TypeInfo& type_info, FormatContext& ctx) const {
+    auto format(const WitLexy::Type& type_info, FormatContext& ctx) const {
         if (type_info.type_tree.size() == 1) {
             return fmt::format_to(ctx.out(), "{:n}", type_info.type_tree[0]);
         }
@@ -274,24 +272,59 @@ bool check_bindings() {
         }
     });
 
+    bool bindings_valid = true;
+
 
     for (const auto& method : methods) {
+        auto loc = method.binding_location;
+        auto name = method.name;
+
         auto it = std::find_if(cpu_resource.methods.begin(), cpu_resource.methods.end(),
                                [&](const auto& m) { return m.id == method.name; });
         if (it == cpu_resource.methods.end()) {
-            fmt::print(stderr, "{}: error: Binding '{}' is not defined in dolphin.wit\n", method.binding_location, method.name);
+            fmt::print(stderr, "{}: error: Binding '{}' is not defined in dolphin.wit\n", loc, name);
             continue;
         }
 
-        fmt::print(stderr, "{} : {}(", method.name, method.return_type);
-        for (size_t i = 0; i < method.arg_types.size(); ++i) {
-            if (i > 0) {
-                fmt::print(stderr, ", ");
+        size_t num_params = std::max(method.arg_types.size(), it->type.num_params);
+        bool method_valid = false;
+
+        for (unsigned i = 0; i < num_params; i++) {
+            if (i >= it->type.params.size()) {
+                fmt::print(stderr, "{}: error: method '{}' has extra argument of type {} at position {}\n", loc, name, method.arg_types[i], i);
+                continue;
             }
-            fmt::print(stderr, "{}", method.arg_types[i]);
+            auto arg_name = it->type.params[i].id;
+            auto arg_type = it->type.params[i].type;
+
+            if (i >= method.arg_types.size()) {
+                fmt::print(stderr, "{}: error: method '{}' is missing argument {} '{}: {}'\n", loc, name, i, arg_name, arg_type);
+                continue;
+            }
+            if (method.arg_types[i].type_tree != it->type.params[i].type.type_tree) {
+                fmt::print(stderr, "{}: error: method '{}' argument {} type mismatch: expected '{}: {}', found ': {}'\n", loc, name, i, arg_name, arg_type, method.arg_types[i]);
+            } else if (i == num_params - 1) {
+                method_valid = true;
+            }
         }
-        fmt::print(stderr, ")\n");
+
+        if (it->type.result.type_tree != method.return_type.type_tree) {
+            fmt::print(stderr, "{}: error: method '{}' result type mismatch: expected {}, found {}\n", loc, name, it->type.result, method.return_type);
+            method_valid = false;
+        }
+
+        if (!method_valid) {
+            bindings_valid = false;
+            fmt::print(stderr, "{}: info: expected method {}(", loc, name);
+            for (size_t i = 0; i < it->type.num_params; ++i) {
+                if (i > 0) {
+                    fmt::print(stderr, ", ");
+                }
+                fmt::print(stderr, "{}: {}", it->type.params[i].id, it->type.params[i].type);
+            }
+            fmt::print(stderr, ") -> {}\n", it->type.result);
+        }
     }
 
-    return false;
+    return bindings_valid;
 }
