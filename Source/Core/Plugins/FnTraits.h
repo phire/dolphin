@@ -1,5 +1,6 @@
 #pragma once
 
+#include <typeinfo>
 #include <wasmtime/component/val.hh>
 #include "Core/System.h"
 #include "Core/Core.h"
@@ -170,6 +171,10 @@ struct FnTraits<f, R(C::*)(Args...)> : public FnTraitsBase<R, Args...> {
     }
 
     return std::monostate();
+  }
+
+  static std::type_info const& get_class_type() {
+    return typeid(C);
   }
 
 };

@@ -11,7 +11,7 @@
 
 namespace CpuApi {
 
-    struct CpuMemory {
+struct CpuMemory {
 
   u8 ReadU8(u32 address)
   {
@@ -81,6 +81,7 @@ namespace CpuApi {
   Core::CPUThreadGuard m_cpu_guard;
 
   static void constexpr bindings(auto bind) {
+    bind(HostResource<CpuMemory>{"cpu"});
     bind(Method<&CpuMemory::ReadU8, "read-u8"_t>{});
     bind(Method<&CpuMemory::ReadU16, "read-u16"_t>{});
     bind(Method<&CpuMemory::ReadU32, "read-u32"_t>{});

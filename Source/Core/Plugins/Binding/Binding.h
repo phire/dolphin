@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "Common/CommonTypes.h"
-
+#include <type_traits>
+#include <string_view>
+#include <algorithm>
 
 template<size_t Footprint>
 struct cxstring
@@ -55,11 +56,16 @@ using empty_type_string = decltype(empty_type_string_v);
 template<auto, typename>
 struct FnTraits;
 
+struct Binding {
+    static constexpr bool is_method = false;
+    static constexpr bool is_resource = false;
+};
+
 template <auto f, auto name>
-struct Method {
+struct Method : Binding {
   using name_t = decltype(name);
   using Traits = FnTraits<f, decltype(f)>;
-  static constexpr std::string_view binding_name() {
+  constexpr std::string_view binding_name() {
       return name.view();
   }
 
@@ -67,4 +73,20 @@ struct Method {
 
   static constexpr auto fn_ptr = f;
 
+};
+
+template <typename T>
+requires (std::is_class_v<T>)
+struct HostResource : Binding {
+  std::string_view m_name;
+
+  using ResourceType = std::remove_cv_t<T>;
+
+  constexpr HostResource(std::string_view name) : m_name(name) {}
+
+  static constexpr bool is_resource = true;
+
+  constexpr std::string_view binding_name() {
+      return m_name;
+  }
 };

@@ -1,6 +1,6 @@
 
 
-#include "Common/Logging/Log.h"
+#include "Plugins/WitFile.h"
 #include "Plugins/WitLexy.h"
 
 #include "Binding.h"
@@ -11,6 +11,8 @@
 #include "Plugins/WitLexy.h"
 
 
+#include <fmt/ostream.h>
+#include <iterator>
 #include <lexy/input/string_input.hpp>
 #include <lexy/action/parse.hpp>
 #include <lexy/action/validate.hpp>
@@ -18,6 +20,9 @@
 
 #include <source_location>
 #include <ranges>
+#include <string_view>
+#include <type_traits>
+#include <utility>
 
 
 // Custom formatter for source_location, prints file:line:column which many IDEs will extract.
@@ -111,15 +116,10 @@ static constexpr auto typetree() {
     }
 }
 
-struct MethodBinding {
-    std::string_view name;
-    std::source_location binding_location;
-    WitLexy::Type return_type;
-    std::vector<WitLexy::Type> arg_types;
-};
 
 struct BindingCounts {
     size_t methods = 0;
+    size_t resources = 0;
 };
 
 static constexpr BindingCounts s_counts = []() constexpr {
@@ -127,6 +127,8 @@ static constexpr BindingCounts s_counts = []() constexpr {
     dolphin_bindings([&] (auto item, std::source_location loc = std::source_location::current()) constexpr {
         if constexpr (item.is_method) {
             counts.methods++;
+        } else if constexpr (item.is_resource) {
+            counts.resources++;
         } else {
             static_assert(false, "Unhandled type in binder");
         }
@@ -134,21 +136,52 @@ static constexpr BindingCounts s_counts = []() constexpr {
     return counts;
 }();
 
-
-
-constexpr std::array<WasmtimeFn, s_counts.methods> s_methods = []() consteval {
+constexpr std::array<WasmtimeFn, s_counts.methods> s_methods = [] consteval {
     std::array<WasmtimeFn, s_counts.methods> methods{};
     size_t index = 0;
     dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
         if constexpr (item.is_method) {
             using Traits = decltype(item)::Traits;
             methods[index++] = Traits::wrapped;
-        } else {
-            static_assert(false, "Unhandled type in binder");
         }
     });
     return methods;
 }();
+
+constexpr std::array<std::pair<std::string_view, std::type_info const*>, s_counts.resources>
+s_resource_mapping = [] consteval {
+    std::array<std::pair<std::string_view, std::type_info const*>, s_counts.resources> resources{};
+    size_t index = 0;
+    dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
+        if constexpr (item.is_resource) {
+            resources[index++] = std::make_pair(item.binding_name(), &typeid(typename decltype(item)::ResourceType));
+        }
+    });
+    return resources;
+}();
+
+using resource_iterator = decltype(s_resource_mapping)::const_iterator;
+
+constexpr resource_iterator get_resource(std::string_view name) {
+    return std::ranges::find_if(s_resource_mapping, [&](const auto& resource) {
+        return resource.first == name;
+    });
+}
+
+constexpr resource_iterator get_resource(std::type_info const& type) {
+    return std::ranges::find_if(s_resource_mapping, [&](const auto& resource) {
+        return resource.second == &type;
+    });
+}
+
+template <typename T>
+consteval resource_iterator get_resource() {
+    return std::ranges::find_if(s_resource_mapping, [&](const auto& resource) {
+        return resource.second == &typeid(std::remove_cvref_t<T>);
+    });
+}
+
+
 
 template<typename Reader, typename Tag>
 void error_reporter(const auto& context, const lexy::error<Reader, Tag>& error) {
@@ -223,7 +256,6 @@ void error_reporter(const auto& context, const lexy::error<Reader, Tag>& error) 
                                           return lexy::_detail::write_str(out, error.message());
                                       });
     }
-
 }
 
 template <>
@@ -246,6 +278,21 @@ struct fmt::formatter<WitLexy::Type>
     }
 };
 
+
+struct MethodBinding {
+    std::string_view name = {};
+    std::source_location binding_location = {};
+    WitLexy::Type return_type = {};
+    std::vector<WitLexy::Type> arg_types = {};
+    resource_iterator resource = s_resource_mapping.cend();
+};
+
+struct ResourceBinding {
+    std::string_view name = {};
+    std::source_location binding_location = {};
+    const std::type_info& resource_type = typeid(void);
+};
+
 bool check_bindings() {
     auto literal = lexy::string_input(get_embedded_wit());
     auto result = lexy::parse<WitLexy::grammar::witfile>(literal, lexy::callback<void>([](auto context, auto error) {
@@ -259,14 +306,24 @@ bool check_bindings() {
 
     auto witfile = result.value();
 
-    auto cpu_resource = witfile.interfaces[0].resources[0];
+    std::vector<const WitLexy::Resource*> all_resources;
+    for (const auto& interface : witfile.interfaces) {
+        for (const auto& resource : interface.resources) {
+            all_resources.emplace_back(&resource);
+        }
+    }
 
-    std::array<MethodBinding, s_counts.methods> methods{};
-    size_t index = 0;
+    Common::SmallVector<MethodBinding, s_counts.methods> methods{};
+    Common::SmallVector<ResourceBinding, s_counts.resources> resources{};
+
+    // Collect all bindings
     dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
         if constexpr (item.is_method) {
             using Traits = decltype(item)::Traits;
-            methods[index++] = {item.binding_name(), loc, {ToTypeTree<typename Traits::ReturnType>()}, Traits::arg_types()};
+            auto resource = get_resource<typename Traits::ClassType>();
+            methods.emplace_back(item.binding_name(), loc, WitLexy::Type{ToTypeTree<typename Traits::ReturnType>()}, Traits::arg_types(), resource);
+        } else if constexpr (item.is_resource) {
+            resources.emplace_back(item.binding_name(), loc, typeid(typename decltype(item)::ResourceType));
         } else {
             static_assert(false, "Unhandled type in binder");
         }
@@ -274,14 +331,73 @@ bool check_bindings() {
 
     bool bindings_valid = true;
 
+    for (const auto& mapping : s_resource_mapping) {
+        fmt::print(stderr, "Resource mapping: {} -> {}\n", mapping.first, mapping.second->name());
+    }
+
+    // Check resource bindings
+    for (size_t i = 0; i < resources.size(); ++i) {
+        auto& resource = resources[i];
+        auto loc = resource.binding_location;
+        auto name = resource.name;
+
+        auto it = get_resource(name);
+        assert(it != s_resource_mapping.cend());
+        ssize_t index = std::distance(s_resource_mapping.cbegin(), it);
+        assert(index >= 0);
+        if (index != static_cast<ssize_t>(i)) {
+            fmt::print(stderr, "{}: error: resource {} bound multiple times\n", loc, name);
+            fmt::print(stderr, "{}: info: first binding of {} was here\n", resources[index].binding_location, name);
+            bindings_valid = false;
+            continue;
+        }
+
+        fmt::print(stderr, "Resource {} bound to struct/class {}\n", name, resource.resource_type.name());
+
+        auto type_it = get_resource(resource.resource_type);
+        assert(type_it != s_resource_mapping.cend());
+        if (type_it != it) {
+            fmt::print(stderr, "{}: error: struct/class for resource {} bound to multiple resources\n", loc, name);
+            ssize_t type_index = std::distance(s_resource_mapping.cbegin(), type_it);
+
+            auto first_resource = resources[type_index];
+            fmt::print(stderr, "{}: info: struct/class first bound to {}\n", first_resource.binding_location, first_resource.name);
+            bindings_valid = false;
+        }
+
+        auto wit_resource = std::ranges::find_if(all_resources, [&](const auto& r) {
+            return r->id == name;
+        });
+
+        if (wit_resource == all_resources.end()) {
+            fmt::print(stderr, "{}: error: resource {} is not defined in dolphin.wit\n", loc, name);
+            bindings_valid = false;
+        }
+    }
 
     for (const auto& method : methods) {
-        auto loc = method.binding_location;
-        auto name = method.name;
+        const std::source_location& loc = method.binding_location;
+        const std::string_view name = method.name;
 
-        auto it = std::find_if(cpu_resource.methods.begin(), cpu_resource.methods.end(),
+        if (method.resource == s_resource_mapping.cend()) {
+            fmt::print(stderr, "{}: error: resource for method '{}' is not bound\n", loc, name);
+            bindings_valid = false;
+            continue;
+        }
+
+        auto resource_iter = std::ranges::find_if(all_resources, [&](auto r) {
+            return r->id == method.resource->first;
+        });
+
+        if (resource_iter == all_resources.end()) {
+            bindings_valid = false;
+            continue;
+        }
+        auto resource = *resource_iter;
+
+        auto it = std::find_if(resource->methods.begin(), resource->methods.end(),
                                [&](const auto& m) { return m.id == method.name; });
-        if (it == cpu_resource.methods.end()) {
+        if (it == resource->methods.end()) {
             fmt::print(stderr, "{}: error: Binding '{}' is not defined in dolphin.wit\n", loc, name);
             continue;
         }
