@@ -70,7 +70,8 @@ bool DolReader::Initialize(std::span<const u8> buffer)
       m_text_sections.emplace_back(text_start, &text_start[m_dolheader.textSize[i]]);
 
       auto bytes = std::span<const u8>(text_start, m_dolheader.textSize[i]);
-      auto words = Common::U32View(bytes);
+      auto words = Common::BitCastView<u32>(bytes).value();
+      assert(words.size() * sizeof(u32) == bytes.size());
 
       for (const u32 word : words)
       {
