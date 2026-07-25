@@ -19,7 +19,7 @@ template <typename To, std::ranges::view V>
 requires (
     std::is_trivially_copyable_v<To>
     && std::is_trivially_copyable_v<std::ranges::range_value_t<V>>
-    && std::contiguous_iterator<std::ranges::iterator_t<V>>
+    && std::random_access_iterator<std::ranges::iterator_t<V>>
     && sizeof(To) >= sizeof(std::ranges::range_value_t<V>)
     && (sizeof(To) / sizeof(std::ranges::range_value_t<V>)) * sizeof(std::ranges::range_value_t<V>) == sizeof(To)
 )
@@ -27,32 +27,27 @@ class BitCastViewIterator
 {
   using from_type = std::ranges::range_value_t<V>;
   using from_iterator = std::ranges::iterator_t<V>;
-  using from_view = V;
   constexpr static size_t step = sizeof(To) / sizeof(from_type);
 public:
   using value_type = To;
   using difference_type = std::ptrdiff_t;
 
-  using iterator_concept  = std::random_access_iterator_tag;
-  using iterator_category = std::random_access_iterator_tag;
-
   BitCastViewIterator() = default;
-  explicit BitCastViewIterator(V view) : m_view(view) {
-    ASSERT_MSG(COMMON, (view.size() * sizeof(from_type)) % sizeof(value_type) == 0, "Byte span size must be a multiple of value_type.");
+  explicit BitCastViewIterator(from_iterator iter) : m_iter(iter) {
   }
 
   value_type operator*() const
   requires (step > 1)
   {
     std::array<from_type, step> arr;
-    std::copy_n(m_view.begin(), step, arr.begin());
+    std::copy_n(m_iter, step, arr.begin());
     return std::bit_cast<value_type>(arr);
   }
 
   value_type& operator*() const
   requires (step == 1)
   {
-    return std::bit_cast<value_type>(*m_view.begin());
+    return std::bit_cast<value_type>(*m_iter);
   }
 
 
@@ -65,7 +60,7 @@ public:
 
   BitCastViewIterator& operator++()
   {
-    m_view = m_view.subspan(step);
+    m_iter += step;
     return *this;
   }
 
@@ -78,7 +73,7 @@ public:
 
   BitCastViewIterator& operator--()
   {
-    m_view = m_view.subspan(-step);
+    m_iter -= step;
     return *this;
   }
 
@@ -91,29 +86,23 @@ public:
 
   BitCastViewIterator& operator+=(difference_type n)
   {
-    m_view = m_view.subspan(n * step);
+    m_iter += n * step;
     return *this;
   }
-
 
   BitCastViewIterator& operator-=(difference_type n)
   {
-    m_view = m_view.subspan(-n * step);
+    m_iter -= n * step;
     return *this;
   }
 
-  bool operator==(const BitCastViewIterator& other) const
-  {
-    return m_view.begin() == other.m_view.begin() && m_view.size() == other.m_view.size();
-  }
+  bool operator==(const BitCastViewIterator& other) const = default;
 
-  friend auto operator<=>(const BitCastViewIterator& lhs, const BitCastViewIterator& rhs) {
-    return lhs.m_view.begin() <=> rhs.m_view.begin();
-  }
+  friend auto operator<=>(const BitCastViewIterator& lhs, const BitCastViewIterator& rhs) = default;
 
   friend difference_type operator-(const BitCastViewIterator& lhs, const BitCastViewIterator& rhs)
   {
-    return (lhs.m_view.begin() - rhs.m_view.begin()) / step;
+    return (lhs.m_iter - rhs.m_iter) / step;
   }
 
   friend BitCastViewIterator operator+(const BitCastViewIterator& it, difference_type n)
@@ -133,25 +122,26 @@ public:
     return it + (-n);
   }
 
-
 private:
-  V m_view;
+  from_iterator m_iter;
 };
 
 static_assert(std::random_access_iterator<BitCastViewIterator<u32, std::span<const u8>>>);
 
 template <typename To, std::ranges::view V>
-
 class BitCastViewImpl : public std::ranges::view_interface<BitCastViewImpl<To, V>>
 {
+  using from_type = std::ranges::range_value_t<V>;
+  using from_iterator = std::ranges::iterator_t<V>;
 public:
   explicit BitCastViewImpl(V view) : m_view(view) {}
 
-  BitCastViewIterator<To, V> begin() const { return BitCastViewIterator<To, V>(m_view); }
+  BitCastViewIterator<To, V> begin() const {
+    ASSERT_MSG(COMMON, (m_view.size() * sizeof(from_type)) % sizeof(To) == 0, "Byte span size must be a multiple of value_type.");
+    return BitCastViewIterator<To, V>(m_view.begin());
+   }
   BitCastViewIterator<To, V> end() const {
-     BitCastViewIterator<To, V> iter(m_view);
-     iter += (m_view.size() * sizeof(std::ranges::range_value_t<V>)) / sizeof(To);
-     return iter;
+     return BitCastViewIterator<To, V>(m_view.end());
   }
 
   bool valid() const { return m_view.size() % sizeof(To) == 0; }
