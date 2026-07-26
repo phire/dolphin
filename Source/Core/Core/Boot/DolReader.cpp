@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <span>
@@ -70,10 +71,12 @@ bool DolReader::Initialize(std::span<const u8> buffer)
       m_text_sections.emplace_back(text_start, &text_start[m_dolheader.textSize[i]]);
 
       auto bytes = std::span<const u8>(text_start, m_dolheader.textSize[i]);
+      // auto words = Common::BitCastView<Common::BigEndianValue<u32>>(bytes).value();
       auto words = Common::BitCastView<u32>(bytes).value();
+
       assert(words.size() * sizeof(u32) == bytes.size());
 
-      for (const u32 word : words)
+      for (auto word : words)
       {
         if ((word & HID4_mask) == HID4_pattern)
         {

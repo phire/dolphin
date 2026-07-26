@@ -184,13 +184,15 @@ inline T FromBigEndian(T data)
   return data;
 }
 
-template <typename value_type>
+template <typename value_type_>
 struct BigEndianValue
 {
+  using value_type = value_type_;
   static_assert(std::is_arithmetic<value_type>(), "value_type must be an arithmetic type");
   BigEndianValue() = default;
   explicit BigEndianValue(value_type val) { *this = val; }
   operator value_type() const { return FromBigEndian(raw); }
+  const value_type operator*() { return FromBigEndian(raw);; }
   BigEndianValue& operator=(value_type v)
   {
     raw = FromBigEndian(v);

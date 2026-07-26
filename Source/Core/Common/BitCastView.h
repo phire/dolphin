@@ -7,13 +7,74 @@
 
 #include <array>
 #include <bit>
+#include <concepts>
 #include <cstddef>
-#include <optional>
 #include <span>
+#include <iterator>
+#include <optional>
 #include <algorithm>
+#include <type_traits>
 
 namespace Common
 {
+
+template<typename T>
+concept Wrapper = std::invocable<decltype(&T::operator*), T>;
+
+
+template <typename T, typename = void>
+struct value_type_for {};
+
+template <typename T>
+struct value_type_for<T, std::enable_if_t<Wrapper<T>>>
+{
+  using type = std::remove_cv_t<std::invoke_result_t<decltype(&T::operator*), T>>;
+};
+
+
+template <typename T>
+struct value_type_for<T, std::enable_if_t<!Wrapper<T>>>
+{
+  using type = std::remove_cv_t<T>;
+};
+
+
+template <typename To, typename FromIter>
+requires (std::input_iterator<FromIter>)
+class BitCastRef {
+  using From = std::iter_value_t<FromIter>;
+  using value_type = value_type_for<To>::type;
+  constexpr static size_t step = sizeof(To) / sizeof(From);
+
+public:
+  BitCastRef() = default;
+  explicit BitCastRef(FromIter iter) : m_iter(iter) {}
+
+  value_type operator*() const
+  {
+    std::array<From, step> arr;
+    std::copy_n(m_iter, step, arr.begin());
+    return std::bit_cast<To>(arr);
+  }
+
+  operator value_type() const
+  {
+    std::array<From, step> arr;
+    std::copy_n(m_iter, step, arr.begin());
+    return std::bit_cast<value_type>(arr);
+  }
+
+  BitCastRef& operator=(const value_type& rhs)
+  requires (std::output_iterator<FromIter, From>)
+  {
+    std::array<From, step> arr = std::bit_cast<std::array<From, step>>(rhs);
+    std::copy_n(arr.begin(), step, m_iter);
+    return *this;
+  }
+
+private:
+  FromIter m_iter;
+};
 
 template <typename To, std::ranges::view V>
 requires (
@@ -25,37 +86,27 @@ requires (
 )
 class BitCastViewIterator
 {
-  using from_type = std::ranges::range_value_t<V>;
-  using from_iterator = std::ranges::iterator_t<V>;
-  constexpr static size_t step = sizeof(To) / sizeof(from_type);
+  using From = std::ranges::range_value_t<V>;
+  using FromIter = std::ranges::iterator_t<V>;
+  constexpr static size_t step = sizeof(To) / sizeof(From);
 public:
-  using value_type = To;
+  using value_type = std::remove_cv_t<To>;
+  using reference = BitCastRef<To, FromIter>;
   using difference_type = std::ptrdiff_t;
 
   BitCastViewIterator() = default;
-  explicit BitCastViewIterator(from_iterator iter) : m_iter(iter) {
+  explicit BitCastViewIterator(FromIter iter) : m_iter(iter) {
   }
 
-  value_type operator*() const
-  requires (step > 1)
-  {
-    std::array<from_type, step> arr;
-    std::copy_n(m_iter, step, arr.begin());
-    return std::bit_cast<value_type>(arr);
+  reference operator*() const {
+    return reference(m_iter);
   }
 
-  value_type& operator*() const
-  requires (step == 1)
-  {
-    return std::bit_cast<value_type>(*m_iter);
-  }
-
-
-  value_type operator[](std::ptrdiff_t index) const
+  reference operator[](std::ptrdiff_t index) const
   {
     BitCastViewIterator tmp = *this;
     tmp += index;
-    return *tmp;
+    return reference(tmp.m_iter);
   }
 
   BitCastViewIterator& operator++()
@@ -123,7 +174,7 @@ public:
   }
 
 private:
-  from_iterator m_iter;
+  FromIter m_iter;
 };
 
 static_assert(std::random_access_iterator<BitCastViewIterator<u32, std::span<const u8>>>);
@@ -131,13 +182,13 @@ static_assert(std::random_access_iterator<BitCastViewIterator<u32, std::span<con
 template <typename To, std::ranges::view V>
 class BitCastViewImpl : public std::ranges::view_interface<BitCastViewImpl<To, V>>
 {
-  using from_type = std::ranges::range_value_t<V>;
-  using from_iterator = std::ranges::iterator_t<V>;
+  using From = std::ranges::range_value_t<V>;
+  using FromIter = std::ranges::iterator_t<V>;
 public:
   explicit BitCastViewImpl(V view) : m_view(view) {}
 
   BitCastViewIterator<To, V> begin() const {
-    ASSERT_MSG(COMMON, (m_view.size() * sizeof(from_type)) % sizeof(To) == 0, "Byte span size must be a multiple of value_type.");
+    ASSERT_MSG(COMMON, (m_view.size() * sizeof(From)) % sizeof(To) == 0, "Byte span size must be a multiple of value_type.");
     return BitCastViewIterator<To, V>(m_view.begin());
    }
   BitCastViewIterator<To, V> end() const {
