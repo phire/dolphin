@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <optional>
+#include <ranges>
+
 
 #include "Common/EnumFormatter.h"
 
@@ -103,4 +105,24 @@ template <>
 struct fmt::formatter<WitLexy::TypeKind> : EnumFormatter<WitLexy::TypeKind::TupleEnd>
 {
    constexpr formatter() : EnumFormatter({"Void", "U8", "U16", "U32", "U64", "S8", "S16", "S32", "S64", "F32", "F64", "Bool", "CharType", "StringType", "ListStart", "ListEnd", "TupleStart", "TupleEnd"}) {}
+};
+
+template <>
+struct fmt::formatter<WitLexy::Type>
+{
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+
+    template <typename FormatContext>
+    auto format(const WitLexy::Type& type_info, FormatContext& ctx) const {
+        if (type_info.type_tree.size() == 1) {
+            return fmt::format_to(ctx.out(), "{:n}", type_info.type_tree[0]);
+        }
+
+        fmt::format_to(ctx.out(), "[{:n}", type_info.type_tree[0]);
+        for (auto kind : type_info.type_tree | std::views::drop(1)) {
+            fmt::format_to(ctx.out(), ", {:n}", kind);
+        }
+        fmt::format_to(ctx.out(), "]");
+        return ctx.out();
+    }
 };

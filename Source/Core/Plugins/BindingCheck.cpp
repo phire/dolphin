@@ -3,27 +3,16 @@
 #include "Plugins/WitFile.h"
 #include "Plugins/WitLexy.h"
 
-#include "Binding.h"
 #include "BindingCheck.h"
-#include "FnTraits.h"
+#include "BindingGen.h"
 
-
-#include "Plugins/WitLexy.h"
-
-
-#include <fmt/ostream.h>
-#include <iterator>
 #include <lexy/input/string_input.hpp>
 #include <lexy/action/parse.hpp>
 #include <lexy/action/validate.hpp>
 #include <lexy_ext/report_error.hpp>
 
-#include <source_location>
-#include <ranges>
 #include <string_view>
 #include <type_traits>
-#include <utility>
-
 
 // Custom formatter for source_location, prints file:line:column which many IDEs will extract.
 template <>
@@ -49,139 +38,6 @@ static constexpr std::string_view get_embedded_wit()
     };
     return std::string_view(embedded_wit, sizeof(embedded_wit));
 }
-
-template <typename T, typename StrT = empty_type_string>
-struct TypeTree {
-    using Type = T;
-    using Name = StrT;
-
-    template <typename U>
-    static constexpr void is_same() {
-        static_assert(std::is_same_v<Type, U>, "Type mismatch with dolphin.wit");
-    }
-
-    template <typename NewStrT>
-    static constexpr TypeTree<Type, NewStrT> named(NewStrT id) {
-        return {};
-    }
-};
-
-
-template<const WitLexy::TypeKind kind>
-static constexpr auto typetree() {
-    if constexpr (kind == WitLexy::TypeKind::U8) {
-        return TypeTree<uint8_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::U16) {
-        return TypeTree<uint16_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::U32) {
-        return TypeTree<uint32_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::U64) {
-        return TypeTree<uint64_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::S8) {
-        return TypeTree<int8_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::S16) {
-        return TypeTree<int16_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::S32) {
-        return TypeTree<int32_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::S64) {
-        return TypeTree<int64_t>{};
-    } else if constexpr (kind == WitLexy::TypeKind::F32) {
-        return TypeTree<float>{};
-    } else if constexpr (kind == WitLexy::TypeKind::F64) {
-        return TypeTree<double>{};
-    } else if constexpr (kind == WitLexy::TypeKind::Bool) {
-        return TypeTree<bool>{};
-    } else if constexpr (kind == WitLexy::TypeKind::CharType) {
-        return TypeTree<char>{};
-    } else if constexpr (kind == WitLexy::TypeKind::StringType) {
-        return TypeTree<std::string>{};
-    } else {
-        static_assert(false, "Unhandled typetree kind in typetree");
-    }
-}
-
-template<const WitLexy::TypeKind head, const WitLexy::TypeKind... kinds> requires(sizeof...(kinds) > 0)
-static constexpr auto typetree() {
-    constexpr WitLexy::TypeKind kinds_array[] = {kinds...};
-    constexpr auto size = sizeof...(kinds);
-
-    if constexpr (head == WitLexy::TypeKind::ListStart) {
-        auto element_type = [&]<std::size_t... Is>(std::index_sequence<Is...> is) consteval {
-            return typetree<kinds_array[Is]...>();
-        }(std::make_index_sequence<size-1>{});
-
-        return TypeTree<std::vector<typename decltype(element_type)::Type>>();
-    } else {
-        static_assert(false, "Unhandled typetree kind in typetree");
-    }
-}
-
-
-struct BindingCounts {
-    size_t methods = 0;
-    size_t resources = 0;
-};
-
-static constexpr BindingCounts s_counts = []() constexpr {
-    BindingCounts counts;
-    dolphin_bindings([&] (auto item, std::source_location loc = std::source_location::current()) constexpr {
-        if constexpr (item.is_method) {
-            counts.methods++;
-        } else if constexpr (item.is_resource) {
-            counts.resources++;
-        } else {
-            static_assert(false, "Unhandled type in binder");
-        }
-    });
-    return counts;
-}();
-
-constexpr std::array<WasmtimeFn, s_counts.methods> s_methods = [] consteval {
-    std::array<WasmtimeFn, s_counts.methods> methods{};
-    size_t index = 0;
-    dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
-        if constexpr (item.is_method) {
-            using Traits = decltype(item)::Traits;
-            methods[index++] = Traits::wrapped;
-        }
-    });
-    return methods;
-}();
-
-constexpr std::array<std::pair<std::string_view, std::type_info const*>, s_counts.resources>
-s_resource_mapping = [] consteval {
-    std::array<std::pair<std::string_view, std::type_info const*>, s_counts.resources> resources{};
-    size_t index = 0;
-    dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
-        if constexpr (item.is_resource) {
-            resources[index++] = std::make_pair(item.binding_name(), &typeid(typename decltype(item)::ResourceType));
-        }
-    });
-    return resources;
-}();
-
-using resource_iterator = decltype(s_resource_mapping)::const_iterator;
-
-constexpr resource_iterator get_resource(std::string_view name) {
-    return std::ranges::find_if(s_resource_mapping, [&](const auto& resource) {
-        return resource.first == name;
-    });
-}
-
-constexpr resource_iterator get_resource(std::type_info const& type) {
-    return std::ranges::find_if(s_resource_mapping, [&](const auto& resource) {
-        return resource.second == &type;
-    });
-}
-
-template <typename T>
-consteval resource_iterator get_resource() {
-    return std::ranges::find_if(s_resource_mapping, [&](const auto& resource) {
-        return resource.second == &typeid(std::remove_cvref_t<T>);
-    });
-}
-
-
 
 template<typename Reader, typename Tag>
 void error_reporter(const auto& context, const lexy::error<Reader, Tag>& error) {
@@ -258,40 +114,7 @@ void error_reporter(const auto& context, const lexy::error<Reader, Tag>& error) 
     }
 }
 
-template <>
-struct fmt::formatter<WitLexy::Type>
-{
-    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
 
-    template <typename FormatContext>
-    auto format(const WitLexy::Type& type_info, FormatContext& ctx) const {
-        if (type_info.type_tree.size() == 1) {
-            return fmt::format_to(ctx.out(), "{:n}", type_info.type_tree[0]);
-        }
-
-        fmt::format_to(ctx.out(), "[{:n}", type_info.type_tree[0]);
-        for (auto kind : type_info.type_tree | std::views::drop(1)) {
-            fmt::format_to(ctx.out(), ", {:n}", kind);
-        }
-        fmt::format_to(ctx.out(), "]");
-        return ctx.out();
-    }
-};
-
-
-struct MethodBinding {
-    std::string_view name = {};
-    std::source_location binding_location = {};
-    WitLexy::Type return_type = {};
-    std::vector<WitLexy::Type> arg_types = {};
-    resource_iterator resource = s_resource_mapping.cend();
-};
-
-struct ResourceBinding {
-    std::string_view name = {};
-    std::source_location binding_location = {};
-    const std::type_info& resource_type = typeid(void);
-};
 
 bool check_bindings() {
     auto literal = lexy::string_input(get_embedded_wit());
@@ -307,93 +130,69 @@ bool check_bindings() {
     auto witfile = result.value();
 
     std::vector<const WitLexy::Resource*> all_resources;
+    all_resources.resize(get_resource_count(), nullptr);
+
+
     for (const auto& interface : witfile.interfaces) {
         for (const auto& resource : interface.resources) {
-            all_resources.emplace_back(&resource);
+            if (auto index = get_resource_idx(resource.id)) {
+                all_resources[*index] = &resource;
+            }
         }
     }
 
-    Common::SmallVector<MethodBinding, s_counts.methods> methods{};
-    Common::SmallVector<ResourceBinding, s_counts.resources> resources{};
-
-    // Collect all bindings
-    dolphin_bindings([&](auto item, std::source_location loc = std::source_location::current()) constexpr {
-        if constexpr (item.is_method) {
-            using Traits = decltype(item)::Traits;
-            auto resource = get_resource<typename Traits::ClassType>();
-            methods.emplace_back(item.binding_name(), loc, WitLexy::Type{ToTypeTree<typename Traits::ReturnType>()}, Traits::arg_types(), resource);
-        } else if constexpr (item.is_resource) {
-            resources.emplace_back(item.binding_name(), loc, typeid(typename decltype(item)::ResourceType));
-        } else {
-            static_assert(false, "Unhandled type in binder");
-        }
-    });
+    Bindings bindings = get_bindings();
 
     bool bindings_valid = true;
 
-    for (const auto& mapping : s_resource_mapping) {
-        fmt::print(stderr, "Resource mapping: {} -> {}\n", mapping.first, mapping.second->name());
-    }
-
     // Check resource bindings
-    for (size_t i = 0; i < resources.size(); ++i) {
-        auto& resource = resources[i];
+    for (size_t i = 0; i < bindings.resources.size(); ++i) {
+        auto& resource = bindings.resources[i];
         auto loc = resource.binding_location;
         auto name = resource.name;
 
-        auto it = get_resource(name);
-        assert(it != s_resource_mapping.cend());
-        ssize_t index = std::distance(s_resource_mapping.cbegin(), it);
-        assert(index >= 0);
-        if (index != static_cast<ssize_t>(i)) {
+        unsigned index = get_resource_idx(name).value();
+        if (index != i) {
             fmt::print(stderr, "{}: error: resource {} bound multiple times\n", loc, name);
-            fmt::print(stderr, "{}: info: first binding of {} was here\n", resources[index].binding_location, name);
+            fmt::print(stderr, "{}: info: first binding of {} was here\n", bindings.resources[index].binding_location, name);
             bindings_valid = false;
             continue;
         }
 
-        fmt::print(stderr, "Resource {} bound to struct/class {}\n", name, resource.resource_type.name());
-
-        auto type_it = get_resource(resource.resource_type);
-        assert(type_it != s_resource_mapping.cend());
-        if (type_it != it) {
+        unsigned type_index = get_resource_idx(resource.resource_type).value();
+        if (type_index != i) {
             fmt::print(stderr, "{}: error: struct/class for resource {} bound to multiple resources\n", loc, name);
-            ssize_t type_index = std::distance(s_resource_mapping.cbegin(), type_it);
-
-            auto first_resource = resources[type_index];
+            auto first_resource = bindings.resources[type_index];
             fmt::print(stderr, "{}: info: struct/class first bound to {}\n", first_resource.binding_location, first_resource.name);
             bindings_valid = false;
         }
 
-        auto wit_resource = std::ranges::find_if(all_resources, [&](const auto& r) {
-            return r->id == name;
-        });
-
-        if (wit_resource == all_resources.end()) {
+        if (all_resources[i] == nullptr) {
             fmt::print(stderr, "{}: error: resource {} is not defined in dolphin.wit\n", loc, name);
             bindings_valid = false;
         }
     }
 
-    for (const auto& method : methods) {
+    for (const auto& method : bindings.methods) {
         const std::source_location& loc = method.binding_location;
         const std::string_view name = method.name;
 
-        if (method.resource == s_resource_mapping.cend()) {
+        auto resource_idx = get_resource_idx(method.resource_type);
+
+        if (resource_idx.has_value() == false) {
             fmt::print(stderr, "{}: error: resource for method '{}' is not bound\n", loc, name);
             bindings_valid = false;
             continue;
         }
 
-        auto resource_iter = std::ranges::find_if(all_resources, [&](auto r) {
-            return r->id == method.resource->first;
-        });
+        const auto* resource = all_resources[resource_idx.value()];
 
-        if (resource_iter == all_resources.end()) {
+        if (resource == nullptr) {
+            std::string_view resource_name = get_resource_name(method.resource_type).value();
+            fmt::print(stderr, "{}: error: resource '{}' for method '{}' is not defined in dolphin.wit\n", loc, resource_name, name);
             bindings_valid = false;
             continue;
         }
-        auto resource = *resource_iter;
 
         auto it = std::find_if(resource->methods.begin(), resource->methods.end(),
                                [&](const auto& m) { return m.id == method.name; });
@@ -429,6 +228,7 @@ bool check_bindings() {
             method_valid = false;
         }
 
+        // If there were any errors, print the expected signature for the method.
         if (!method_valid) {
             bindings_valid = false;
             fmt::print(stderr, "{}: info: expected method {}(", loc, name);

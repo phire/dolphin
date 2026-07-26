@@ -21,43 +21,52 @@ add_custom_command(
     DEPENDS ${DOLPHIN_WIT}
 )
 
+add_library(bindingGen STATIC
+    BindingGen.cpp
+    BindingGen.h
+    DolphinBindings.h
+)
+
+target_include_directories(bindingGen
+SYSTEM PUBLIC
+    # We only need wasmtime's headers for this.
+    "$<TARGET_PROPERTY:wasmtime,INTERFACE_INCLUDE_DIRECTORIES>"
+PRIVATE
+    // Pull in any include directories we might need when generating bindings
+    "$<TARGET_PROPERTY:common,INCLUDE_DIRECTORIES>"
+    "$<TARGET_PROPERTY:core,INCLUDE_DIRECTORIES>"
+)
+
 add_library(bindingCheck STATIC
     BindingCheck.cpp
     BindingCheck.h
     ${CMAKE_CURRENT_BINARY_DIR}/dolphin_wit.h
 )
 
-add_compile_definitions("DOLPHIN_WIT_PATH=\"${DOLPHIN_WIT}\"")
-
-target_link_libraries(bindingCheck
-PUBLIC
-    plugin_binding
-PRIVATE
-    fmt::fmt
-    lexy
-    lexy_ext
+target_compile_definitions(bindingCheck
+    PRIVATE
+        "DOLPHIN_WIT_PATH=\"${DOLPHIN_WIT}\""
 )
 
-
 target_include_directories(bindingCheck
-PUBLIC
-    # We only need wasmtime's headers for this.
-    #"$<TARGET_PROPERTY:wasmtime,INTERFACE_INCLUDE_DIRECTORIES>"
 PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/wit
 )
 
-target_include_directories(bindingCheck
-SYSTEM PUBLIC
-    # We only need wasmtime's headers for this.
-    "$<TARGET_PROPERTY:wasmtime,INTERFACE_INCLUDE_DIRECTORIES>"
+target_link_libraries(bindingCheck
+PUBLIC
+    plugin_binding
+PRIVATE
+    bindingGen
+    fmt::fmt
+    lexy
+    lexy_ext
 )
 
 add_executable(bindingCheckTool
     BindingCheckTool.cpp
 )
-
 
 target_link_libraries(bindingCheckTool
 PRIVATE
@@ -93,6 +102,7 @@ PRIVATE
 
 target_link_libraries(plugins
 PRIVATE
+    bindingGen
     plugin_binding
     plugin_cpp
     plugin_abi

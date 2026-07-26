@@ -57,26 +57,26 @@ concept BindableArg = requires(T t) {
 using TypeKind = WitLexy::TypeKind;
 
 template<typename T>
-std::vector<TypeKind> ToTypeTree();
+constexpr std::vector<TypeKind> ToTypeTree();
 
-template<> std::vector<TypeKind> ToTypeTree<void>() { return {TypeKind::Void}; }
-template<> std::vector<TypeKind> ToTypeTree<uint8_t>() { return {TypeKind::U8}; }
-template<> std::vector<TypeKind> ToTypeTree<uint16_t>() { return {TypeKind::U16}; }
-template<> std::vector<TypeKind> ToTypeTree<uint32_t>() { return {TypeKind::U32}; }
-template<> std::vector<TypeKind> ToTypeTree<uint64_t>() { return {TypeKind::U64}; }
-template<> std::vector<TypeKind> ToTypeTree<int8_t>() { return {TypeKind::S8}; }
-template<> std::vector<TypeKind> ToTypeTree<int16_t>() { return {TypeKind::S16}; }
-template<> std::vector<TypeKind> ToTypeTree<int32_t>() { return {TypeKind::S32}; }
-template<> std::vector<TypeKind> ToTypeTree<int64_t>() { return {TypeKind::S64}; }
-template<> std::vector<TypeKind> ToTypeTree<float>() { return {TypeKind::F32}; }
-template<> std::vector<TypeKind> ToTypeTree<double>() { return {TypeKind::F64}; }
-template<> std::vector<TypeKind> ToTypeTree<bool>() { return {TypeKind::Bool}; }
-template<> std::vector<TypeKind> ToTypeTree<char>() { return {TypeKind::CharType}; }
-template<> std::vector<TypeKind> ToTypeTree<std::string>() { return {TypeKind::StringType}; }
-template<> std::vector<TypeKind> ToTypeTree<std::string_view>() { return {TypeKind::StringType}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<void>() { return {TypeKind::Void}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<uint8_t>() { return {TypeKind::U8}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<uint16_t>() { return {TypeKind::U16}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<uint32_t>() { return {TypeKind::U32}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<uint64_t>() { return {TypeKind::U64}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<int8_t>() { return {TypeKind::S8}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<int16_t>() { return {TypeKind::S16}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<int32_t>() { return {TypeKind::S32}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<int64_t>() { return {TypeKind::S64}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<float>() { return {TypeKind::F32}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<double>() { return {TypeKind::F64}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<bool>() { return {TypeKind::Bool}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<char>() { return {TypeKind::CharType}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<std::string>() { return {TypeKind::StringType}; }
+template<> constexpr std::vector<TypeKind> ToTypeTree<std::string_view>() { return {TypeKind::StringType}; }
 
 template<typename T>
-std::vector<TypeKind> ToTypeTree() {
+constexpr std::vector<TypeKind> ToTypeTree() {
     if constexpr (std::is_same_v<T, std::vector<typename T::value_type>>) {
         //return MatchList<T, typename T::value_type>();
         std::vector<TypeKind> tree{ TypeKind::ListStart };
@@ -107,7 +107,7 @@ struct FnTraitsBase {
       }(std::make_index_sequence<ArgCount>{});
   }
 
-  static auto arg_types() {
+  static constexpr auto arg_types() {
     return std::vector<WitLexy::Type>{WitLexy::Type{ToTypeTree<Args>()}...};
   }
 };
